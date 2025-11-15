@@ -252,6 +252,15 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   // Calculate percent display
   const percent = Math.round(p * 100);
 
+  // Calculate dynamic spacer width based on badge size
+  // Badge width = (digits × ~7.5px/char) + padding (6px each side) + border adjustments
+  // Always assume minimum of 2 digits to prevent text jumping when probability changes
+  const numDigits = percent === 100 ? 3 : 2;
+  const baseCharWidth = 7.5; // Approximate monospace character width at 0.75rem
+  const badgePadding = 4; // px-1.5 = 6px on each side
+  const borderAdjustment = borderWidth * 0.5; // Account for thicker borders when selected
+  const spacerWidth = (numDigits * baseCharWidth) + (badgePadding * 2) + borderAdjustment; // +2px buffer
+
   // Corner radius for top-left (shared between node and badge)
   const topLeftRadius = '8px';
 
@@ -271,6 +280,9 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         pointerEvents: 'auto',
         minWidth: '120px',
         maxWidth: '150px',
+        minHeight: '40px',
+        display: 'flex',
+        alignItems: 'center',
         borderTopLeftRadius: topLeftRadius,
         borderTopRightRadius: '12px',
         borderBottomLeftRadius: '12px',
@@ -316,24 +328,26 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         style={{
           color: getTextColor(),
           fontWeight: 400,
-          paddingTop: '0.1rem',
-          paddingBottom: '0.1rem',
+          paddingTop: '0.12rem',
+          paddingBottom: '0.12rem',
         }}
       >
         {/* Invisible spacer to push first line text to the right */}
         <span
           style={{
             float: 'left',
-            width: '25px',
+            width: `${spacerWidth}px`,
             height: '1px',
+            // backgroundColor: 'red', // Red highlight for debugging
           }}
         />
         {/* Invisible spacer on right for symmetry */}
         <span
           style={{
             float: 'right',
-            width: '25px',
+            width: `${spacerWidth}px`,
             height: '1px',
+            // backgroundColor: 'red', // Red highlight for debugging
           }}
         />
         {lines.map((line, i) => (

@@ -449,12 +449,12 @@
         {
           "targetId": "ncontrollers-thoughtful",
           "type": "n",
-          "label": "Misaligned"
+          "label": "Controller-aligned"
         },
         {
           "targetId": "gagi-utopia2",
           "type": "y",
-          "label": "Aligned"
+          "label": "Humanity-aligned"
         }
       ]
     },
