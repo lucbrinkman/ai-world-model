@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Flowchart from '@/components/Flowchart';
 import ZoomControls from '@/components/ZoomControls';
-import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE } from '@/lib/types';
+import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
 import { readSliderValuesFromUrl, updateUrlWithSliderValues, decodeSliderValues } from '@/lib/urlState';
@@ -128,10 +128,6 @@ export default function Home() {
   }, []);
 
   // Zoom control handlers
-  const ZOOM_STEP = 25;
-  const MIN_ZOOM = 25;
-  const MAX_ZOOM = 200;
-
   const handleZoomIn = useCallback(() => {
     setZoom(prev => {
       const newZoom = Math.min(prev + ZOOM_STEP, MAX_ZOOM);

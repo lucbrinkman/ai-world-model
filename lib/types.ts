@@ -98,6 +98,13 @@ export const CANVAS_HEIGHT = 1800;
 export const SLIDER_DEFAULT_VALUE = 50;
 export const SLIDER_COUNT = 21;
 
+// Zoom constants
+export const MIN_ZOOM = 25;
+export const MAX_ZOOM = 200;
+export const ZOOM_STEP = 25;
+export const ZOOM_SENSITIVITY = 0.15; // Mouse wheel zoom sensitivity
+export const CANVAS_PADDING = 1000; // Padding around canvas for scrolling (px)
+
 // Color scheme (matching original v4)
 export const NODE_COLORS = {
   SELECTED: '#FF8B38',

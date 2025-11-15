@@ -1,4 +1,4 @@
-import { Node as NodeType, Edge as EdgeType, CANVAS_WIDTH, CANVAS_HEIGHT } from '@/lib/types';
+import { Node as NodeType, Edge as EdgeType, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING } from '@/lib/types';
 import { questionNodeIndices } from '@/lib/graphData';
 import NodeComponent from './Node';
 import EdgeComponent from './Edge';
@@ -45,7 +45,6 @@ export default function Flowchart({
   const [nodeBounds, setNodeBounds] = useState<DOMRect[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const PADDING = 1000; // pixels of padding on all sides
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
   const [isPositioned, setIsPositioned] = useState(false);
@@ -55,12 +54,12 @@ export default function Flowchart({
     scrollContainerRef.current = node;
     if (node && !isPositioned) {
       // Set initial position immediately when element is created
-      node.scrollLeft = PADDING;
-      node.scrollTop = PADDING;
+      node.scrollLeft = CANVAS_PADDING;
+      node.scrollTop = CANVAS_PADDING;
       // Make visible now that it's positioned
       setIsPositioned(true);
     }
-  }, [PADDING, isPositioned]);
+  }, [isPositioned]);
 
   // Update node bounds whenever nodes change or window resizes
   useEffect(() => {
@@ -99,11 +98,11 @@ export default function Flowchart({
     if (resetTrigger > 1 && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       // Position the top-left of the canvas at the top-left of the viewport
-      // The canvas is centered in the large area with PADDING on all sides
-      container.scrollLeft = PADDING;
-      container.scrollTop = PADDING;
+      // The canvas is centered in the large area with CANVAS_PADDING on all sides
+      container.scrollLeft = CANVAS_PADDING;
+      container.scrollTop = CANVAS_PADDING;
     }
-  }, [resetTrigger, PADDING]);
+  }, [resetTrigger]);
 
   // Handle zoom changes and adjust scroll position to keep cursor point stable
   useEffect(() => {
@@ -117,12 +116,9 @@ export default function Flowchart({
 
         // Calculate zoom delta
         const delta = -e.deltaY;
-        const ZOOM_SENSITIVITY = 0.15;
         const zoomFactor = 1 + (delta > 0 ? ZOOM_SENSITIVITY : -ZOOM_SENSITIVITY);
 
         // Calculate new zoom value with constraints
-        const MIN_ZOOM = 25;
-        const MAX_ZOOM = 200;
         const oldZoom = zoom;
         const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * zoomFactor));
 
@@ -134,12 +130,12 @@ export default function Flowchart({
         const cursorY = e.clientY - rect.top;
 
         // Calculate what point in canvas coordinates is under the cursor
-        const canvasX = (container.scrollLeft + cursorX - PADDING) / (oldZoom / 100);
-        const canvasY = (container.scrollTop + cursorY - PADDING) / (oldZoom / 100);
+        const canvasX = (container.scrollLeft + cursorX - CANVAS_PADDING) / (oldZoom / 100);
+        const canvasY = (container.scrollTop + cursorY - CANVAS_PADDING) / (oldZoom / 100);
 
         // Calculate where that point should be after zoom to keep it under cursor
-        const newScrollLeft = PADDING + canvasX * (newZoom / 100) - cursorX;
-        const newScrollTop = PADDING + canvasY * (newZoom / 100) - cursorY;
+        const newScrollLeft = CANVAS_PADDING + canvasX * (newZoom / 100) - cursorX;
+        const newScrollTop = CANVAS_PADDING + canvasY * (newZoom / 100) - cursorY;
 
         // Use flushSync to force synchronous state update, then immediately adjust scroll
         // This ensures the DOM updates with new zoom before we adjust scroll position
@@ -158,7 +154,7 @@ export default function Flowchart({
     // Add listener with passive: false to allow preventDefault
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => container.removeEventListener('wheel', handleWheel);
-  }, [zoom, onZoomChange, PADDING]);
+  }, [zoom, onZoomChange]);
 
   // Drag-to-pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -224,8 +220,8 @@ export default function Flowchart({
       <div
         className="relative"
         style={{
-          width: `${CANVAS_WIDTH * (zoom / 100) + PADDING * 2}px`,
-          height: `${CANVAS_HEIGHT * (zoom / 100) + PADDING * 2}px`,
+          width: `${CANVAS_WIDTH * (zoom / 100) + CANVAS_PADDING * 2}px`,
+          height: `${CANVAS_HEIGHT * (zoom / 100) + CANVAS_PADDING * 2}px`,
           minWidth: '100%',
           minHeight: '100%',
           display: 'flex',
@@ -242,8 +238,6 @@ export default function Flowchart({
             height: `${CANVAS_HEIGHT}px`,
             transform: `scale(${zoom / 100})`,
             transformOrigin: 'center',
-            border: '2px solid #4a5568', // Dark gray debug border
-            boxShadow: '0 0 0 4px rgba(74, 85, 104, 0.3)', // Extra visible outline
           }}
         >
           {/* SVG for edges/arrows */}

@@ -1,3 +1,5 @@
+import { MIN_ZOOM, MAX_ZOOM } from '@/lib/types';
+
 interface ZoomControlsProps {
   zoom: number;
   onZoomIn: () => void;
@@ -16,7 +18,7 @@ export default function ZoomControls({
       {/* Zoom In Button */}
       <button
         onClick={onZoomIn}
-        disabled={zoom >= 200}
+        disabled={zoom >= MAX_ZOOM}
         className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed rounded text-lg font-bold transition-colors"
         title="Zoom in (Ctrl/Cmd + Wheel)"
       >
@@ -31,7 +33,7 @@ export default function ZoomControls({
       {/* Zoom Out Button */}
       <button
         onClick={onZoomOut}
-        disabled={zoom <= 25}
+        disabled={zoom <= MIN_ZOOM}
         className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed rounded text-lg font-bold transition-colors"
         title="Zoom out (Ctrl/Cmd + Wheel)"
       >
