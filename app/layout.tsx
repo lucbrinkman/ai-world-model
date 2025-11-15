@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Map of AI Futures",
+  title: "AI World Model",
   description: "Interactive probability map exploring potential AI futures",
 };
 

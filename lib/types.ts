@@ -36,6 +36,7 @@ export interface Edge {
   source: number; // Node index
   target: number; // Node index
   p: number; // Total probability flow going through the edge
+  label: string; // Display label (e.g., "Plateau", "Continue")
 }
 
 // Application state
@@ -46,6 +47,49 @@ export interface AppState {
   boldPaths: boolean; // Setting: make more likely paths bolder
   transparentPaths: boolean; // Setting: make less likely paths transparent
   minOpacity: number; // Setting: minimum opacity (0-100)
+}
+
+// JSON Schema Interfaces (for graphData.json)
+
+// Connection from one node to another (stored under source node)
+export interface NodeConnection {
+  targetId: string; // ID of target node
+  type: EdgeType; // yes | no | always
+  label: string; // Display label (e.g., "Plateau", "Continue")
+  evidence?: string; // Future: explanation for this connection
+  confidence?: number; // Future: 0-100 confidence level
+  assumptions?: string; // Future: what must be true for this connection
+}
+
+// Node as stored in JSON (before transformation)
+export interface GraphNode {
+  id: string;
+  type: NodeType;
+  title: string; // Question or outcome description
+  description?: string; // Optional extended explanation
+  position: {
+    x: number;
+    y: number;
+  };
+  sliderIndex: number | null; // Index of associated slider (null for non-question nodes)
+  authorEstimate?: number; // Author's probability estimate for this question (0-100, only for question nodes)
+  connections: NodeConnection[]; // Outgoing connections from this node
+}
+
+// Metadata about the graph
+export interface GraphMetadata {
+  version: string;
+  title: string;
+  canvas: {
+    width: number;
+    height: number;
+  };
+}
+
+// Root structure of graphData.json
+export interface GraphData {
+  metadata: GraphMetadata;
+  nodes: GraphNode[];
 }
 
 // Constants

@@ -1,6 +1,5 @@
 import { Edge as EdgeType, EdgeType as ET, Node } from '@/lib/types';
 import { calculateAlpha, calculateArrowWidth, calculateArrowHeadLength } from '@/lib/probability';
-import { edgeLabels } from '@/lib/edgeLabels';
 import { useRef, useEffect, useState } from 'react';
 
 interface EdgeProps {
@@ -121,10 +120,9 @@ export default function Edge({
   if (yn !== ET.E100) {
     const value = yn === ET.YES ? sliderValue : (sliderValue !== null ? 100 - sliderValue : null);
     if (value !== null) {
-      // Get descriptive label from edgeLabels
-      const labels = edgeLabels[sourceNode.id];
-      if (labels) {
-        labelDescription = yn === ET.YES ? labels.yes : labels.no;
+      // Get descriptive label from edge data
+      if (edge.label) {
+        labelDescription = edge.label;
         labelText = `${value}%`;
       } else {
         // Fallback to old format if no label is defined
