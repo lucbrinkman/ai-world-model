@@ -51,6 +51,7 @@ export interface AppState {
 
 // Drag handler callback types
 export type NodeDragEndHandler = (nodeId: string, newX: number, newY: number) => void;
+export type NodeDragStateHandler = (isDragging: boolean, shiftHeld: boolean, cursorX?: number, cursorY?: number) => void;
 
 // JSON Schema Interfaces (for graphData.json)
 
@@ -107,6 +108,10 @@ export const MAX_ZOOM = 200;
 export const ZOOM_STEP = 25;
 export const ZOOM_SENSITIVITY = 0.15; // Mouse wheel zoom sensitivity
 export const CANVAS_PADDING = 1000; // Padding around canvas for scrolling (px)
+
+// Grid snap settings
+export const GRID_SIZE_X = 50; // Horizontal snap grid (hold Shift to disable)
+export const GRID_SIZE_Y = 30; // Vertical snap grid (hold Shift to disable)
 
 // Color scheme (matching original v4)
 export const NODE_COLORS = {

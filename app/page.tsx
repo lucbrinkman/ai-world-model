@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Flowchart from '@/components/Flowchart';
 import ZoomControls from '@/components/ZoomControls';
+import DragHint from '@/components/DragHint';
 import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
@@ -30,6 +31,11 @@ export default function Home() {
 
   // Custom node positions (stored in localStorage)
   const [customNodePositions, setCustomNodePositions] = useState<CustomNodePositions>({});
+
+  // Drag hint state
+  const [isDraggingNode, setIsDraggingNode] = useState(false);
+  const [dragShiftHeld, setDragShiftHeld] = useState(false);
+  const [dragCursorPos, setDragCursorPos] = useState({ x: 0, y: 0 });
 
   // Load slider values from URL on mount (after hydration)
   useEffect(() => {
@@ -167,6 +173,15 @@ export default function Home() {
     setCustomNodePositions({});
   }, []);
 
+  // Node drag state handler
+  const handleNodeDragStateChange = useCallback((isDragging: boolean, shiftHeld: boolean, cursorX?: number, cursorY?: number) => {
+    setIsDraggingNode(isDragging);
+    setDragShiftHeld(shiftHeld);
+    if (cursorX !== undefined && cursorY !== undefined) {
+      setDragCursorPos({ x: cursorX, y: cursorY });
+    }
+  }, []);
+
   // Zoom control handlers
   const handleZoomIn = useCallback(() => {
     setZoom(prev => {
@@ -255,7 +270,9 @@ export default function Home() {
             onNodeHover={handleNodeHover}
             onNodeLeave={handleNodeLeave}
             onNodeDragEnd={handleNodeDragEnd}
+            onNodeDragStateChange={handleNodeDragStateChange}
           />
+          <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />
           <ZoomControls
             zoom={zoom}
             onZoomIn={handleZoomIn}

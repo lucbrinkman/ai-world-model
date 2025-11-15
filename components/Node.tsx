@@ -1,6 +1,11 @@
-import { Node as NodeType, NodeType as NT, NODE_COLORS, NodeDragEndHandler } from '@/lib/types';
+import { Node as NodeType, NodeType as NT, NODE_COLORS, NodeDragEndHandler, NodeDragStateHandler, GRID_SIZE_X, GRID_SIZE_Y } from '@/lib/types';
 import { toPercentString, calculateAlpha, calculateNodeBorderWidth } from '@/lib/probability';
 import { forwardRef, useState, useRef, useEffect, useCallback } from 'react';
+
+// Helper function to snap coordinate to grid
+const snapToGrid = (value: number, gridSize: number): number => {
+  return Math.round(value / gridSize) * gridSize;
+};
 
 interface NodeProps {
   node: NodeType;
@@ -15,6 +20,7 @@ interface NodeProps {
   onMouseLeave: () => void;
   onDragMove: (nodeIndex: number, deltaX: number, deltaY: number) => void;
   onDragEnd: NodeDragEndHandler;
+  onDragStateChange: NodeDragStateHandler;
 }
 
 const Node = forwardRef<HTMLDivElement, NodeProps>(({
@@ -30,11 +36,13 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   onMouseLeave,
   onDragMove,
   onDragEnd,
+  onDragStateChange,
 }, ref) => {
   const { x, y, text, p, type } = node;
 
   // Drag state
   const [isDragging, setIsDragging] = useState(false);
+  const [shiftHeld, setShiftHeld] = useState(false); // Track if Shift is held during drag
   const dragStartRef = useRef<{ mouseX: number; mouseY: number; nodeX: number; nodeY: number } | null>(null);
   const didDragRef = useRef(false);
   const internalRef = useRef<HTMLDivElement>(null);
@@ -110,6 +118,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
     e.stopPropagation();
 
     setIsDragging(true);
+    setShiftHeld(false);
+    onDragStateChange(true, false, e.clientX, e.clientY);
     didDragRef.current = false;
     lastUpdateTimeRef.current = Date.now(); // Reset timer for throttling
     dragStartRef.current = {
@@ -118,6 +128,12 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
       nodeX: x,
       nodeY: y,
     };
+
+    // Apply immediate visual "lift" effect
+    if (internalRef.current) {
+      internalRef.current.style.transform = 'translate(-50%, -50%) scale(1.03)';
+      internalRef.current.style.filter = 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))';
+    }
   };
 
   // Global mouse move and mouse up handlers
@@ -131,29 +147,54 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
 
       if (!dragStartRef.current) return;
 
-      // Calculate delta in screen space
-      const deltaX = e.clientX - dragStartRef.current.mouseX;
-      const deltaY = e.clientY - dragStartRef.current.mouseY;
+      // Track Shift key state and cursor position
+      if (shiftHeld !== e.shiftKey) {
+        setShiftHeld(e.shiftKey);
+      }
+      onDragStateChange(true, e.shiftKey, e.clientX, e.clientY);
+
+      // Calculate raw delta in screen space
+      const rawDeltaX = e.clientX - dragStartRef.current.mouseX;
+      const rawDeltaY = e.clientY - dragStartRef.current.mouseY;
 
       // Mark that we've dragged (moved more than a few pixels)
-      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+      if (Math.abs(rawDeltaX) > 3 || Math.abs(rawDeltaY) > 3) {
         didDragRef.current = true;
       }
 
-      // Apply transform directly to DOM element for instant visual feedback
-      // No need to account for zoom here - we're working in screen space
-      element.style.transform = `translate(-50%, -50%) translate(${deltaX}px, ${deltaY}px)`;
+      // Convert to canvas coordinates
+      const zoomFactor = zoom / 100;
+      const canvasDeltaX = rawDeltaX / zoomFactor;
+      const canvasDeltaY = rawDeltaY / zoomFactor;
+
+      // Calculate new position in canvas coordinates
+      let newX = dragStartRef.current.nodeX + canvasDeltaX;
+      let newY = dragStartRef.current.nodeY + canvasDeltaY;
+
+      // Apply snap to grid unless Shift is held
+      // Simple, predictable: what you see during drag = final position
+      if (!e.shiftKey) {
+        newX = snapToGrid(newX, GRID_SIZE_X);
+        newY = snapToGrid(newY, GRID_SIZE_Y);
+      }
+
+      // Convert back to delta for transform
+      const snappedDeltaX = (newX - dragStartRef.current.nodeX) * zoomFactor;
+      const snappedDeltaY = (newY - dragStartRef.current.nodeY) * zoomFactor;
+
+      // Apply snapped transform to DOM element with lift effect
+      element.style.transform = `translate(-50%, -50%) scale(1.03) translate(${snappedDeltaX}px, ${snappedDeltaY}px)`;
+      element.style.filter = 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))';
 
       // Throttle edge updates to avoid performance issues
       const now = Date.now();
       if (now - lastUpdateTimeRef.current >= updateIntervalMs) {
         lastUpdateTimeRef.current = now;
 
-        // Trigger bounds recalculation so arrows update
-        const zoomFactor = zoom / 100;
-        const canvasDeltaX = deltaX / zoomFactor;
-        const canvasDeltaY = deltaY / zoomFactor;
-        onDragMove(node.index, canvasDeltaX, canvasDeltaY);
+        // Trigger bounds recalculation so arrows update (use snapped position)
+        const snappedCanvasDeltaX = newX - dragStartRef.current.nodeX;
+        const snappedCanvasDeltaY = newY - dragStartRef.current.nodeY;
+        onDragMove(node.index, snappedCanvasDeltaX, snappedCanvasDeltaY);
       }
     };
 
@@ -162,25 +203,34 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
 
       if (!dragStartRef.current) return;
 
-      // Calculate final position
-      const deltaX = e.clientX - dragStartRef.current.mouseX;
-      const deltaY = e.clientY - dragStartRef.current.mouseY;
+      // Calculate final position (same logic as mousemove for consistency)
+      const rawDeltaX = e.clientX - dragStartRef.current.mouseX;
+      const rawDeltaY = e.clientY - dragStartRef.current.mouseY;
 
       const zoomFactor = zoom / 100;
-      const canvasDeltaX = deltaX / zoomFactor;
-      const canvasDeltaY = deltaY / zoomFactor;
+      const canvasDeltaX = rawDeltaX / zoomFactor;
+      const canvasDeltaY = rawDeltaY / zoomFactor;
 
-      const newX = dragStartRef.current.nodeX + canvasDeltaX;
-      const newY = dragStartRef.current.nodeY + canvasDeltaY;
+      let newX = dragStartRef.current.nodeX + canvasDeltaX;
+      let newY = dragStartRef.current.nodeY + canvasDeltaY;
 
-      // Reset transform on node
+      // Apply snap to grid unless Shift was held
+      if (!e.shiftKey) {
+        newX = snapToGrid(newX, GRID_SIZE_X);
+        newY = snapToGrid(newY, GRID_SIZE_Y);
+      }
+
+      // Reset transform and remove lift effect
       element.style.transform = 'translate(-50%, -50%)';
+      element.style.filter = '';
 
       // Call the drag end handler to update React state (this will also update arrows)
       onDragEnd(node.id, newX, newY);
 
       // Reset drag state
       setIsDragging(false);
+      setShiftHeld(false);
+      onDragStateChange(false, false);
       dragStartRef.current = null;
     };
 
@@ -207,9 +257,9 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
 
   return (
     <div  // Node container
-      ref={setRefs}
-      data-node="true"
-      className={`absolute border-solid px-1.5 py-0.5 ${isDragging ? '' : 'transition-all duration-200'}`}
+        ref={setRefs}
+        data-node="true"
+        className={`absolute border-solid px-1.5 py-0.5 ${isDragging ? '' : 'transition-all duration-200'}`}
       style={{
         left: `${x}px`,
         top: `${y}px`,

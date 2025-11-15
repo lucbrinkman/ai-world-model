@@ -1,4 +1,4 @@
-import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING } from '@/lib/types';
+import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, NodeDragStateHandler, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING } from '@/lib/types';
 import { questionNodeIndices } from '@/lib/graphData';
 import NodeComponent from './Node';
 import EdgeComponent from './Edge';
@@ -22,6 +22,7 @@ interface FlowchartProps {
   onNodeHover: (index: number) => void;
   onNodeLeave: () => void;
   onNodeDragEnd: NodeDragEndHandler;
+  onNodeDragStateChange: NodeDragStateHandler;
 }
 
 export default function Flowchart({
@@ -41,6 +42,7 @@ export default function Flowchart({
   onNodeHover,
   onNodeLeave,
   onNodeDragEnd,
+  onNodeDragStateChange,
 }: FlowchartProps) {
   // Create refs for all nodes
   const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -102,12 +104,18 @@ export default function Flowchart({
 
   // Update node bounds whenever nodes change or window resizes
   useEffect(() => {
-    // Initial update
-    updateBounds();
+    // Wait for CSS transitions to complete (nodes have transition-all duration-200)
+    // This fixes the issue where reset positions doesn't update arrows until second click
+    const timeoutId = setTimeout(() => {
+      updateBounds();
+    }, 250); // Wait slightly longer than the 200ms transition
 
     // Update on window resize
     window.addEventListener('resize', updateBounds);
-    return () => window.removeEventListener('resize', updateBounds);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', updateBounds);
+    };
   }, [nodes, updateBounds]);
 
   // Reset scroll position when reset button is clicked (after initial mount)
@@ -314,6 +322,7 @@ export default function Flowchart({
               onMouseLeave={onNodeLeave}
               onDragMove={updateBounds}
               onDragEnd={onNodeDragEnd}
+              onDragStateChange={onNodeDragStateChange}
             />
           ))}
         </div>
