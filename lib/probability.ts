@@ -100,20 +100,31 @@ export function clamp01(x: number): number {
 
 /**
  * Calculate alpha (opacity) based on probability and settings
+ * Uses adaptive threshold: paths with probability >= max outcome probability get 100% opacity
  */
 export function calculateAlpha(
   probability: number,
   transparentPaths: boolean,
   minOpacity: number,
-  isSelectedOrHovered: boolean
+  isSelectedOrHovered: boolean,
+  maxOutcomeProbability: number = 1.0
 ): number {
   if (isSelectedOrHovered) {
     return 1.0;
   }
 
   if (transparentPaths) {
+    // If probability is at or above the max outcome probability, full opacity
+    if (probability >= maxOutcomeProbability) {
+      return 1.0;
+    }
+
+    // Otherwise, scale from minOpacity to 100% based on ratio to max outcome probability
     const minAlpha = minOpacity / 100.0;
-    return interpolate(probability, minAlpha, 1.0);
+    const normalizedProbability = maxOutcomeProbability > 0
+      ? probability / maxOutcomeProbability
+      : 0;
+    return interpolate(normalizedProbability, minAlpha, 1.0);
   }
 
   return 1.0;

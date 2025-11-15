@@ -8,6 +8,7 @@ interface NodeProps {
   isHovered: boolean;
   transparentPaths: boolean;
   minOpacity: number;
+  maxOutcomeProbability: number;
   onClick: () => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -19,6 +20,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   isHovered,
   transparentPaths,
   minOpacity,
+  maxOutcomeProbability,
   onClick,
   onMouseEnter,
   onMouseLeave,
@@ -26,7 +28,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   const { x, y, text, p, type } = node;
 
   // Calculate opacity
-  const opacity = calculateAlpha(p, transparentPaths, minOpacity, isSelected || isHovered);
+  const opacity = calculateAlpha(p, transparentPaths, minOpacity, isSelected || isHovered, maxOutcomeProbability);
 
   // Calculate border width
   const borderWidth = calculateNodeBorderWidth(p, isSelected || isHovered);

@@ -13,6 +13,7 @@ interface FlowchartProps {
   boldPaths: boolean;
   transparentPaths: boolean;
   minOpacity: number;
+  maxOutcomeProbability: number;
   onNodeClick: (index: number) => void;
   onNodeHover: (index: number) => void;
   onNodeLeave: () => void;
@@ -27,6 +28,7 @@ export default function Flowchart({
   boldPaths,
   transparentPaths,
   minOpacity,
+  maxOutcomeProbability,
   onNodeClick,
   onNodeHover,
   onNodeLeave,
@@ -102,6 +104,7 @@ export default function Flowchart({
                 transparentPaths={transparentPaths}
                 boldPaths={boldPaths}
                 minOpacity={minOpacity}
+                maxOutcomeProbability={maxOutcomeProbability}
                 sourceBounds={sourceBounds}
                 targetBounds={targetBounds}
               />
@@ -119,6 +122,7 @@ export default function Flowchart({
             isHovered={node.index === hoveredNodeIndex}
             transparentPaths={transparentPaths}
             minOpacity={minOpacity}
+            maxOutcomeProbability={maxOutcomeProbability}
             onClick={() => onNodeClick(node.index)}
             onMouseEnter={() => onNodeHover(node.index)}
             onMouseLeave={onNodeLeave}

@@ -10,6 +10,7 @@ interface EdgeProps {
   transparentPaths: boolean;
   boldPaths: boolean;
   minOpacity: number;
+  maxOutcomeProbability: number;
   sourceBounds?: DOMRect;
   targetBounds?: DOMRect;
 }
@@ -22,6 +23,7 @@ export default function Edge({
   transparentPaths,
   boldPaths,
   minOpacity,
+  maxOutcomeProbability,
   sourceBounds,
   targetBounds,
 }: EdgeProps) {
@@ -33,7 +35,7 @@ export default function Edge({
   const [boxDimensions, setBoxDimensions] = useState({ width: 84, height: 30 });
 
   // Calculate opacity
-  const opacity = calculateAlpha(p, transparentPaths, minOpacity, false);
+  const opacity = calculateAlpha(p, transparentPaths, minOpacity, false, maxOutcomeProbability);
 
   // Calculate arrow width and head length
   const arrowWidth = calculateArrowWidth(p, boldPaths);

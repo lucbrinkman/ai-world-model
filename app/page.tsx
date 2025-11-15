@@ -34,8 +34,19 @@ export default function Home() {
   }, [sliderValues]);
 
   // Calculate probabilities using useMemo (only recalculate when dependencies change)
-  const { nodes, edges } = useMemo(() => {
-    return calculateProbabilities(sliderValues, selectedNodeIndex);
+  const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
+    const result = calculateProbabilities(sliderValues, selectedNodeIndex);
+
+    // Find max probability among outcome nodes (good, ambivalent, existential)
+    const outcomeNodes = result.nodes.filter(
+      n => n.type === 'g' || n.type === 'a' || n.type === 'e'
+    );
+    const maxOutcomeProbability = Math.max(
+      ...outcomeNodes.map(n => n.p),
+      0 // Fallback to 0 if no outcome nodes
+    );
+
+    return { ...result, maxOutcomeProbability };
   }, [sliderValues, selectedNodeIndex]);
 
   // Slider change handler
@@ -160,6 +171,7 @@ export default function Home() {
           boldPaths={boldPaths}
           transparentPaths={transparentPaths}
           minOpacity={minOpacity}
+          maxOutcomeProbability={maxOutcomeProbability}
           onNodeClick={handleNodeClick}
           onNodeHover={handleNodeHover}
           onNodeLeave={handleNodeLeave}
