@@ -127,6 +127,12 @@ export default function Home() {
     });
   }, []);
 
+  // Load scenario handler
+  const handleLoadScenario = useCallback((loadedValues: number[]) => {
+    setSliderValues(loadedValues);
+    setUndoStack(prev => [...prev, loadedValues.join('i')]);
+  }, []);
+
   // Zoom control handlers
   const handleZoomIn = useCallback(() => {
     setZoom(prev => {
@@ -176,6 +182,7 @@ export default function Home() {
         onResetSliders={handleResetSliders}
         onLoadAuthorsEstimates={handleLoadAuthorsEstimates}
         onUndo={handleUndo}
+        onLoadScenario={handleLoadScenario}
       />
 
       {/* Main content */}

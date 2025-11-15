@@ -235,7 +235,7 @@ export default function Edge({
           opacity={opacity}
           textAnchor="middle"
           dominantBaseline="middle"
-          transform={`rotate(${(labelAngle * 180) / Math.PI} ${labelX} ${labelY})`}
+          transform={`rotate(${(angle * 180) / Math.PI} ${labelX} ${labelY})`}
         >
           {labelText}
         </text>

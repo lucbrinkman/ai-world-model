@@ -1,7 +1,14 @@
+'use client'
+
+import { useState } from 'react';
 import { nodes, questionNodeIndices, AUTHORS_ESTIMATES } from '@/lib/graphData';
 import { SLIDER_DEFAULT_VALUE } from '@/lib/types';
 import { decodeSliderValues } from '@/lib/urlState';
 import Slider from './Slider';
+import { AuthModal } from './auth/AuthModal';
+import { SaveScenarioModal } from './SaveScenarioModal';
+import { SavedScenariosList } from './SavedScenariosList';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SidebarProps {
   sliderValues: number[];
@@ -20,6 +27,7 @@ interface SidebarProps {
   onResetSliders: () => void;
   onLoadAuthorsEstimates: () => void;
   onUndo: () => void;
+  onLoadScenario: (sliderValues: number[]) => void;
 }
 
 export default function Sidebar({
@@ -39,9 +47,74 @@ export default function Sidebar({
   onResetSliders,
   onLoadAuthorsEstimates,
   onUndo,
+  onLoadScenario,
 }: SidebarProps) {
+  const { user, loading } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   return (
     <div className="w-96 h-screen overflow-y-auto bg-background border-r border-gray-800 p-6 flex-shrink-0">
+      {/* Auth Section */}
+      <div className="mb-6 pb-6 border-b border-gray-800">
+        {loading ? (
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
+          </div>
+        ) : user ? (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-400">Signed in as:</span>
+              <button
+                onClick={() => setAuthModalOpen(true)}
+                className="text-sm text-purple-500 hover:text-purple-400"
+              >
+                Profile
+              </button>
+            </div>
+            <div className="text-sm truncate mb-3">{user.email}</div>
+            <button
+              onClick={() => setSaveModalOpen(true)}
+              className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-m text-sm transition-colors"
+            >
+              Save Scenario
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAuthModalOpen(true)}
+            className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-m text-sm transition-colors"
+          >
+            Sign In / Sign Up
+          </button>
+        )}
+      </div>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        isAuthenticated={!!user}
+      />
+
+      <SaveScenarioModal
+        isOpen={saveModalOpen}
+        onClose={() => setSaveModalOpen(false)}
+        sliderValues={sliderValues}
+        onSave={() => setRefreshTrigger(prev => prev + 1)}
+      />
+
+      {/* Saved Scenarios Section - only show when user is authenticated */}
+      {user && (
+        <div className="mb-6 pb-6 border-b border-gray-800">
+          <h2 className="text-lg font-bold mb-4">Saved Scenarios</h2>
+          <SavedScenariosList
+            onLoad={onLoadScenario}
+            refreshTrigger={refreshTrigger}
+          />
+        </div>
+      )}
+
       {/* Settings Section */}
       <div className="mb-6">
         <h2 className="text-lg font-bold mb-4">Settings</h2>
