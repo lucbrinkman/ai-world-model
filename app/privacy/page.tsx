@@ -42,12 +42,33 @@ export default function PrivacyPolicy() {
             <h2 className="text-2xl font-bold mb-4 text-white">3. Data Storage</h2>
             <p>
               Your data is securely stored using Supabase, a PostgreSQL database service. We
-              implement row-level security to ensure that users can only access their own data.
+              implement row-level security to ensure that users can only access their own data
+              through the application interface.
             </p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">4. Your Rights (GDPR)</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">4. Administrator Access</h2>
+            <p>
+              Site administrators have access to user data (email addresses and saved scenarios)
+              for the following purposes:
+            </p>
+            <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
+              <li>Debugging technical issues</li>
+              <li>Providing customer support</li>
+              <li>Improving the service</li>
+              <li>Ensuring compliance with terms of service</li>
+            </ul>
+            <p className="mt-4">
+              We do not sell, rent, or share your data with third parties. Administrators will
+              only access individual user data when necessary for the purposes listed above.
+              Passwords are cryptographically hashed and cannot be accessed by anyone, including
+              administrators.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold mb-4 text-white">5. Your Rights (GDPR)</h2>
             <p>Under GDPR, you have the right to:</p>
             <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
               <li>
@@ -69,7 +90,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">5. Anonymous Usage</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">6. Anonymous Usage</h2>
             <p>
               You can use Map of AI Futures without creating an account. When used anonymously, we
               do not collect or store any personal information. Your probability configurations
@@ -78,7 +99,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">6. Cookies</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">7. Cookies</h2>
             <p>
               We use cookies only for authentication purposes. These are essential for the
               functionality of user accounts and are not used for tracking or analytics.
@@ -86,7 +107,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">7. Third-Party Services</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">8. Third-Party Services</h2>
             <p>We use the following third-party services:</p>
             <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
               <li>
@@ -96,7 +117,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">8. Data Retention</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">9. Data Retention</h2>
             <p>
               We retain your data until you delete your account. You can delete your account at
               any time from your profile page.
@@ -104,7 +125,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">9. Changes to This Policy</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">10. Changes to This Policy</h2>
             <p>
               We may update this privacy policy from time to time. We will notify users of any
               material changes by updating the policy on this page.
@@ -112,7 +133,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">10. Contact</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">11. Contact</h2>
             <p>
               If you have any questions about this privacy policy or your data, please contact us
               through our GitHub repository.
