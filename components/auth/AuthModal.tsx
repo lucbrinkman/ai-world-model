@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { MagicLinkAuth } from './MagicLinkAuth'
 import { Login } from './Login'
-import { Signup } from './Signup'
 import { Profile } from './Profile'
 
-type AuthView = 'login' | 'signup' | 'profile'
+type AuthView = 'magic' | 'password' | 'profile'
 
 interface AuthModalProps {
   isOpen: boolean
@@ -14,27 +14,57 @@ interface AuthModalProps {
   isAuthenticated?: boolean
 }
 
-export function AuthModal({ isOpen, onClose, initialView = 'login', isAuthenticated = false }: AuthModalProps) {
+export function AuthModal({ isOpen, onClose, initialView = 'magic', isAuthenticated = false }: AuthModalProps) {
   const [view, setView] = useState<AuthView>(isAuthenticated ? 'profile' : initialView)
+  const [emailForward, setEmailForward] = useState<string>('')
+  const [mouseDownOutside, setMouseDownOutside] = useState(false)
+
+  // Update view when authentication status changes or modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setView(isAuthenticated ? 'profile' : initialView)
+      setEmailForward('') // Reset email forward when opening
+    }
+  }, [isOpen, isAuthenticated, initialView])
 
   if (!isOpen) return null
 
+  const handleBackdropMouseDown = () => {
+    setMouseDownOutside(true)
+  }
+
+  const handleBackdropMouseUp = () => {
+    if (mouseDownOutside) {
+      onClose()
+    }
+    setMouseDownOutside(false)
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onMouseDown={handleBackdropMouseDown}
+      onMouseUp={handleBackdropMouseUp}
+    >
       <div
         className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
       >
-        {view === 'login' && (
-          <Login
+        {view === 'magic' && (
+          <MagicLinkAuth
             onClose={onClose}
-            onSwitchToSignup={() => setView('signup')}
+            onSwitchToPassword={(email) => {
+              setEmailForward(email)
+              setView('password')
+            }}
           />
         )}
-        {view === 'signup' && (
-          <Signup
+        {view === 'password' && (
+          <Login
             onClose={onClose}
-            onSwitchToLogin={() => setView('login')}
+            onSwitchToMagicLink={() => setView('magic')}
+            initialEmail={emailForward}
           />
         )}
         {view === 'profile' && (

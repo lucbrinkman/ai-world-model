@@ -5,11 +5,12 @@ import { createClient } from '@/lib/supabase/client'
 
 interface LoginProps {
   onClose: () => void
-  onSwitchToSignup: () => void
+  onSwitchToMagicLink: () => void
+  initialEmail?: string
 }
 
-export function Login({ onClose, onSwitchToSignup }: LoginProps) {
-  const [email, setEmail] = useState('')
+export function Login({ onClose, onSwitchToMagicLink, initialEmail = '' }: LoginProps) {
+  const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -69,7 +70,7 @@ export function Login({ onClose, onSwitchToSignup }: LoginProps) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
             placeholder="you@example.com"
           />
         </div>
@@ -84,7 +85,7 @@ export function Login({ onClose, onSwitchToSignup }: LoginProps) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
             placeholder="••••••••"
           />
         </div>
@@ -99,12 +100,12 @@ export function Login({ onClose, onSwitchToSignup }: LoginProps) {
       </form>
 
       <div className="mt-4 text-center text-sm text-gray-600">
-        Don&apos;t have an account?{' '}
+        Prefer passwordless?{' '}
         <button
-          onClick={onSwitchToSignup}
+          onClick={onSwitchToMagicLink}
           className="text-purple-600 hover:text-purple-700 font-medium"
         >
-          Sign up
+          Use magic link
         </button>
       </div>
     </div>

@@ -19,6 +19,7 @@ export function SaveScenarioModal({
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [mouseDownOutside, setMouseDownOutside] = useState(false)
 
   if (!isOpen) return null
 
@@ -45,14 +46,27 @@ export function SaveScenarioModal({
     }
   }
 
+  const handleBackdropMouseDown = () => {
+    setMouseDownOutside(true)
+  }
+
+  const handleBackdropMouseUp = () => {
+    if (mouseDownOutside) {
+      onClose()
+    }
+    setMouseDownOutside(false)
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
+      onMouseDown={handleBackdropMouseDown}
+      onMouseUp={handleBackdropMouseUp}
     >
       <div
         className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
       >
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">

@@ -5,12 +5,16 @@ import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Flowchart from '@/components/Flowchart';
 import ZoomControls from '@/components/ZoomControls';
+import { WelcomeModal } from '@/components/WelcomeModal';
+import { useAuth } from '@/hooks/useAuth';
 import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
 import { readSliderValuesFromUrl, updateUrlWithSliderValues, decodeSliderValues } from '@/lib/urlState';
 
 export default function Home() {
+  const { user, loading: authLoading } = useAuth();
+
   // Initialize with default values to avoid hydration mismatch
   const [sliderValues, setSliderValues] = useState<number[]>(
     Array(SLIDER_COUNT).fill(SLIDER_DEFAULT_VALUE)
@@ -22,6 +26,7 @@ export default function Home() {
   const [transparentPaths, setTransparentPaths] = useState(false);
   const [minOpacity, setMinOpacity] = useState(20);
   const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   // Zoom state (pan is now handled by native scrolling)
   const [zoom, setZoom] = useState(100);
@@ -32,6 +37,33 @@ export default function Home() {
     const urlValues = readSliderValuesFromUrl();
     setSliderValues(urlValues);
   }, []);
+
+  // Check if user is new and show welcome modal
+  useEffect(() => {
+    if (!authLoading && user) {
+      // Check if we've already shown the welcome modal for this user
+      const welcomeShownKey = `welcome_shown_${user.id}`;
+      const hasShownWelcome = localStorage.getItem(welcomeShownKey);
+
+      if (!hasShownWelcome) {
+        // Check if user was created recently (within last 30 minutes for testing)
+        const userCreatedAt = new Date(user.created_at);
+        const now = new Date();
+        const minutesSinceCreation = (now.getTime() - userCreatedAt.getTime()) / 1000 / 60;
+
+        console.log('User created:', userCreatedAt, 'Minutes ago:', minutesSinceCreation);
+
+        if (minutesSinceCreation < 30) {
+          // New user! Show welcome modal
+          console.log('Showing welcome modal');
+          setShowWelcomeModal(true);
+          localStorage.setItem(welcomeShownKey, 'true');
+        }
+      } else {
+        console.log('Welcome modal already shown for this user');
+      }
+    }
+  }, [user, authLoading]);
 
   // Update URL whenever slider values change
   useEffect(() => {
@@ -229,6 +261,24 @@ export default function Home() {
           />
         </div>
       </div>
+
+      {/* Welcome Modal for new users */}
+      <WelcomeModal
+        isOpen={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        userEmail={user?.email || ''}
+      />
+
+      {/* Dev-only: Test Welcome Modal button */}
+      {process.env.NODE_ENV === 'development' && user && (
+        <button
+          onClick={() => setShowWelcomeModal(true)}
+          className="fixed bottom-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-md shadow-lg hover:bg-orange-600 text-sm z-50"
+          title="Dev only: Test welcome modal"
+        >
+          Test Welcome
+        </button>
+      )}
     </div>
   );
 }

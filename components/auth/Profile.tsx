@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { exportUserData, deleteUserAccount } from '@/lib/actions/account'
+import { createPassword } from '@/lib/actions/password'
 import Link from 'next/link'
 
 interface ProfileProps {
@@ -15,6 +16,12 @@ export function Profile({ onClose }: ProfileProps) {
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showPasswordCreate, setShowPasswordCreate] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
 
   useEffect(() => {
     async function loadUser() {
@@ -82,6 +89,38 @@ export function Profile({ onClose }: ProfileProps) {
     }
   }
 
+  const handleCreatePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPasswordError(null)
+
+    if (password !== confirmPassword) {
+      setPasswordError('Passwords do not match')
+      return
+    }
+
+    if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters')
+      return
+    }
+
+    setPasswordLoading(true)
+    const result = await createPassword(password)
+
+    if (result.error) {
+      setPasswordError(result.error)
+      setPasswordLoading(false)
+    } else {
+      setPasswordSuccess(true)
+      setPasswordLoading(false)
+      setTimeout(() => {
+        setShowPasswordCreate(false)
+        setPassword('')
+        setConfirmPassword('')
+        setPasswordSuccess(false)
+      }, 2000)
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-6">
@@ -124,6 +163,76 @@ export function Profile({ onClose }: ProfileProps) {
           <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
           <p className="text-gray-600 text-sm font-mono break-all">{user.id}</p>
         </div>
+
+        {/* Create Password Section */}
+        {!showPasswordCreate ? (
+          <div className="pt-4 pb-4 border-b border-gray-200">
+            <button
+              onClick={() => setShowPasswordCreate(true)}
+              className="w-full text-left px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-md text-sm text-purple-700 font-medium transition-colors"
+            >
+              + Create an optional password
+            </button>
+            <p className="text-xs text-gray-500 mt-2 px-1">
+              Add a password to sign in faster (you can still use magic links)
+            </p>
+          </div>
+        ) : (
+          <div className="pt-4 pb-4 border-b border-gray-200">
+            <h3 className="text-sm font-medium text-gray-900 mb-3">Create Password</h3>
+            {passwordSuccess && (
+              <div className="bg-green-50 text-green-700 p-3 rounded-md text-sm mb-3">
+                Password created successfully!
+              </div>
+            )}
+            <form onSubmit={handleCreatePassword} className="space-y-3">
+              {passwordError && (
+                <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm">
+                  {passwordError}
+                </div>
+              )}
+              <div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="New password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 text-sm"
+                />
+              </div>
+              <div>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 text-sm"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordCreate(false)
+                    setPassword('')
+                    setConfirmPassword('')
+                    setPasswordError(null)
+                  }}
+                  className="flex-1 px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 text-sm"
+                >
+                  {passwordLoading ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         <div className="pt-4 space-y-2">
           <Link
