@@ -20,6 +20,7 @@ interface SidebarProps {
   onResetSliders: () => void;
   onLoadAuthorsEstimates: () => void;
   onUndo: () => void;
+  onResetNodePositions: () => void;
 }
 
 export default function Sidebar({
@@ -39,6 +40,7 @@ export default function Sidebar({
   onResetSliders,
   onLoadAuthorsEstimates,
   onUndo,
+  onResetNodePositions,
 }: SidebarProps) {
   return (
     <div className="w-96 h-screen overflow-y-auto bg-background border-r border-gray-800 p-6 flex-shrink-0">
@@ -89,6 +91,17 @@ export default function Sidebar({
             />
           </div>
         )}
+
+        {/* Reset node positions button */}
+        <div className="mt-4">
+          <button
+            onClick={onResetNodePositions}
+            className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-m text-sm transition-colors"
+          >
+            Reset Node Positions
+          </button>
+          <p className="text-xs text-gray-400 mt-1">Drag nodes to reposition them</p>
+        </div>
       </div>
 
       {/* Conditional Probabilities Section */}

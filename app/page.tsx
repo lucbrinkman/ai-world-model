@@ -9,6 +9,7 @@ import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } fro
 import { startNodeIndex, AUTHORS_ESTIMATES } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
 import { readSliderValuesFromUrl, updateUrlWithSliderValues, decodeSliderValues } from '@/lib/urlState';
+import { loadCustomPositions, saveNodePosition, resetAllPositions, hasCustomPositions, type CustomNodePositions } from '@/lib/nodePositionState';
 
 export default function Home() {
   // Initialize with default values to avoid hydration mismatch
@@ -27,10 +28,19 @@ export default function Home() {
   const [zoom, setZoom] = useState(100);
   const [resetTrigger, setResetTrigger] = useState(1); // Start at 1 to trigger initial positioning
 
+  // Custom node positions (stored in localStorage)
+  const [customNodePositions, setCustomNodePositions] = useState<CustomNodePositions>({});
+
   // Load slider values from URL on mount (after hydration)
   useEffect(() => {
     const urlValues = readSliderValuesFromUrl();
     setSliderValues(urlValues);
+  }, []);
+
+  // Load custom node positions from localStorage on mount
+  useEffect(() => {
+    const positions = loadCustomPositions();
+    setCustomNodePositions(positions);
   }, []);
 
   // Update URL whenever slider values change
@@ -42,8 +52,20 @@ export default function Home() {
   const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
     const result = calculateProbabilities(sliderValues, selectedNodeIndex);
 
+    // Apply custom node positions (overlay on top of calculated positions)
+    const nodesWithCustomPositions = result.nodes.map(node => {
+      if (customNodePositions[node.id]) {
+        return {
+          ...node,
+          x: customNodePositions[node.id].x,
+          y: customNodePositions[node.id].y,
+        };
+      }
+      return node;
+    });
+
     // Find max probability among outcome nodes (good, ambivalent, existential)
-    const outcomeNodes = result.nodes.filter(
+    const outcomeNodes = nodesWithCustomPositions.filter(
       n => n.type === 'g' || n.type === 'a' || n.type === 'e'
     );
     const maxOutcomeProbability = Math.max(
@@ -51,8 +73,8 @@ export default function Home() {
       0 // Fallback to 0 if no outcome nodes
     );
 
-    return { ...result, maxOutcomeProbability };
-  }, [sliderValues, selectedNodeIndex]);
+    return { nodes: nodesWithCustomPositions, edges: result.edges, maxOutcomeProbability };
+  }, [sliderValues, selectedNodeIndex, customNodePositions]);
 
   // Slider change handler
   const handleSliderChange = useCallback((index: number, value: number) => {
@@ -127,6 +149,24 @@ export default function Home() {
     });
   }, []);
 
+  // Node drag end handler
+  const handleNodeDragEnd = useCallback((nodeId: string, newX: number, newY: number) => {
+    // Save to localStorage
+    saveNodePosition(nodeId, newX, newY);
+
+    // Update state
+    setCustomNodePositions(prev => ({
+      ...prev,
+      [nodeId]: { x: newX, y: newY },
+    }));
+  }, []);
+
+  // Reset node positions handler
+  const handleResetNodePositions = useCallback(() => {
+    resetAllPositions();
+    setCustomNodePositions({});
+  }, []);
+
   // Zoom control handlers
   const handleZoomIn = useCallback(() => {
     setZoom(prev => {
@@ -176,6 +216,7 @@ export default function Home() {
         onResetSliders={handleResetSliders}
         onLoadAuthorsEstimates={handleLoadAuthorsEstimates}
         onUndo={handleUndo}
+        onResetNodePositions={handleResetNodePositions}
       />
 
       {/* Main content */}
@@ -213,6 +254,7 @@ export default function Home() {
             onNodeClick={handleNodeClick}
             onNodeHover={handleNodeHover}
             onNodeLeave={handleNodeLeave}
+            onNodeDragEnd={handleNodeDragEnd}
           />
           <ZoomControls
             zoom={zoom}

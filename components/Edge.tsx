@@ -42,10 +42,11 @@ export default function Edge({
   const headLen = calculateArrowHeadLength(p, boldPaths);
 
   // Get source and target positions (centers)
-  let x1 = sourceNode.x;
-  let y1 = sourceNode.y;
-  let x2 = targetNode.x;
-  let y2 = targetNode.y;
+  // Use bounds if available (for real-time updates during drag), otherwise fall back to node positions
+  let x1 = sourceBounds ? sourceBounds.x + sourceBounds.width / 2 : sourceNode.x;
+  let y1 = sourceBounds ? sourceBounds.y + sourceBounds.height / 2 : sourceNode.y;
+  let x2 = targetBounds ? targetBounds.x + targetBounds.width / 2 : targetNode.x;
+  let y2 = targetBounds ? targetBounds.y + targetBounds.height / 2 : targetNode.y;
 
   // Use actual bounds if available, otherwise fall back to estimates
   const sourceWidth = sourceBounds?.width ?? 145;
@@ -157,7 +158,7 @@ export default function Edge({
 
   return (
     <g>
-      {/* Arrow line */}+
+      {/* Arrow line */}
       <line
         x1={x1}
         y1={y1}
@@ -235,7 +236,7 @@ export default function Edge({
           opacity={opacity}
           textAnchor="middle"
           dominantBaseline="middle"
-          transform={`rotate(${(labelAngle * 180) / Math.PI} ${labelX} ${labelY})`}
+          transform={`rotate(${(angle * 180) / Math.PI} ${labelX} ${labelY})`}
         >
           {labelText}
         </text>

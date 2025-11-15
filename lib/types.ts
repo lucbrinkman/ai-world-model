@@ -49,6 +49,9 @@ export interface AppState {
   minOpacity: number; // Setting: minimum opacity (0-100)
 }
 
+// Drag handler callback types
+export type NodeDragEndHandler = (nodeId: string, newX: number, newY: number) => void;
+
 // JSON Schema Interfaces (for graphData.json)
 
 // Connection from one node to another (stored under source node)
