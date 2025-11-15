@@ -309,7 +309,7 @@ export default function Flowchart({
           {nodes.map((node) => (
             <NodeComponent
               key={node.index}
-              ref={(el) => (nodeRefs.current[node.index] = el)}
+              ref={(el) => { nodeRefs.current[node.index] = el }}
               node={node}
               isSelected={node.index === selectedNodeIndex}
               isHovered={node.index === hoveredNodeIndex}
