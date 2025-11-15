@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Flowchart from '@/components/Flowchart';
-import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE } from '@/lib/types';
+import ZoomControls from '@/components/ZoomControls';
+import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
 import { readSliderValuesFromUrl, updateUrlWithSliderValues, decodeSliderValues } from '@/lib/urlState';
@@ -21,6 +22,10 @@ export default function Home() {
   const [transparentPaths, setTransparentPaths] = useState(false);
   const [minOpacity, setMinOpacity] = useState(20);
   const [undoStack, setUndoStack] = useState<string[]>([]);
+
+  // Zoom state (pan is now handled by native scrolling)
+  const [zoom, setZoom] = useState(100);
+  const [resetTrigger, setResetTrigger] = useState(1); // Start at 1 to trigger initial positioning
 
   // Load slider values from URL on mount (after hydration)
   useEffect(() => {
@@ -122,6 +127,35 @@ export default function Home() {
     });
   }, []);
 
+  // Zoom control handlers
+  const handleZoomIn = useCallback(() => {
+    setZoom(prev => {
+      const newZoom = Math.min(prev + ZOOM_STEP, MAX_ZOOM);
+      // Buttons don't zoom to cursor, they zoom to center
+      // No pan adjustment needed, clamping will happen in Flowchart
+      return newZoom;
+    });
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom(prev => {
+      const newZoom = Math.max(prev - ZOOM_STEP, MIN_ZOOM);
+      // Buttons don't zoom to cursor, they zoom to center
+      // No pan adjustment needed, clamping will happen in Flowchart
+      return newZoom;
+    });
+  }, []);
+
+  const handleResetView = useCallback(() => {
+    setZoom(100);
+    // Increment reset trigger to force scroll reset even if zoom is already 100%
+    setResetTrigger(prev => prev + 1);
+  }, []);
+
+  const handleZoomChange = useCallback((newZoom: number) => {
+    setZoom(newZoom);
+  }, []);
+
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
@@ -145,9 +179,9 @@ export default function Home() {
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 h-screen">
         {/* Header */}
-        <header className="border-b border-gray-800 p-4">
+        <header className="border-b border-gray-800 p-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">
               Map of AI Futures
@@ -162,20 +196,31 @@ export default function Home() {
         </header>
 
         {/* Flowchart */}
-        <Flowchart
-          nodes={nodes}
-          edges={edges}
-          sliderValues={sliderValues}
-          selectedNodeIndex={selectedNodeIndex}
-          hoveredNodeIndex={hoveredNodeIndex}
-          boldPaths={boldPaths}
-          transparentPaths={transparentPaths}
-          minOpacity={minOpacity}
-          maxOutcomeProbability={maxOutcomeProbability}
-          onNodeClick={handleNodeClick}
-          onNodeHover={handleNodeHover}
-          onNodeLeave={handleNodeLeave}
-        />
+        <div className="flex-1 min-h-0">
+          <Flowchart
+            nodes={nodes}
+            edges={edges}
+            sliderValues={sliderValues}
+            selectedNodeIndex={selectedNodeIndex}
+            hoveredNodeIndex={hoveredNodeIndex}
+            boldPaths={boldPaths}
+            transparentPaths={transparentPaths}
+            minOpacity={minOpacity}
+            maxOutcomeProbability={maxOutcomeProbability}
+            zoom={zoom}
+            resetTrigger={resetTrigger}
+            onZoomChange={handleZoomChange}
+            onNodeClick={handleNodeClick}
+            onNodeHover={handleNodeHover}
+            onNodeLeave={handleNodeLeave}
+          />
+          <ZoomControls
+            zoom={zoom}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onReset={handleResetView}
+          />
+        </div>
       </div>
     </div>
   );

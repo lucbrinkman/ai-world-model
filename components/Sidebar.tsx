@@ -41,7 +41,7 @@ export default function Sidebar({
   onUndo,
 }: SidebarProps) {
   return (
-    <div className="w-96 h-screen overflow-y-auto bg-background border-r border-gray-800 p-6">
+    <div className="w-96 h-screen overflow-y-auto bg-background border-r border-gray-800 p-6 flex-shrink-0">
       {/* Settings Section */}
       <div className="mb-6">
         <h2 className="text-lg font-bold mb-4">Settings</h2>
@@ -74,19 +74,21 @@ export default function Sidebar({
           </label>
         </div>
 
-        {/* Min opacity slider */}
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm">Minimum opacity?</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={minOpacity}
-            onChange={(e) => onMinOpacityChange(parseInt(e.target.value))}
-            className="w-32 h-2 rounded-full cursor-pointer appearance-none"
-            style={{ accentColor: '#1E90FF' }}
-          />
-        </div>
+        {/* Min opacity slider - only show when transparency is enabled */}
+        {transparentPaths && (
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm">Minimum opacity?</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={minOpacity}
+              onChange={(e) => onMinOpacityChange(parseInt(e.target.value))}
+              className="w-32 h-2 rounded-full cursor-pointer appearance-none"
+              style={{ accentColor: '#1E90FF' }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Conditional Probabilities Section */}

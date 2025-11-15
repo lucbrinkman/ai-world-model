@@ -93,6 +93,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   return (
     <div  // Node container
       ref={ref}
+      data-node="true"
       className="absolute border-solid cursor-pointer transition-all duration-200 px-1.5 py-0.5"
       style={{
         left: `${x}px`,
