@@ -4,9 +4,9 @@ import { Node, Edge, NodeType, EdgeType, CANVAS_WIDTH, CANVAS_HEIGHT } from './t
 export const AUTHORS_ESTIMATES = "50i70i25i96i55i5i95i75i65i40i65i20i60i75i75i10i30i95i3i97i4";
 
 // Canvas padding for node positioning
-const CANVAS_PADDINGW = 100;
-const CANVAS_PADDINGH = 50;
-const XSCALE = 1.0;
+const CANVAS_PADDINGW = 150;
+const CANVAS_PADDINGH = 100;
+const XSCALE = 1.5;
 
 // Raw node data from v4/graph.js
 const NODES_STR = `

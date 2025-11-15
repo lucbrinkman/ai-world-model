@@ -49,8 +49,8 @@ export interface AppState {
 }
 
 // Constants
-export const CANVAS_WIDTH = 900;
-export const CANVAS_HEIGHT = 1200;
+export const CANVAS_WIDTH = 1400;
+export const CANVAS_HEIGHT = 1800;
 export const SLIDER_DEFAULT_VALUE = 50;
 export const SLIDER_COUNT = 21;
 

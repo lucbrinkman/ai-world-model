@@ -1,5 +1,7 @@
 import { Edge as EdgeType, EdgeType as ET, Node } from '@/lib/types';
 import { calculateAlpha, calculateArrowWidth, calculateArrowHeadLength } from '@/lib/probability';
+import { edgeLabels } from '@/lib/edgeLabels';
+import { useRef, useEffect, useState } from 'react';
 
 interface EdgeProps {
   edge: EdgeType;
@@ -25,6 +27,11 @@ export default function Edge({
   targetBounds,
 }: EdgeProps) {
   const { p, yn } = edge;
+
+  // Refs for measuring text
+  const descriptionRef = useRef<SVGTextElement>(null);
+  const percentRef = useRef<SVGTextElement>(null);
+  const [boxDimensions, setBoxDimensions] = useState({ width: 84, height: 30 });
 
   // Calculate opacity
   const opacity = calculateAlpha(p, transparentPaths, minOpacity, false);
@@ -103,32 +110,54 @@ export default function Edge({
   const arrowPoint2X = x2 - headLen * Math.cos(angle + Math.PI / 6);
   const arrowPoint2Y = y2 - headLen * Math.sin(angle + Math.PI / 6);
 
-  // Calculate label position and rotation
-  const NODE_LABEL_POSITION_FACTOR = 0.38;
-  let labelDx = dy;
-  let labelDy = -dx;
-  const norm = Math.sqrt(labelDx * labelDx + labelDy * labelDy);
-  const offset = 12;
-  const flipSign = labelDy > 0;
-  labelDx = (labelDx / norm) * offset * (flipSign ? -1 : 1);
-  labelDy = (labelDy / norm) * offset * (flipSign ? -1 : 1);
-  const labelAngle = Math.atan2(dy, dx) + (flipSign ? Math.PI : 0);
-  const labelX = labelDx + x1 + dx * NODE_LABEL_POSITION_FACTOR;
-  const labelY = labelDy + y1 + dy * NODE_LABEL_POSITION_FACTOR;
+  // Calculate label position at center of arrow
+  const NODE_LABEL_POSITION_FACTOR = 0.5; // Center of arrow is 0.5.
+  const labelX = x1 + dx * NODE_LABEL_POSITION_FACTOR;
+  const labelY = y1 + dy * NODE_LABEL_POSITION_FACTOR;
 
   // Calculate label text
   let labelText = '';
+  let labelDescription = '';
   if (yn !== ET.E100) {
-    const label = yn === ET.YES ? 'y' : 'n';
     const value = yn === ET.YES ? sliderValue : (sliderValue !== null ? 100 - sliderValue : null);
     if (value !== null) {
-      labelText = `${label}=${value}`;
+      // Get descriptive label from edgeLabels
+      const labels = edgeLabels[sourceNode.id];
+      if (labels) {
+        labelDescription = yn === ET.YES ? labels.yes : labels.no;
+        labelText = `${value}%`;
+      } else {
+        // Fallback to old format if no label is defined
+        const label = yn === ET.YES ? 'y' : 'n';
+        labelText = `${label}=${value}`;
+      }
     }
   }
 
+  // Measure text and update box dimensions
+  useEffect(() => {
+    if (descriptionRef.current && percentRef.current) {
+      const descBBox = descriptionRef.current.getBBox();
+      const percentBBox = percentRef.current.getBBox();
+
+      // Get the maximum width and total height
+      const maxWidth = Math.max(descBBox.width, percentBBox.width);
+      const totalHeight = descBBox.height + percentBBox.height;
+
+      // Add padding: 10px horizontal (5px each side), 8px vertical (4px each side)
+      const newWidth = maxWidth + 0;
+      const newHeight = totalHeight + 2;
+
+      setBoxDimensions({ width: newWidth, height: newHeight });
+    }
+  }, [labelDescription, labelText]);
+
+  const boxX = labelX - boxDimensions.width / 2;
+  const boxY = labelY - boxDimensions.height / 2;
+
   return (
     <g>
-      {/* Arrow line */}
+      {/* Arrow line */}+
       <line
         x1={x1}
         y1={y1}
@@ -145,7 +174,58 @@ export default function Edge({
       />
 
       {/* Edge label */}
-      {labelText && (
+      {labelText && labelDescription && (
+        <g>
+          {/* Background rectangle to create interrupting effect */}
+          <rect
+            x={boxX}
+            y={boxY}
+            width={boxDimensions.width}
+            height={boxDimensions.height}
+            fill="#0C0A16"
+            opacity={0.95}
+            rx={3}
+          />
+          {/* Description text */}
+          <text
+            ref={descriptionRef}
+            x={labelX}
+            y={labelY - 7}
+            fill="white"
+            fontSize="11"
+            fontWeight={500}
+            opacity={opacity}
+            textAnchor="middle"
+            dominantBaseline="middle"
+          >
+            {labelDescription}
+          </text>
+          {/* Percentage text */}
+          <text
+            ref={percentRef}
+            x={labelX}
+            y={labelY + 7}
+            fill="white"
+            fontSize="11"
+            fontWeight={400}
+            opacity={opacity}
+            textAnchor="middle"
+            dominantBaseline="middle"
+          >
+            {labelText}
+          </text>
+          {/* Debug: Red dot at center - rendered last so it's on top
+          <circle
+            cx={labelX}
+            cy={labelY}
+            r={4}
+            fill="red"
+            opacity={1}
+          /> */}
+        </g>
+      )}
+      {/* Fallback for edges without descriptions (e.g., E100) */}
+      {labelText && !labelDescription && (
         <text
           x={labelX}
           y={labelY}
