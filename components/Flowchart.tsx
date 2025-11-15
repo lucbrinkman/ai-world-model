@@ -238,6 +238,8 @@ export default function Flowchart({
             height: `${CANVAS_HEIGHT}px`,
             transform: `scale(${zoom / 100})`,
             transformOrigin: 'center',
+            border: '2px solid #4a5568',
+            boxShadow: '0 0 0 4px rgba(74, 85, 104, 0.3)',
           }}
         >
           {/* SVG for edges/arrows */}
