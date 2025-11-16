@@ -282,9 +282,29 @@ export default function Edge({
   };
 
 
+  // Handle arrow click
+  const handleArrowClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onClick) {
+      onClick();
+    }
+  };
+
   return (
     <g>
-      {/* Arrow line - doesn't block clicks */}
+      {/* Invisible wider hitbox for easier clicking */}
+      <line
+        x1={x1}
+        y1={y1}
+        x2={lineEndX}
+        y2={lineEndY}
+        stroke="transparent"
+        strokeWidth={Math.max(arrowWidth + 10, 15)}
+        style={{ cursor: 'pointer', pointerEvents: 'stroke' }}
+        onClick={handleArrowClick}
+      />
+
+      {/* Arrow line */}
       <line
         x1={x1}
         y1={y1}
@@ -292,14 +312,16 @@ export default function Edge({
         y2={lineEndY}
         stroke={color}
         strokeWidth={arrowWidth}
-        style={{ pointerEvents: 'none' }}
+        style={{ cursor: 'pointer', pointerEvents: 'stroke' }}
+        onClick={handleArrowClick}
       />
 
-      {/* Arrow head - doesn't block clicks */}
+      {/* Arrow head */}
       <polygon
         points={`${x2},${y2} ${arrowPoint1X},${arrowPoint1Y} ${arrowPoint2X},${arrowPoint2Y}`}
         fill={color}
-        style={{ pointerEvents: 'none' }}
+        style={{ cursor: 'pointer', pointerEvents: 'all' }}
+        onClick={handleArrowClick}
       />
 
 
