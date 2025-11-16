@@ -10,7 +10,8 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 - Interactive probability sliders with real-time DAG-based calculations
 - Zoom and pan canvas navigation
 - Supabase authentication (passwordless magic link)
-- Save/load/share scenarios via URL
+- Google Docs-style auto-saving with unified document storage
+- Document picker for switching between saved maps
 
 ## Development
 
@@ -24,7 +25,7 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (server-side only)
 
-**Database:** Supabase with `saved_scenarios` table storing user scenarios.
+**Database:** Supabase with `documents` table storing unified user maps (graph structure + slider values + node positions).
 
 ## Architecture
 
@@ -35,18 +36,26 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 - **Calculation** (`lib/probability.ts`): Recursive probability propagation with memoization. Question nodes (21 total) use slider values to control YES/NO branch probabilities
 - **URL State** (`lib/urlState.ts`): Slider values encoded as `?p=50i70i25i...` (integers separated by 'i')
 
+**Unified Document Storage:**
+- Single `documents` table replaces old `saved_scenarios` and `user_graphs` tables
+- Each document contains: graph nodes, slider values, metadata (all in one JSONB field)
+- Auto-save with 2-second debounce for authenticated users
+- localStorage fallback for anonymous users with auto-migration on signup
+
 **Authentication:**
 - Supabase passwordless magic link (`lib/supabase/`)
-- Server actions in `lib/actions/scenarios.ts`
-- Custom `useAuth` hook (`hooks/useAuth.ts`)
+- Server actions in `lib/actions/documents.ts`
+- Custom `useAuth` hook (`hooks/useAuth.ts`) with localStorage migration logic
 
 ### Key Components
 
-- `app/page.tsx` - Main state orchestrator (slider values, selected node, settings)
+- `app/page.tsx` - Main state orchestrator (document state, slider values, selected node, settings)
 - `components/Flowchart.tsx` - DAG visualization with zoom/pan
-- `components/Sidebar.tsx` - 21 probability sliders + controls
+- `components/Sidebar.tsx` - 21 probability sliders + controls + auth
 - `components/Node.tsx` - Individual nodes (click to set probability root)
 - `components/Edge.tsx` - SVG arrows with adaptive styling
+- `components/DocumentPicker.tsx` - Dropdown for switching between saved documents
+- `components/AutoSaveIndicator.tsx` - Shows save status (Saving.../Saved to cloud/Saved locally)
 - `components/WelcomeModal.tsx` - New user onboarding
 
 ### Important Implementation Details
@@ -62,6 +71,14 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 - Adaptive opacity/width based on probability values
 
 **State Management:**
-- URL params sync bidirectionally with slider values
+- Auto-save hook (`lib/autoSave.ts`) with 2-second debounce for cloud saves
+- localStorage (`lib/documentState.ts`) for anonymous user drafts
+- Document state unified: graph structure, slider values, node positions all in one
 - `useMemo` for probability calculations to prevent unnecessary recomputation
 - Undo stack tracks slider history
+
+**Storage Flow:**
+- **Anonymous users**: Changes save instantly to localStorage
+- **Authenticated users**: Changes auto-save to cloud (debounced)
+- **On signup**: localStorage draft automatically migrates to cloud as "My First Map"
+- **Document switching**: Load from cloud, update last_opened_at timestamp
