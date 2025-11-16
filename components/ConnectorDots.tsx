@@ -183,12 +183,10 @@ export default function ConnectorDots({
 
       const canvasPos = screenToCanvasCoords(e.clientX, e.clientY);
       const SNAP_DISTANCE_SQUARED = SNAP_DISTANCE * SNAP_DISTANCE;
-      const TOOLTIP_DISTANCE = 80; // Larger distance for showing tooltip warning
-      const TOOLTIP_DISTANCE_SQUARED = TOOLTIP_DISTANCE * TOOLTIP_DISTANCE;
       let closestNode: Node | null = null;
       let closestBlockedNode: { node: Node; bounds: DOMRect } | null = null;
       let minDistanceSquared = SNAP_DISTANCE_SQUARED;
-      let minBlockedDistanceSquared = TOOLTIP_DISTANCE_SQUARED;
+      let minBlockedDistanceSquared = SNAP_DISTANCE_SQUARED;
 
       for (let i = 0; i < allNodes.length; i++) {
         const node = allNodes[i];
