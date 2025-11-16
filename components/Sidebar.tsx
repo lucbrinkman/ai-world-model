@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { nodes, questionNodeIndices, AUTHORS_ESTIMATES } from '@/lib/graphData';
-import { SLIDER_DEFAULT_VALUE } from '@/lib/types';
+import { SLIDER_DEFAULT_VALUE, type GraphData, type GraphNode } from '@/lib/types';
 import { decodeSliderValues } from '@/lib/urlState';
 import Slider from './Slider';
 import { AuthModal } from './auth/AuthModal';
 import { SaveScenarioModal } from './SaveScenarioModal';
 import { SavedScenariosList } from './SavedScenariosList';
+import ConnectionEditor from './ConnectionEditor';
 import { useAuth } from '@/hooks/useAuth';
 
 interface SidebarProps {
@@ -17,6 +18,8 @@ interface SidebarProps {
   minOpacity: number;
   hoveredNodeIndex: number;
   selectedNodeIndex: number;
+  graphData: GraphData;
+  hasUnsavedGraphChanges: boolean;
   onSliderChange: (index: number, value: number) => void;
   onSliderChangeComplete: (index: number) => void;
   onBoldPathsChange: (value: boolean) => void;
@@ -29,6 +32,11 @@ interface SidebarProps {
   onUndo: () => void;
   onResetNodePositions: () => void;
   onLoadScenario: (sliderValues: number[]) => void;
+  onUpdateConnectionLabel: (nodeId: string, connectionIndex: number, newLabel: string) => void;
+  onUpdateConnectionTarget: (nodeId: string, connectionIndex: number, newTargetId: string) => void;
+  onSaveGraph?: () => void;
+  onLoadGraph?: (graphData: GraphData, graphId: string | null) => void;
+  onResetGraph?: () => void;
 }
 
 export default function Sidebar({
@@ -38,6 +46,8 @@ export default function Sidebar({
   minOpacity,
   hoveredNodeIndex,
   selectedNodeIndex,
+  graphData,
+  hasUnsavedGraphChanges,
   onSliderChange,
   onSliderChangeComplete,
   onBoldPathsChange,
@@ -50,6 +60,11 @@ export default function Sidebar({
   onUndo,
   onResetNodePositions,
   onLoadScenario,
+  onUpdateConnectionLabel,
+  onUpdateConnectionTarget,
+  onSaveGraph,
+  onLoadGraph,
+  onResetGraph,
 }: SidebarProps) {
   const { user, loading } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -116,6 +131,54 @@ export default function Sidebar({
           />
         </div>
       )}
+
+      {/* Graph Editing Section */}
+      <div className="mb-6 pb-6 border-b border-gray-800">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">Graph Editing</h2>
+          {hasUnsavedGraphChanges && (
+            <span className="text-xs text-orange-400 font-semibold">Unsaved changes</span>
+          )}
+        </div>
+
+        {/* Connection Editor */}
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-gray-300 mb-2">Connections</h3>
+          <ConnectionEditor
+            selectedNode={graphData.nodes.find((_, index) => index === selectedNodeIndex) || null}
+            allNodes={graphData.nodes}
+            onUpdateConnectionLabel={onUpdateConnectionLabel}
+            onUpdateConnectionTarget={onUpdateConnectionTarget}
+          />
+        </div>
+
+        {/* Graph Save/Load/Reset Controls */}
+        {user ? (
+          <div className="space-y-2">
+            <button
+              onClick={onSaveGraph}
+              disabled={!hasUnsavedGraphChanges}
+              className={`w-full px-4 py-2 rounded-m text-sm transition-colors ${
+                hasUnsavedGraphChanges
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              Save Graph
+            </button>
+            <button
+              onClick={onResetGraph}
+              className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-m text-sm transition-colors"
+            >
+              Reset to Default Graph
+            </button>
+          </div>
+        ) : (
+          <div className="text-sm text-gray-400 text-center">
+            Sign in to save custom graphs
+          </div>
+        )}
+      </div>
 
       {/* Settings Section */}
       <div className="mb-6">

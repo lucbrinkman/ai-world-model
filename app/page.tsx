@@ -13,7 +13,7 @@ import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from
 import { calculateProbabilities } from '@/lib/probability';
 import { readSliderValuesFromUrl, updateUrlWithSliderValues, decodeSliderValues } from '@/lib/urlState';
 import { loadCustomPositions, saveNodePosition, resetAllPositions, hasCustomPositions, type CustomNodePositions } from '@/lib/nodePositionState';
-import { getDefaultGraph } from '@/lib/actions/graphs';
+import { getDefaultGraph, saveGraph, updateGraph } from '@/lib/actions/graphs';
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
@@ -372,6 +372,36 @@ export default function Home() {
     setCustomNodePositions({});
   }, []);
 
+  const handleSaveGraph = useCallback(async () => {
+    if (!user) {
+      alert('Please sign in to save graphs');
+      return;
+    }
+
+    const graphName = prompt('Enter a name for this graph:');
+    if (!graphName) return;
+
+    if (currentGraphId) {
+      // Update existing graph
+      const { error } = await updateGraph(currentGraphId, graphName, graphData, true);
+      if (error) {
+        alert(`Error updating graph: ${error}`);
+      } else {
+        alert('Graph updated successfully!');
+        setHasUnsavedGraphChanges(false);
+      }
+    } else {
+      // Save new graph
+      const { error } = await saveGraph(graphName, graphData, true);
+      if (error) {
+        alert(`Error saving graph: ${error}`);
+      } else {
+        alert('Graph saved successfully!');
+        setHasUnsavedGraphChanges(false);
+      }
+    }
+  }, [user, graphData, currentGraphId]);
+
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
@@ -382,6 +412,8 @@ export default function Home() {
         minOpacity={minOpacity}
         hoveredNodeIndex={hoveredNodeIndex}
         selectedNodeIndex={selectedNodeIndex}
+        graphData={graphData}
+        hasUnsavedGraphChanges={hasUnsavedGraphChanges}
         onSliderChange={handleSliderChange}
         onSliderChangeComplete={handleSliderChangeComplete}
         onBoldPathsChange={setBoldPaths}
@@ -394,6 +426,11 @@ export default function Home() {
         onUndo={handleUndo}
         onResetNodePositions={handleResetNodePositions}
         onLoadScenario={handleLoadScenario}
+        onUpdateConnectionLabel={handleUpdateConnectionLabel}
+        onUpdateConnectionTarget={handleUpdateConnectionTarget}
+        onSaveGraph={handleSaveGraph}
+        onLoadGraph={handleLoadGraph}
+        onResetGraph={handleResetToDefaultGraph}
       />
 
       {/* Main content */}
