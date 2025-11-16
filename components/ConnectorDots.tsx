@@ -125,6 +125,9 @@ export default function ConnectorDots({
         const bounds = nodeBounds[i];
         if (!bounds) continue;
 
+        // Don't allow connecting back to the source node
+        if (node.id === sourceNode.id) continue;
+
         const closestX = Math.max(bounds.left, Math.min(canvasPos.x, bounds.right));
         const closestY = Math.max(bounds.top, Math.min(canvasPos.y, bounds.bottom));
         const dx = closestX - canvasPos.x;
@@ -160,6 +163,9 @@ export default function ConnectorDots({
         const node = allNodes[i];
         const bounds = nodeBounds[i];
         if (!bounds) continue;
+
+        // Don't allow connecting back to the source node
+        if (node.id === sourceNode.id) continue;
 
         const closestX = Math.max(bounds.left, Math.min(canvasPos.x, bounds.right));
         const closestY = Math.max(bounds.top, Math.min(canvasPos.y, bounds.bottom));
