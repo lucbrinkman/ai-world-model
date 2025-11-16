@@ -25,6 +25,7 @@ export default function Home() {
 
   const [selectedNodeIndex, setSelectedNodeIndex] = useState(startNodeIndex);
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(-1);
+  const [selectedEdgeIndex, setSelectedEdgeIndex] = useState(-1);
   const [boldPaths, setBoldPaths] = useState(true);
   const [transparentPaths, setTransparentPaths] = useState(false);
   const [minOpacity, setMinOpacity] = useState(20);
@@ -166,6 +167,8 @@ export default function Home() {
         return index;
       }
     });
+    // Deselect any selected edge when clicking a node
+    setSelectedEdgeIndex(-1);
   }, []);
 
   // Node hover handler
@@ -177,6 +180,89 @@ export default function Home() {
   const handleNodeLeave = useCallback(() => {
     setHoveredNodeIndex(-1);
   }, []);
+
+  // Background click handler - deselect edge
+  const handleBackgroundClick = useCallback(() => {
+    setSelectedEdgeIndex(-1);
+  }, []);
+
+  // Edge click handler
+  const handleEdgeClick = useCallback((edgeIndex: number) => {
+    setSelectedEdgeIndex(prev => prev === edgeIndex ? -1 : edgeIndex);
+    // Deselect node when selecting an edge
+    setSelectedNodeIndex(startNodeIndex);
+  }, []);
+
+  // Edge reconnect handler
+  const handleEdgeReconnect = useCallback((edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => {
+    const edge = edges[edgeIndex];
+    if (!edge) return;
+
+    // Convert indices to IDs
+    const sourceNodeId = nodes[edge.source].id;
+    const targetNodeId = edge.target !== undefined ? nodes[edge.target].id : undefined;
+
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        if (node.id === sourceNodeId) {
+          // This is the source node, update its connection
+          const updatedConnections = node.connections.map((conn) => {
+            // Find which connection corresponds to this edge (by targetId or by targetX/targetY)
+            const isMatchingConnection = targetNodeId ?
+              conn.targetId === targetNodeId :
+              conn.targetX === edge.targetX && conn.targetY === edge.targetY;
+
+            if (isMatchingConnection && end === 'target') {
+              if (typeof newNodeIdOrCoords === 'string') {
+                // Reconnecting to a node
+                return { ...conn, targetId: newNodeIdOrCoords, targetX: undefined, targetY: undefined };
+              } else {
+                // Creating floating endpoint
+                return { ...conn, targetId: undefined, targetX: newNodeIdOrCoords.x, targetY: newNodeIdOrCoords.y };
+              }
+            }
+            return conn;
+          });
+          return { ...node, connections: updatedConnections };
+        }
+
+        return node;
+      });
+
+      return { ...prev, nodes: updatedNodes };
+    });
+
+    setHasUnsavedGraphChanges(true);
+  }, [edges, nodes]);
+
+  // Edge label update handler
+  const handleEdgeLabelUpdate = useCallback((edgeIndex: number, newLabel: string) => {
+    const edge = edges[edgeIndex];
+    if (!edge) return;
+
+    // Convert indices to IDs
+    const sourceNodeId = nodes[edge.source].id;
+    const targetNodeId = nodes[edge.target].id;
+
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        if (node.id === sourceNodeId) {
+          const updatedConnections = node.connections.map((conn) => {
+            if (conn.targetId === targetNodeId) {
+              return { ...conn, label: newLabel };
+            }
+            return conn;
+          });
+          return { ...node, connections: updatedConnections };
+        }
+        return node;
+      });
+
+      return { ...prev, nodes: updatedNodes };
+    });
+
+    setHasUnsavedGraphChanges(true);
+  }, [edges, nodes]);
 
   // Reset sliders to 50%
   const handleResetSliders = useCallback(() => {
@@ -487,6 +573,7 @@ export default function Home() {
             sliderValues={sliderValues}
             selectedNodeIndex={selectedNodeIndex}
             hoveredNodeIndex={hoveredNodeIndex}
+            selectedEdgeIndex={selectedEdgeIndex}
             boldPaths={boldPaths}
             transparentPaths={transparentPaths}
             minOpacity={minOpacity}
@@ -501,6 +588,10 @@ export default function Home() {
             onNodeDragStateChange={handleNodeDragStateChange}
             onUpdateNodeText={handleUpdateNodeText}
             onAddNode={handleAddNode}
+            onEdgeClick={handleEdgeClick}
+            onEdgeReconnect={handleEdgeReconnect}
+            onEdgeLabelUpdate={handleEdgeLabelUpdate}
+            onBackgroundClick={handleBackgroundClick}
           />
           <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />
           <ZoomControls

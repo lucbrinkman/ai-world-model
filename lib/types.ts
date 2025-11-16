@@ -33,8 +33,10 @@ export interface Node {
 // Edge interface
 export interface Edge {
   yn: EdgeType;
-  source: number; // Node index
-  target: number; // Node index
+  source: number; // Node index (source is always a node)
+  target?: number; // Node index (optional if using targetX/targetY for floating endpoint)
+  targetX?: number; // X coordinate for floating endpoint (optional if using target)
+  targetY?: number; // Y coordinate for floating endpoint (optional if using target)
   p: number; // Total probability flow going through the edge
   label: string; // Display label (e.g., "Plateau", "Continue")
 }
@@ -57,7 +59,9 @@ export type NodeDragStateHandler = (isDragging: boolean, shiftHeld: boolean, cur
 
 // Connection from one node to another (stored under source node)
 export interface NodeConnection {
-  targetId: string; // ID of target node
+  targetId?: string; // ID of target node (optional if using targetX/targetY)
+  targetX?: number; // X coordinate for floating endpoint (optional if using targetId)
+  targetY?: number; // Y coordinate for floating endpoint (optional if using targetId)
   type: EdgeType; // yes | no | always
   label: string; // Display label (e.g., "Plateau", "Continue")
   evidence?: string; // Future: explanation for this connection
@@ -112,6 +116,9 @@ export const CANVAS_PADDING = 1000; // Padding around canvas for scrolling (px)
 // Grid snap settings
 export const GRID_SIZE_X = 50; // Horizontal snap grid (hold Shift to disable)
 export const GRID_SIZE_Y = 30; // Vertical snap grid (hold Shift to disable)
+
+// Edge connector snap settings
+export const SNAP_DISTANCE = 15; // Distance in pixels for magnetic snap to nodes
 
 // Color scheme (matching original v4)
 export const NODE_COLORS = {

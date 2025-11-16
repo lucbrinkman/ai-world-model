@@ -32,19 +32,33 @@ function buildNodesAndEdges(graphData: GraphData): {
   const edges: Edge[] = [];
   graphData.nodes.forEach((graphNode, sourceIndex) => {
     graphNode.connections.forEach(connection => {
-      const targetIndex = nodeIdMap.get(connection.targetId);
+      // Handle both node-connected and floating endpoints
+      if (connection.targetId) {
+        // Traditional node-to-node connection
+        const targetIndex = nodeIdMap.get(connection.targetId);
 
-      if (targetIndex === undefined) {
-        throw new Error(`Unknown target node: ${connection.targetId} in connections from ${graphNode.id}`);
+        if (targetIndex === undefined) {
+          throw new Error(`Unknown target node: ${connection.targetId} in connections from ${graphNode.id}`);
+        }
+
+        edges.push({
+          yn: connection.type,
+          source: sourceIndex,
+          target: targetIndex,
+          p: 0.0, // Initial probability, will be calculated
+          label: connection.label,
+        });
+      } else if (connection.targetX !== undefined && connection.targetY !== undefined) {
+        // Floating endpoint
+        edges.push({
+          yn: connection.type,
+          source: sourceIndex,
+          targetX: connection.targetX,
+          targetY: connection.targetY,
+          p: 0.0, // Initial probability, will be calculated
+          label: connection.label,
+        });
       }
-
-      edges.push({
-        yn: connection.type,
-        source: sourceIndex,
-        target: targetIndex,
-        p: 0.0, // Initial probability, will be calculated
-        label: connection.label,
-      });
     });
   });
 

@@ -22,6 +22,7 @@ interface NodeProps {
   onDragEnd: NodeDragEndHandler;
   onDragStateChange: NodeDragStateHandler;
   onUpdateText?: (nodeId: string, newText: string) => void;
+  onEditorClose?: () => void;
 }
 
 const Node = forwardRef<HTMLDivElement, NodeProps>(({
@@ -39,6 +40,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   onDragEnd,
   onDragStateChange,
   onUpdateText,
+  onEditorClose,
 }, ref) => {
   const { x, y, text, p, type } = node;
 
@@ -79,6 +81,28 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
     }
   }, [isEditing]);
 
+  //  saveEdit function defined below
+
+  // Handle click outside to save edits
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (editInputRef.current && !editInputRef.current.contains(e.target as Node)) {
+        const newText = editText.trim();
+        if (newText && newText !== text && onUpdateText) {
+          onUpdateText(node.id, newText);
+        }
+        setIsEditing(false);
+        onEditorClose?.();
+      }
+    };
+
+    // Use mousedown instead of click to catch the event before blur
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isEditing, editText, text, onUpdateText, node.id, onEditorClose]);
+
   // Edit handlers
   const handleDoubleClick = (e: React.MouseEvent) => {
     if (onUpdateText && !isDragging) {
@@ -93,6 +117,15 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
     }
   };
 
+  const saveEdit = useCallback(() => {
+    const newText = editText.trim();
+    if (newText && newText !== text && onUpdateText) {
+      onUpdateText(node.id, newText);
+    }
+    setIsEditing(false);
+    onEditorClose?.();
+  }, [editText, text, onUpdateText, node.id, onEditorClose]);
+
   const handleEditKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -100,15 +133,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
     } else if (e.key === 'Escape') {
       setIsEditing(false);
       setEditText(text); // Revert changes
+      onEditorClose?.();
     }
-  };
-
-  const saveEdit = () => {
-    const newText = editText.trim();
-    if (newText && newText !== text && onUpdateText) {
-      onUpdateText(node.id, newText);
-    }
-    setIsEditing(false);
   };
 
   // Calculate opacity

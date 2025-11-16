@@ -2,6 +2,7 @@ import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, NodeDragStateHa
 import { questionNodeIndices } from '@/lib/graphData';
 import NodeComponent from './Node';
 import EdgeComponent from './Edge';
+import ConnectorDots from './ConnectorDots';
 import ContextMenu from './ContextMenu';
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
@@ -12,6 +13,7 @@ interface FlowchartProps {
   sliderValues: number[];
   selectedNodeIndex: number;
   hoveredNodeIndex: number;
+  selectedEdgeIndex: number;
   boldPaths: boolean;
   transparentPaths: boolean;
   minOpacity: number;
@@ -26,6 +28,10 @@ interface FlowchartProps {
   onNodeDragStateChange: NodeDragStateHandler;
   onUpdateNodeText?: (nodeId: string, newText: string) => void;
   onAddNode?: (x: number, y: number) => void;
+  onEdgeClick?: (edgeIndex: number) => void;
+  onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeId: string) => void;
+  onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
+  onBackgroundClick?: () => void;
 }
 
 export default function Flowchart({
@@ -34,6 +40,7 @@ export default function Flowchart({
   sliderValues,
   selectedNodeIndex,
   hoveredNodeIndex,
+  selectedEdgeIndex,
   boldPaths,
   transparentPaths,
   minOpacity,
@@ -48,6 +55,10 @@ export default function Flowchart({
   onNodeDragStateChange,
   onUpdateNodeText,
   onAddNode,
+  onEdgeClick,
+  onEdgeReconnect,
+  onEdgeLabelUpdate,
+  onBackgroundClick,
 }: FlowchartProps) {
   // Create refs for all nodes
   const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -56,8 +67,11 @@ export default function Flowchart({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
+  const didDragRef = useRef(false);
   const [isPositioned, setIsPositioned] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const lastInteractionRef = useRef<{ type: 'editor-close' | null; timestamp: number }>({ type: null, timestamp: 0 });
+  const [edgePreview, setEdgePreview] = useState<{ node: NodeType | null; pos: { x: number; y: number } | null }>({ node: null, pos: null });
 
   // Ref callback to set initial scroll position immediately on mount
   const scrollContainerRefCallback = useCallback((node: HTMLDivElement | null) => {
@@ -202,6 +216,7 @@ export default function Flowchart({
     if (!isNode) {
       e.preventDefault(); // Prevent text selection
       setIsDragging(true);
+      didDragRef.current = false; // Reset drag flag
       const container = scrollContainerRef.current;
       if (container) {
         dragStartRef.current = {
@@ -214,30 +229,45 @@ export default function Flowchart({
     }
   };
 
-  // Handle canvas click for context menu (fires after mouseup if no drag occurred)
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const isNode = target.closest('[data-node]') ||
-                   target.tagName === 'BUTTON' ||
-                   target.closest('button');
+  // Track when an editor closes to prevent immediate context menu opening
+  const handleEditorClose = useCallback(() => {
+    lastInteractionRef.current = { type: 'editor-close', timestamp: Date.now() };
+  }, []);
 
-    if (!isNode) {
-      // Clicking on canvas
-      e.preventDefault();
+  // Handle background canvas click for context menu
+  // This is ONLY called when clicking the explicit background rect
+  const handleBackgroundClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation(); // Don't let this bubble up to scroll container
 
-      // If context menu is already open, close it instead of opening a new one
-      if (contextMenu) {
-        setContextMenu(null);
-      } else {
-        setContextMenu({ x: e.clientX, y: e.clientY });
-      }
-    } else {
-      // Clicking on a node - close context menu if open
-      if (contextMenu) {
-        setContextMenu(null);
-      }
+    // Check 1: Don't open context menu if we just dragged to pan
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
     }
-  };
+
+    // Check 2: Don't open context menu if we just closed an editor (within 100ms)
+    const timeSinceLastInteraction = Date.now() - lastInteractionRef.current.timestamp;
+    if (lastInteractionRef.current.type === 'editor-close' && timeSinceLastInteraction < 100) {
+      lastInteractionRef.current = { type: null, timestamp: 0 };
+      return;
+    }
+
+    // Check 3: If an edge is selected, just deselect it (don't open context menu)
+    if (selectedEdgeIndex !== -1) {
+      onBackgroundClick?.();
+      return;
+    }
+
+    // Deselect any selected edge when clicking background
+    onBackgroundClick?.();
+
+    // If context menu is already open, close it instead of opening a new one
+    if (contextMenu) {
+      setContextMenu(null);
+    } else {
+      setContextMenu({ x: e.clientX, y: e.clientY });
+    }
+  }, [contextMenu, didDragRef, lastInteractionRef, onBackgroundClick, selectedEdgeIndex]);
 
   // Handle adding a node from context menu
   const handleAddNodeFromMenu = () => {
@@ -263,6 +293,12 @@ export default function Flowchart({
     if (isDragging && scrollContainerRef.current) {
       const deltaX = e.clientX - dragStartRef.current.x;
       const deltaY = e.clientY - dragStartRef.current.y;
+
+      // Mark that we've dragged if moved more than a few pixels
+      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+        didDragRef.current = true;
+      }
+
       scrollContainerRef.current.scrollLeft = dragStartRef.current.scrollLeft - deltaX;
       scrollContainerRef.current.scrollTop = dragStartRef.current.scrollTop - deltaY;
     }
@@ -288,7 +324,6 @@ export default function Flowchart({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onClick={handleCanvasClick}
       style={{
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: isDragging ? 'none' : 'auto',
@@ -324,13 +359,24 @@ export default function Flowchart({
         >
           {/* SVG for edges/arrows */}
           <svg
-            className="absolute top-0 left-0 pointer-events-none"
+            className="absolute top-0 left-0"
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
           >
+            {/* Background rect - the ONLY element that opens context menu */}
+            <rect
+              x={0}
+              y={0}
+              width={CANVAS_WIDTH}
+              height={CANVAS_HEIGHT}
+              fill="transparent"
+              style={{ cursor: 'grab', pointerEvents: 'all' }}
+              onClick={handleBackgroundClick}
+            />
+
             {edges.map((edge, index) => {
               const sourceNode = nodes[edge.source];
-              const targetNode = nodes[edge.target];
+              const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
 
               // Get slider value for this edge (if source is a question node)
               const sliderIndex = questionNodeIndices.indexOf(edge.source);
@@ -338,12 +384,27 @@ export default function Flowchart({
 
               // Get bounding boxes for source and target
               const sourceBounds = nodeBounds[edge.source];
-              const targetBounds = nodeBounds[edge.target];
+              const targetBounds = edge.target !== undefined ? nodeBounds[edge.target] : undefined;
+
+              // Coordinate conversion function for floating endpoints
+              const screenToCanvasCoords = (screenX: number, screenY: number) => {
+                if (!containerRef.current || !scrollContainerRef.current) return { x: 0, y: 0 };
+                const scrollContainer = scrollContainerRef.current;
+                const scrollRect = scrollContainer.getBoundingClientRect();
+                const zoomFactor = zoom / 100;
+
+                // Convert screen coords to position within scrollable area, then to canvas coords
+                const canvasX = (scrollContainer.scrollLeft + screenX - scrollRect.left - CANVAS_PADDING) / zoomFactor;
+                const canvasY = (scrollContainer.scrollTop + screenY - scrollRect.top - CANVAS_PADDING) / zoomFactor;
+
+                return { x: canvasX, y: canvasY };
+              };
 
               return (
                 <EdgeComponent
                   key={index}
                   edge={edge}
+                  edgeIndex={index}
                   sourceNode={sourceNode}
                   targetNode={targetNode}
                   sliderValue={sliderValue}
@@ -353,6 +414,13 @@ export default function Flowchart({
                   maxOutcomeProbability={maxOutcomeProbability}
                   sourceBounds={sourceBounds}
                   targetBounds={targetBounds}
+                  isSelected={index === selectedEdgeIndex}
+                  onClick={onEdgeClick ? () => onEdgeClick(index) : undefined}
+                  onLabelUpdate={onEdgeLabelUpdate}
+                  onEditorClose={handleEditorClose}
+                  previewTargetNode={index === selectedEdgeIndex ? edgePreview.node : null}
+                  previewTargetBounds={index === selectedEdgeIndex && edgePreview.node ? nodeBounds[edgePreview.node.index] : undefined}
+                  previewFloatingPos={index === selectedEdgeIndex ? edgePreview.pos : null}
                 />
               );
             })}
@@ -377,8 +445,49 @@ export default function Flowchart({
               onDragEnd={onNodeDragEnd}
               onDragStateChange={onNodeDragStateChange}
               onUpdateText={onUpdateNodeText}
+              onEditorClose={handleEditorClose}
             />
           ))}
+
+          {/* Connector dots (HTML, rendered on top of nodes) */}
+          {selectedEdgeIndex !== -1 && (() => {
+            const edge = edges[selectedEdgeIndex];
+            if (!edge) return null;
+
+            const sourceNode = nodes[edge.source];
+            const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
+            const sourceBounds = nodeBounds[edge.source];
+            const targetBounds = edge.target !== undefined ? nodeBounds[edge.target] : undefined;
+
+            const screenToCanvasCoords = (screenX: number, screenY: number) => {
+              if (!containerRef.current || !scrollContainerRef.current) return { x: 0, y: 0 };
+              const scrollContainer = scrollContainerRef.current;
+              const scrollRect = scrollContainer.getBoundingClientRect();
+              const zoomFactor = zoom / 100;
+
+              const canvasX = (scrollContainer.scrollLeft + screenX - scrollRect.left - CANVAS_PADDING) / zoomFactor;
+              const canvasY = (scrollContainer.scrollTop + screenY - scrollRect.top - CANVAS_PADDING) / zoomFactor;
+
+              return { x: canvasX, y: canvasY };
+            };
+
+            return (
+              <ConnectorDots
+                key={`connector-${selectedEdgeIndex}`}
+                edge={edge}
+                edgeIndex={selectedEdgeIndex}
+                sourceNode={sourceNode}
+                targetNode={targetNode}
+                allNodes={nodes}
+                nodeBounds={nodeBounds}
+                sourceBounds={sourceBounds}
+                targetBounds={targetBounds}
+                onReconnect={onEdgeReconnect}
+                screenToCanvasCoords={screenToCanvasCoords}
+                onPreviewChange={(node, pos) => setEdgePreview({ node, pos })}
+              />
+            );
+          })()}
         </div>
       </div>
 
