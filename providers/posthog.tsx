@@ -4,6 +4,8 @@ import posthog from 'posthog-js'
 import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
+const CONSENT_KEY = 'cookie-consent'
+
 function PostHogPageView() {
   const pathname = usePathname()
 
@@ -25,21 +27,8 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST
 
     if (posthogKey && posthogHost && typeof window !== 'undefined') {
-      // Check if CookieYes has given consent for analytics
-      // CookieYes sets this global variable when consent is managed
-      const checkConsent = () => {
-        // @ts-ignore - CookieYes global
-        if (typeof window.CookieConsent !== 'undefined') {
-          // @ts-ignore - CookieYes global
-          const consentCategories = window.CookieConsent.getCategories()
-          // If analytics category is not accepted, opt out
-          if (!consentCategories.includes('analytics')) {
-            posthog.opt_out_capturing()
-            return false
-          }
-        }
-        return true
-      }
+      // Check localStorage for user's consent choice
+      const consent = localStorage.getItem(CONSENT_KEY)
 
       posthog.init(posthogKey, {
         api_host: posthogHost,
@@ -47,8 +36,16 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         capture_pageleave: true,
         autocapture: false, // We'll manually track events
         loaded: (posthog) => {
-          // Check consent after PostHog loads
-          checkConsent()
+          // Respect user's consent choice
+          if (consent === 'declined') {
+            // User explicitly declined analytics - opt out
+            posthog.opt_out_capturing()
+          } else if (consent === 'accepted') {
+            // User explicitly accepted analytics - opt in
+            posthog.opt_in_capturing()
+          }
+          // If no consent recorded yet, PostHog will use default behavior
+          // (auto-consent for non-GDPR regions, wait for GDPR regions)
 
           if (process.env.NODE_ENV === 'development') {
             posthog.debug()
@@ -56,15 +53,22 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         },
       })
 
-      // Listen for CookieYes consent changes
-      // @ts-ignore - CookieYes event
-      document.addEventListener('cookieyes_consent_update', () => {
-        if (checkConsent()) {
-          posthog.opt_in_capturing()
-        } else {
-          posthog.opt_out_capturing()
+      // Listen for consent changes from localStorage
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === CONSENT_KEY) {
+          if (e.newValue === 'declined') {
+            posthog.opt_out_capturing()
+          } else if (e.newValue === 'accepted') {
+            posthog.opt_in_capturing()
+          }
         }
-      })
+      }
+
+      window.addEventListener('storage', handleStorageChange)
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange)
+      }
     }
   }, [])
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "./globals.css";
 import { PostHogProvider } from "@/providers/posthog";
+import { CookieBanner } from "@/components/CookieBanner";
 
 export const metadata: Metadata = {
   title: "AI World Model",
@@ -13,8 +13,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieYesId = process.env.NEXT_PUBLIC_COOKIEYES_ID;
-
   return (
     <html lang="en">
       <head>
@@ -22,17 +20,12 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;800&display=swap"
           rel="stylesheet"
         />
-        {cookieYesId && (
-          <Script
-            id="cookieyes"
-            type="text/javascript"
-            src={`https://cdn-cookieyes.com/client_data/${cookieYesId}/script.js`}
-            strategy="beforeInteractive"
-          />
-        )}
       </head>
       <body>
-        <PostHogProvider>{children}</PostHogProvider>
+        <PostHogProvider>
+          {children}
+          <CookieBanner />
+        </PostHogProvider>
       </body>
     </html>
   );
