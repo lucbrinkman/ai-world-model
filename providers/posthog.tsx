@@ -11,10 +11,14 @@ function PostHogPageView() {
 
   useEffect(() => {
     if (pathname) {
-      const url = window.origin + pathname
-      posthog.capture('$pageview', {
-        $current_url: url,
-      })
+      // Only capture pageviews if user has consented
+      const consent = localStorage.getItem(CONSENT_KEY)
+      if (consent === 'accepted') {
+        const url = window.origin + pathname
+        posthog.capture('$pageview', {
+          $current_url: url,
+        })
+      }
     }
   }, [pathname])
 
@@ -36,16 +40,15 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         capture_pageleave: true,
         autocapture: false, // We'll manually track events
         loaded: (posthog) => {
-          // Respect user's consent choice
-          if (consent === 'declined') {
-            // User explicitly declined analytics - opt out
-            posthog.opt_out_capturing()
-          } else if (consent === 'accepted') {
+          // GDPR-compliant: Default to opt-out, only opt-in with explicit consent
+          if (consent === 'accepted') {
             // User explicitly accepted analytics - opt in
             posthog.opt_in_capturing()
+          } else {
+            // Default to opt-out for GDPR compliance
+            // User can opt-in via cookie banner
+            posthog.opt_out_capturing()
           }
-          // If no consent recorded yet, PostHog will use default behavior
-          // (auto-consent for non-GDPR regions, wait for GDPR regions)
 
           if (process.env.NODE_ENV === 'development') {
             posthog.debug()

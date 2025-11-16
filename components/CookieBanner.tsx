@@ -30,7 +30,8 @@ export function CookieBanner() {
       } else {
         // Auto-consent for non-GDPR regions
         localStorage.setItem(CONSENT_KEY, 'accepted')
-        // PostHog will automatically opt-in (default behavior)
+        // Immediately opt-in PostHog for this session
+        posthog.opt_in_capturing()
       }
 
       setIsLoading(false)
@@ -60,8 +61,8 @@ export function CookieBanner() {
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex-1">
           <p className="text-sm text-gray-300">
-            We use cookies for login and privacy-focused analytics to improve this AI safety research tool.{' '}
-            <strong>No marketing, no tracking, no data selling.</strong>{' '}
+            We care about AI Safety. We use analytics cookies to understand how to improve this AI Safety tool.{' '}
+            <strong>No marketing, no data selling.</strong>{' '}
             <Link href="/privacy" className="text-blue-400 hover:text-blue-300 underline">
               Learn more
             </Link>
@@ -73,7 +74,7 @@ export function CookieBanner() {
             onClick={handleDecline}
             className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors"
           >
-            Essential Only
+            Decline Analytics
           </button>
           <button
             onClick={handleAccept}
