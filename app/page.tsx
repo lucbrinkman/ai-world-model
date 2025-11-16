@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
-import { readSliderValuesFromUrl, updateUrlWithSliderValues, decodeSliderValues } from '@/lib/urlState';
+import { decodeSliderValues } from '@/lib/urlState';
 import { loadCustomPositions, saveNodePosition, resetAllPositions, hasCustomPositions, type CustomNodePositions } from '@/lib/nodePositionState';
 import { analytics } from '@/lib/analytics';
 
@@ -42,12 +42,6 @@ export default function Home() {
   const [isDraggingNode, setIsDraggingNode] = useState(false);
   const [dragShiftHeld, setDragShiftHeld] = useState(false);
   const [dragCursorPos, setDragCursorPos] = useState({ x: 0, y: 0 });
-
-  // Load slider values from URL on mount (after hydration)
-  useEffect(() => {
-    const urlValues = readSliderValuesFromUrl();
-    setSliderValues(urlValues);
-  }, []);
 
   // Load custom node positions from localStorage on mount
   useEffect(() => {
@@ -125,9 +119,6 @@ export default function Home() {
       // Track analytics
       analytics.trackSliderChange(index, current[index]);
 
-      // Update URL with final values (only on release, not during dragging)
-      updateUrlWithSliderValues(current);
-
       const currentState = current.join('i');
       setUndoStack(prev => {
         if (prev.length === 0 || prev[prev.length - 1] !== currentState) {
@@ -178,9 +169,6 @@ export default function Home() {
     setSliderValues(newValues);
     setUndoStack(prev => [...prev, newValues.join('i')]);
 
-    // Update URL
-    updateUrlWithSliderValues(newValues);
-
     // Track analytics
     analytics.trackAction('reset');
   }, []);
@@ -190,9 +178,6 @@ export default function Home() {
     const authorValues = decodeSliderValues(AUTHORS_ESTIMATES);
     setSliderValues(authorValues);
     setUndoStack(prev => [...prev, authorValues.join('i')]);
-
-    // Update URL
-    updateUrlWithSliderValues(authorValues);
 
     // Track analytics
     analytics.trackAction('load_authors_estimates');
@@ -207,9 +192,6 @@ export default function Home() {
         const previousState = newStack[newStack.length - 1];
         const previousValues = decodeSliderValues(previousState);
         setSliderValues(previousValues);
-
-        // Update URL
-        updateUrlWithSliderValues(previousValues);
 
         // Track analytics
         analytics.trackAction('undo');
@@ -251,9 +233,6 @@ export default function Home() {
   const handleLoadScenario = useCallback((loadedValues: number[]) => {
     setSliderValues(loadedValues);
     setUndoStack(prev => [...prev, loadedValues.join('i')]);
-
-    // Update URL
-    updateUrlWithSliderValues(loadedValues);
   }, []);
 
   // Zoom control handlers
