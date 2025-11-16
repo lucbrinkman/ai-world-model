@@ -369,10 +369,22 @@ export default function Home() {
                 };
               }
 
-              // Normalize direction and push endpoint just outside the bounds
+              // Normalize direction
               const normalizedDx = dx / distance;
               const normalizedDy = dy / distance;
-              const pushDistance = Math.max(nodeWidth, nodeHeight) / 2 + padding + 5;
+
+              // Calculate which edge of the rectangle we'll exit from
+              // and the distance to that edge plus padding
+              const halfWidth = nodeWidth / 2;
+              const halfHeight = nodeHeight / 2;
+
+              // Find which edge we hit first by comparing ratios
+              const tX = normalizedDx !== 0 ? halfWidth / Math.abs(normalizedDx) : Infinity;
+              const tY = normalizedDy !== 0 ? halfHeight / Math.abs(normalizedDy) : Infinity;
+              const t = Math.min(tX, tY);
+
+              // Push distance is to the edge plus padding plus extra space (doubled)
+              const pushDistance = t + (padding + 5) * 2;
 
               return {
                 ...connection,
