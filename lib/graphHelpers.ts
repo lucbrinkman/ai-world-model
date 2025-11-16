@@ -106,7 +106,10 @@ export function findPaths(startNodeId: string, endNodeId: string): string[][] {
 
     if (node) {
       node.connections.forEach(conn => {
-        dfs(conn.targetId, [...path, currentId]);
+        // Skip floating endpoint connections
+        if (conn.targetId) {
+          dfs(conn.targetId, [...path, currentId]);
+        }
       });
     }
 
@@ -137,7 +140,10 @@ export function validateGraph(): {
     if (node.connections.length > 0) {
       nodesWithOutgoing.add(node.id);
       node.connections.forEach(conn => {
-        nodesWithIncoming.add(conn.targetId);
+        // Skip floating endpoint connections
+        if (conn.targetId) {
+          nodesWithIncoming.add(conn.targetId);
+        }
       });
     }
   });
@@ -151,9 +157,12 @@ export function validateGraph(): {
   // Check for invalid target references
   graphData.nodes.forEach(node => {
     node.connections.forEach(conn => {
-      const targetExists = graphData.nodes.some(n => n.id === conn.targetId);
-      if (!targetExists) {
-        errors.push(`Invalid connection from ${node.id} to non-existent node ${conn.targetId}`);
+      // Skip floating endpoint connections
+      if (conn.targetId) {
+        const targetExists = graphData.nodes.some(n => n.id === conn.targetId);
+        if (!targetExists) {
+          errors.push(`Invalid connection from ${node.id} to non-existent node ${conn.targetId}`);
+        }
       }
     });
   });
@@ -204,7 +213,8 @@ function detectCycle(): boolean {
     const node = graphData.nodes.find(n => n.id === nodeId);
     if (node) {
       for (const conn of node.connections) {
-        if (hasCycleDFS(conn.targetId)) {
+        // Skip floating endpoint connections
+        if (conn.targetId && hasCycleDFS(conn.targetId)) {
           return true;
         }
       }

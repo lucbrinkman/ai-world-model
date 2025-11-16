@@ -70,6 +70,10 @@ function buildNodesAndEdges(graphData: GraphData): {
   // Build adjacency list (target -> incoming edges)
   const adjacencyList = new Map<number, number[]>();
   edges.forEach((edge, edgeIndex) => {
+    // Skip edges with floating endpoints (no target node)
+    if (edge.target === undefined) {
+      return;
+    }
     if (!adjacencyList.has(edge.target)) {
       adjacencyList.set(edge.target, []);
     }

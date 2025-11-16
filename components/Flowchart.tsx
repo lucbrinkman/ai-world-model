@@ -35,7 +35,7 @@ interface FlowchartProps {
   onDeleteNode?: (nodeId: string) => void;
   onChangeNodeType?: (nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => void;
   onEdgeClick?: (edgeIndex: number) => void;
-  onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeId: string) => void;
+  onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
   onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
   onDeleteEdge?: (edgeIndex: number) => void;
   onAddArrow?: (nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', targetX?: number, targetY?: number) => void;
@@ -44,7 +44,7 @@ interface FlowchartProps {
   onConfirmNewArrow?: (nodeId: string, targetX: number, targetY: number) => void;
   onBackgroundClick?: () => void;
   onSliderChange?: (sliderIndex: number, value: number) => void;
-  onSliderChangeComplete?: () => void;
+  onSliderChangeComplete?: (sliderIndex: number) => void;
 }
 
 export default function Flowchart({
@@ -539,7 +539,7 @@ export default function Flowchart({
                 onChangeType={onChangeNodeType}
                 sliderValue={nodeSliderValue}
                 onSliderChange={nodeSliderValue !== undefined && onSliderChange ? (value) => onSliderChange(sliderIndex, value) : undefined}
-                onSliderChangeComplete={onSliderChangeComplete}
+                onSliderChangeComplete={nodeSliderValue !== undefined && onSliderChangeComplete ? () => onSliderChangeComplete(sliderIndex) : undefined}
               />
             );
           })}

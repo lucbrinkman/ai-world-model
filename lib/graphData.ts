@@ -33,6 +33,11 @@ nodes.forEach((node, index) => {
 export const edges: Edge[] = [];
 graphData.nodes.forEach((graphNode, sourceIndex) => {
   graphNode.connections.forEach(connection => {
+    // Skip floating endpoint connections (they have targetX/targetY instead of targetId)
+    if (!connection.targetId) {
+      return;
+    }
+
     const targetIndex = nodeIdMap.get(connection.targetId);
 
     if (targetIndex === undefined) {
@@ -60,6 +65,10 @@ export const startNodeIndex = nodes.findIndex(n => n.type === NodeType.START);
 // Build adjacency list (target -> incoming edges)
 export const adjacencyList = new Map<number, number[]>();
 edges.forEach((edge, edgeIndex) => {
+  // Skip edges with floating endpoints (no target node)
+  if (edge.target === undefined) {
+    return;
+  }
   if (!adjacencyList.has(edge.target)) {
     adjacencyList.set(edge.target, []);
   }

@@ -271,7 +271,7 @@ export default function Home() {
   // Edge label update handler
   const handleEdgeLabelUpdate = useCallback((edgeIndex: number, newLabel: string) => {
     const edge = edges[edgeIndex];
-    if (!edge) return;
+    if (!edge || edge.source === undefined || edge.target === undefined) return;
 
     // Convert indices to IDs
     const sourceNodeId = nodes[edge.source].id;
@@ -299,7 +299,7 @@ export default function Home() {
   // Delete edge handler
   const handleDeleteEdge = useCallback((edgeIndex: number) => {
     const edge = edges[edgeIndex];
-    if (!edge) return;
+    if (!edge || edge.source === undefined) return;
 
     const sourceNode = nodes[edge.source];
     const targetNodeId = edge.target !== undefined ? nodes[edge.target].id : undefined;
@@ -329,7 +329,7 @@ export default function Home() {
             finalConnections = updatedConnections.map(conn => ({
               ...conn,
               type: '-' as const,
-              label: undefined,
+              label: '',
             }));
           }
 
@@ -350,7 +350,6 @@ export default function Home() {
       });
     }
 
-    setHasUnsavedGraphChanges(true);
     setSelectedEdgeIndex(-1);
   }, [edges, nodes]);
 
@@ -425,8 +424,6 @@ export default function Home() {
       newValues.splice(newQuestionIndex, 0, SLIDER_DEFAULT_VALUE);
       return newValues;
     });
-
-    setHasUnsavedGraphChanges(true);
   }, [graphData.nodes]);
 
   // Reset sliders to 50%
@@ -723,6 +720,7 @@ export default function Home() {
         },
       ],
       position: { x, y },
+      sliderIndex: null, // Intermediate nodes don't have sliders
     };
 
     setGraphData(prev => ({
