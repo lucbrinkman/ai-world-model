@@ -1,4 +1,4 @@
-import { Node as NodeType, Edge as EdgeType, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING } from '@/lib/types';
+import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, NodeDragStateHandler, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING } from '@/lib/types';
 import { questionNodeIndices } from '@/lib/graphData';
 import NodeComponent from './Node';
 import EdgeComponent from './Edge';
@@ -21,6 +21,8 @@ interface FlowchartProps {
   onNodeClick: (index: number) => void;
   onNodeHover: (index: number) => void;
   onNodeLeave: () => void;
+  onNodeDragEnd: NodeDragEndHandler;
+  onNodeDragStateChange: NodeDragStateHandler;
 }
 
 export default function Flowchart({
@@ -39,6 +41,8 @@ export default function Flowchart({
   onNodeClick,
   onNodeHover,
   onNodeLeave,
+  onNodeDragEnd,
+  onNodeDragStateChange,
 }: FlowchartProps) {
   // Create refs for all nodes
   const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -61,35 +65,58 @@ export default function Flowchart({
     }
   }, [isPositioned]);
 
+  // Extract updateBounds as a useCallback so it can be called from anywhere
+  // When dragNodeIndex and drag deltas are provided, we manually adjust that node's bounds
+  const updateBounds = useCallback((dragNodeIndex?: number, dragDeltaX?: number, dragDeltaY?: number) => {
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    const bounds = nodeRefs.current.map((ref, index) => {
+      if (!ref) return new DOMRect();
+      const rect = ref.getBoundingClientRect();
+      // Convert to container-relative coordinates, then adjust for zoom scale
+      // Since the container is scaled, we need to divide by zoom to get unscaled canvas coordinates
+      const zoomFactor = zoom / 100;
+      let x = (rect.left - containerRect.left) / zoomFactor;
+      let y = (rect.top - containerRect.top) / zoomFactor;
+
+      // If this is the node being dragged, use the node's original position + delta
+      // (getBoundingClientRect returns position AFTER CSS transform, which would double the offset)
+      if (index === dragNodeIndex && dragDeltaX !== undefined && dragDeltaY !== undefined) {
+        // nodes[index].x is the center position, but DOMRect.x should be top-left
+        // So we need to subtract half the width/height to convert from center to top-left
+        x = nodes[index].x - rect.width / (zoomFactor * 2) + dragDeltaX;
+        y = nodes[index].y - rect.height / (zoomFactor * 2) + dragDeltaY;
+      }
+
+      return new DOMRect(
+        x,
+        y,
+        rect.width / zoomFactor,
+        rect.height / zoomFactor
+      );
+    });
+
+    // Update bounds - React will batch these updates efficiently
+    setNodeBounds(bounds);
+  }, [zoom, nodes]);
+
+
   // Update node bounds whenever nodes change or window resizes
   useEffect(() => {
-    const updateBounds = () => {
-      const containerRect = containerRef.current?.getBoundingClientRect();
-      if (!containerRect) return;
-
-      const bounds = nodeRefs.current.map((ref) => {
-        if (!ref) return new DOMRect();
-        const rect = ref.getBoundingClientRect();
-        // Convert to container-relative coordinates, then adjust for zoom scale
-        // Since the container is scaled, we need to divide by zoom to get unscaled canvas coordinates
-        const zoomFactor = zoom / 100;
-        return new DOMRect(
-          (rect.left - containerRect.left) / zoomFactor,
-          (rect.top - containerRect.top) / zoomFactor,
-          rect.width / zoomFactor,
-          rect.height / zoomFactor
-        );
-      });
-      setNodeBounds(bounds);
-    };
-
-    // Initial update
-    updateBounds();
+    // Wait for CSS transitions to complete (nodes have transition-all duration-200)
+    // This fixes the issue where reset positions doesn't update arrows until second click
+    const timeoutId = setTimeout(() => {
+      updateBounds();
+    }, 250); // Wait slightly longer than the 200ms transition
 
     // Update on window resize
     window.addEventListener('resize', updateBounds);
-    return () => window.removeEventListener('resize', updateBounds);
-  }, [nodes, zoom]);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', updateBounds);
+    };
+  }, [nodes, updateBounds]);
 
   // Reset scroll position when reset button is clicked (after initial mount)
   // Use useLayoutEffect to set scroll position before paint (prevents visible jump)
@@ -289,9 +316,13 @@ export default function Flowchart({
               transparentPaths={transparentPaths}
               minOpacity={minOpacity}
               maxOutcomeProbability={maxOutcomeProbability}
+              zoom={zoom}
               onClick={() => onNodeClick(node.index)}
               onMouseEnter={() => onNodeHover(node.index)}
               onMouseLeave={onNodeLeave}
+              onDragMove={updateBounds}
+              onDragEnd={onNodeDragEnd}
+              onDragStateChange={onNodeDragStateChange}
             />
           ))}
         </div>

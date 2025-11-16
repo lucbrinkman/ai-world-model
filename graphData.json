@@ -15,7 +15,7 @@
       "description": "",
       "position": {
         "x": 150,
-        "y": 100
+        "y": 120
       },
       "sliderIndex": null,
       "connections": [
@@ -33,7 +33,7 @@
       "description": "",
       "position": {
         "x": 1250,
-        "y": 100
+        "y": 120
       },
       "sliderIndex": null,
       "connections": []
@@ -45,7 +45,7 @@
       "description": "",
       "position": {
         "x": 150,
-        "y": 277.77777777777777
+        "y": 270
       },
       "sliderIndex": 0,
       "authorEstimate": 50,
@@ -68,8 +68,8 @@
       "title": "Will new approaches unlock AGI-level capabilities?",
       "description": "",
       "position": {
-        "x": 425,
-        "y": 277.77777777777777
+        "x": 400,
+        "y": 270
       },
       "sliderIndex": 1,
       "authorEstimate": 70,
@@ -92,8 +92,8 @@
       "title": "Permanent AI winter",
       "description": "",
       "position": {
-        "x": 425,
-        "y": 455.55555555555554
+        "x": 400,
+        "y": 420
       },
       "sliderIndex": null,
       "connections": []
@@ -104,8 +104,8 @@
       "title": "Will we pause advancing AI capabilities before they reach catastrophic potential?",
       "description": "",
       "position": {
-        "x": 425,
-        "y": 100
+        "x": 400,
+        "y": 120
       },
       "sliderIndex": 2,
       "authorEstimate": 25,
@@ -129,7 +129,7 @@
       "description": "",
       "position": {
         "x": 700,
-        "y": 100
+        "y": 120
       },
       "sliderIndex": null,
       "connections": [
@@ -146,8 +146,8 @@
       "title": "Will we continue AI capabilities research after a pause?",
       "description": "",
       "position": {
-        "x": 975,
-        "y": 100
+        "x": 1000,
+        "y": 120
       },
       "sliderIndex": 3,
       "authorEstimate": 96,
@@ -171,7 +171,7 @@
       "description": "",
       "position": {
         "x": 700,
-        "y": 277.77777777777777
+        "y": 270
       },
       "sliderIndex": null,
       "connections": [
@@ -188,8 +188,8 @@
       "title": "Does a pre-AGI catastrophe occur (e.g. AI misuse via cyber- or bio-weapons)?",
       "description": "",
       "position": {
-        "x": 975,
-        "y": 455.55555555555554
+        "x": 1000,
+        "y": 420
       },
       "sliderIndex": 4,
       "authorEstimate": 55,
@@ -212,8 +212,8 @@
       "title": "Pre-AGI catastrophe does occur!",
       "description": "",
       "position": {
-        "x": 975,
-        "y": 277.77777777777777
+        "x": 1000,
+        "y": 270
       },
       "sliderIndex": null,
       "connections": [
@@ -231,7 +231,7 @@
       "description": "",
       "position": {
         "x": 1250,
-        "y": 455.55555555555554
+        "y": 420
       },
       "sliderIndex": 5,
       "authorEstimate": 5,
@@ -255,7 +255,7 @@
       "description": "",
       "position": {
         "x": 1250,
-        "y": 633.3333333333333
+        "y": 570
       },
       "sliderIndex": null,
       "connections": [
@@ -272,8 +272,8 @@
       "title": "Will AGI become transformative?",
       "description": "",
       "position": {
-        "x": 975,
-        "y": 633.3333333333333
+        "x": 1000,
+        "y": 570
       },
       "sliderIndex": 6,
       "authorEstimate": 95,
@@ -297,7 +297,7 @@
       "description": "",
       "position": {
         "x": 700,
-        "y": 633.3333333333333
+        "y": 570
       },
       "sliderIndex": null,
       "connections": []
@@ -308,8 +308,8 @@
       "title": "Do we have a practical solution for AGI alignment?",
       "description": "",
       "position": {
-        "x": 975,
-        "y": 811.1111111111111
+        "x": 1000,
+        "y": 720
       },
       "sliderIndex": 7,
       "authorEstimate": 75,
@@ -333,7 +333,7 @@
       "description": "",
       "position": {
         "x": 700,
-        "y": 811.1111111111111
+        "y": 720
       },
       "sliderIndex": 8,
       "authorEstimate": 65,
@@ -356,8 +356,8 @@
       "title": "Will the first AGI prevent other AGIs from appearing?",
       "description": "",
       "position": {
-        "x": 425,
-        "y": 811.1111111111111
+        "x": 400,
+        "y": 720
       },
       "sliderIndex": 9,
       "authorEstimate": 40,
@@ -380,8 +380,8 @@
       "title": "Will all other AGI labs implement alignment correctly?",
       "description": "",
       "position": {
-        "x": 425,
-        "y": 988.8888888888889
+        "x": 400,
+        "y": 870
       },
       "sliderIndex": 10,
       "authorEstimate": 65,
@@ -405,7 +405,7 @@
       "description": "",
       "position": {
         "x": 700,
-        "y": 988.8888888888889
+        "y": 870
       },
       "sliderIndex": null,
       "connections": [
@@ -423,7 +423,7 @@
       "description": "",
       "position": {
         "x": 150,
-        "y": 988.8888888888889
+        "y": 870
       },
       "sliderIndex": null,
       "connections": [
@@ -441,7 +441,7 @@
       "description": "",
       "position": {
         "x": 150,
-        "y": 1166.6666666666665
+        "y": 1020
       },
       "sliderIndex": 11,
       "authorEstimate": 20,
@@ -449,12 +449,12 @@
         {
           "targetId": "ncontrollers-thoughtful",
           "type": "n",
-          "label": "Misaligned"
+          "label": "Controller-aligned"
         },
         {
           "targetId": "gagi-utopia2",
           "type": "y",
-          "label": "Aligned"
+          "label": "Humanity-aligned"
         }
       ]
     },
@@ -464,8 +464,8 @@
       "title": "AGI utopia",
       "description": "",
       "position": {
-        "x": 425,
-        "y": 1166.6666666666665
+        "x": 400,
+        "y": 1020
       },
       "sliderIndex": null,
       "connections": []
@@ -477,7 +477,7 @@
       "description": "",
       "position": {
         "x": 150,
-        "y": 1344.4444444444446
+        "y": 1170
       },
       "sliderIndex": 12,
       "authorEstimate": 60,
@@ -501,7 +501,7 @@
       "description": "",
       "position": {
         "x": 150,
-        "y": 1522.2222222222222
+        "y": 1320
       },
       "sliderIndex": 13,
       "authorEstimate": 75,
@@ -525,7 +525,7 @@
       "description": "",
       "position": {
         "x": 150,
-        "y": 1700
+        "y": 1470
       },
       "sliderIndex": null,
       "connections": []
@@ -536,8 +536,8 @@
       "title": "Do AGI controllers have good intentions?",
       "description": "",
       "position": {
-        "x": 425,
-        "y": 1344.4444444444446
+        "x": 400,
+        "y": 1170
       },
       "sliderIndex": 14,
       "authorEstimate": 75,
@@ -560,8 +560,8 @@
       "title": "Authoritarian dystopia",
       "description": "",
       "position": {
-        "x": 425,
-        "y": 1522.2222222222222
+        "x": 400,
+        "y": 1320
       },
       "sliderIndex": null,
       "connections": []
@@ -572,8 +572,8 @@
       "title": "(At least one) Misaligned AGI",
       "description": "",
       "position": {
-        "x": 975,
-        "y": 988.8888888888889
+        "x": 1000,
+        "y": 870
       },
       "sliderIndex": null,
       "connections": [
@@ -591,7 +591,7 @@
       "description": "",
       "position": {
         "x": 700,
-        "y": 1166.6666666666665
+        "y": 1020
       },
       "sliderIndex": 15,
       "authorEstimate": 10,
@@ -614,8 +614,8 @@
       "title": "Can we easily turn it off?",
       "description": "",
       "position": {
-        "x": 975,
-        "y": 1166.6666666666665
+        "x": 1000,
+        "y": 1020
       },
       "sliderIndex": 16,
       "authorEstimate": 30,
@@ -639,7 +639,7 @@
       "description": "",
       "position": {
         "x": 1250,
-        "y": 1166.6666666666665
+        "y": 1020
       },
       "sliderIndex": null,
       "connections": []
@@ -650,8 +650,8 @@
       "title": "Does it pursue actions that harm us?",
       "description": "",
       "position": {
-        "x": 975,
-        "y": 1344.4444444444446
+        "x": 1000,
+        "y": 1170
       },
       "sliderIndex": 17,
       "authorEstimate": 95,
@@ -675,7 +675,7 @@
       "description": "",
       "position": {
         "x": 1250,
-        "y": 1344.4444444444446
+        "y": 1170
       },
       "sliderIndex": 18,
       "authorEstimate": 3,
@@ -699,7 +699,7 @@
       "description": "",
       "position": {
         "x": 1250,
-        "y": 1522.2222222222222
+        "y": 1320
       },
       "sliderIndex": 19,
       "authorEstimate": 97,
@@ -723,7 +723,7 @@
       "description": "",
       "position": {
         "x": 1250,
-        "y": 1700
+        "y": 1470
       },
       "sliderIndex": null,
       "connections": []
@@ -734,8 +734,8 @@
       "title": "Does it benefit from our suffering?",
       "description": "",
       "position": {
-        "x": 975,
-        "y": 1522.2222222222222
+        "x": 1000,
+        "y": 1320
       },
       "sliderIndex": 20,
       "authorEstimate": 4,
@@ -758,8 +758,8 @@
       "title": "AI dystopia: humans survive, but AI is in control",
       "description": "",
       "position": {
-        "x": 975,
-        "y": 1700
+        "x": 1000,
+        "y": 1470
       },
       "sliderIndex": null,
       "connections": []
@@ -771,7 +771,7 @@
       "description": "",
       "position": {
         "x": 700,
-        "y": 1522.2222222222222
+        "y": 1320
       },
       "sliderIndex": null,
       "connections": []

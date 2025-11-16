@@ -5,12 +5,14 @@ import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Flowchart from '@/components/Flowchart';
 import ZoomControls from '@/components/ZoomControls';
+import DragHint from '@/components/DragHint';
 import { WelcomeModal } from '@/components/WelcomeModal';
 import { useAuth } from '@/hooks/useAuth';
 import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
 import { readSliderValuesFromUrl, updateUrlWithSliderValues, decodeSliderValues } from '@/lib/urlState';
+import { loadCustomPositions, saveNodePosition, resetAllPositions, hasCustomPositions, type CustomNodePositions } from '@/lib/nodePositionState';
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
@@ -32,10 +34,24 @@ export default function Home() {
   const [zoom, setZoom] = useState(100);
   const [resetTrigger, setResetTrigger] = useState(1); // Start at 1 to trigger initial positioning
 
+  // Custom node positions (stored in localStorage)
+  const [customNodePositions, setCustomNodePositions] = useState<CustomNodePositions>({});
+
+  // Drag hint state
+  const [isDraggingNode, setIsDraggingNode] = useState(false);
+  const [dragShiftHeld, setDragShiftHeld] = useState(false);
+  const [dragCursorPos, setDragCursorPos] = useState({ x: 0, y: 0 });
+
   // Load slider values from URL on mount (after hydration)
   useEffect(() => {
     const urlValues = readSliderValuesFromUrl();
     setSliderValues(urlValues);
+  }, []);
+
+  // Load custom node positions from localStorage on mount
+  useEffect(() => {
+    const positions = loadCustomPositions();
+    setCustomNodePositions(positions);
   }, []);
 
   // Check if user is new and show welcome modal
@@ -74,8 +90,20 @@ export default function Home() {
   const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
     const result = calculateProbabilities(sliderValues, selectedNodeIndex);
 
+    // Apply custom node positions (overlay on top of calculated positions)
+    const nodesWithCustomPositions = result.nodes.map(node => {
+      if (customNodePositions[node.id]) {
+        return {
+          ...node,
+          x: customNodePositions[node.id].x,
+          y: customNodePositions[node.id].y,
+        };
+      }
+      return node;
+    });
+
     // Find max probability among outcome nodes (good, ambivalent, existential)
-    const outcomeNodes = result.nodes.filter(
+    const outcomeNodes = nodesWithCustomPositions.filter(
       n => n.type === 'g' || n.type === 'a' || n.type === 'e'
     );
     const maxOutcomeProbability = Math.max(
@@ -83,8 +111,8 @@ export default function Home() {
       0 // Fallback to 0 if no outcome nodes
     );
 
-    return { ...result, maxOutcomeProbability };
-  }, [sliderValues, selectedNodeIndex]);
+    return { nodes: nodesWithCustomPositions, edges: result.edges, maxOutcomeProbability };
+  }, [sliderValues, selectedNodeIndex, customNodePositions]);
 
   // Slider change handler
   const handleSliderChange = useCallback((index: number, value: number) => {
@@ -159,6 +187,33 @@ export default function Home() {
     });
   }, []);
 
+  // Node drag end handler
+  const handleNodeDragEnd = useCallback((nodeId: string, newX: number, newY: number) => {
+    // Save to localStorage
+    saveNodePosition(nodeId, newX, newY);
+
+    // Update state
+    setCustomNodePositions(prev => ({
+      ...prev,
+      [nodeId]: { x: newX, y: newY },
+    }));
+  }, []);
+
+  // Reset node positions handler
+  const handleResetNodePositions = useCallback(() => {
+    resetAllPositions();
+    setCustomNodePositions({});
+  }, []);
+
+  // Node drag state handler
+  const handleNodeDragStateChange = useCallback((isDragging: boolean, shiftHeld: boolean, cursorX?: number, cursorY?: number) => {
+    setIsDraggingNode(isDragging);
+    setDragShiftHeld(shiftHeld);
+    if (cursorX !== undefined && cursorY !== undefined) {
+      setDragCursorPos({ x: cursorX, y: cursorY });
+    }
+  }, []);
+
   // Load scenario handler
   const handleLoadScenario = useCallback((loadedValues: number[]) => {
     setSliderValues(loadedValues);
@@ -214,6 +269,7 @@ export default function Home() {
         onResetSliders={handleResetSliders}
         onLoadAuthorsEstimates={handleLoadAuthorsEstimates}
         onUndo={handleUndo}
+        onResetNodePositions={handleResetNodePositions}
         onLoadScenario={handleLoadScenario}
       />
 
@@ -252,7 +308,10 @@ export default function Home() {
             onNodeClick={handleNodeClick}
             onNodeHover={handleNodeHover}
             onNodeLeave={handleNodeLeave}
+            onNodeDragEnd={handleNodeDragEnd}
+            onNodeDragStateChange={handleNodeDragStateChange}
           />
+          <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />
           <ZoomControls
             zoom={zoom}
             onZoomIn={handleZoomIn}
