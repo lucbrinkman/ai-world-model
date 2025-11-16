@@ -180,6 +180,12 @@ export default function ConnectorDots({
     y2 = targetAdjusted.y + Math.sin(targetAngle) * CLEARANCE;
   }
 
+  // Round coordinates to avoid hydration mismatches from floating point precision
+  x1 = Math.round(x1 * 1000) / 1000;
+  y1 = Math.round(y1 * 1000) / 1000;
+  x2 = Math.round(x2 * 1000) / 1000;
+  y2 = Math.round(y2 * 1000) / 1000;
+
   // Handle connector drag
   const handleConnectorMouseDown = useCallback((e: React.MouseEvent, end: 'source' | 'target') => {
     e.stopPropagation();

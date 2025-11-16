@@ -1,26 +1,26 @@
 import React from 'react';
 
-interface DeleteNodeDialogProps {
+interface DeleteEdgeDialogProps {
   isOpen: boolean;
-  nodeTitle: string;
+  sourceNodeTitle: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export default function DeleteNodeDialog({
+export default function DeleteEdgeDialog({
   isOpen,
-  nodeTitle,
+  sourceNodeTitle,
   onConfirm,
   onCancel,
-}: DeleteNodeDialogProps) {
+}: DeleteEdgeDialogProps) {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-900 border border-gray-700 rounded-lg p-5 max-w-md w-full mx-4 shadow-xl">
-        <h2 className="text-xl font-semibold mb-3 text-white">Delete Node</h2>
+        <h2 className="text-xl font-semibold mb-3 text-white">Delete Connection</h2>
         <p className="text-gray-300 mb-5">
-          Are you sure you want to delete &quot;{nodeTitle}&quot;?
+          Delete connection and convert &quot;{sourceNodeTitle}&quot; from question to intermediate outcome?
         </p>
         <div className="flex justify-end gap-3">
           <button

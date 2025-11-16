@@ -270,13 +270,18 @@ export default function Sidebar({
         <div>
           {questionNodeIndices.map((nodeIndex, sliderIndex) => {
             const node = nodes[nodeIndex];
+            const sliderValue = sliderValues[sliderIndex];
+
+            // Skip if slider value doesn't exist yet (during state updates)
+            if (sliderValue === undefined) return null;
+
             const isHighlighted = nodeIndex === hoveredNodeIndex || nodeIndex === selectedNodeIndex;
 
             return (
               <Slider
                 key={nodeIndex}
                 node={node}
-                value={sliderValues[sliderIndex]}
+                value={sliderValue}
                 isHighlighted={isHighlighted}
                 onChange={(value) => onSliderChange(sliderIndex, value)}
                 onChangeComplete={() => onSliderChangeComplete(sliderIndex)}

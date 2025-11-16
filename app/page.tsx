@@ -10,6 +10,7 @@ import DragHint from '@/components/DragHint';
 import { WelcomeModal } from '@/components/WelcomeModal';
 import { CookieSettings } from '@/components/CookieSettings';
 import DeleteNodeDialog from '@/components/DeleteNodeDialog';
+import DeleteEdgeDialog from '@/components/DeleteEdgeDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from '@/lib/graphData';
@@ -33,6 +34,8 @@ export default function Home() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [nodeToDelete, setNodeToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
+  const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
   const [boldPaths, setBoldPaths] = useState(true);
   const [transparentPaths, setTransparentPaths] = useState(false);
   const [minOpacity, setMinOpacity] = useState(20);
@@ -195,6 +198,7 @@ export default function Home() {
   // Background click handler - deselect edge
   const handleBackgroundClick = useCallback(() => {
     setSelectedEdgeIndex(-1);
+    setSelectedNodeId(null);
   }, []);
 
   // Edge click handler
@@ -202,6 +206,7 @@ export default function Home() {
     setSelectedEdgeIndex(prev => prev === edgeIndex ? -1 : edgeIndex);
     // Deselect node when selecting an edge
     setSelectedNodeIndex(startNodeIndex);
+    setSelectedNodeId(null);
   }, []);
 
   // Edge reconnect handler
@@ -274,6 +279,139 @@ export default function Home() {
 
     setHasUnsavedGraphChanges(true);
   }, [edges, nodes]);
+
+  // Delete edge handler
+  const handleDeleteEdge = useCallback((edgeIndex: number) => {
+    const edge = edges[edgeIndex];
+    if (!edge) return;
+
+    const sourceNode = nodes[edge.source];
+    const targetNodeId = edge.target !== undefined ? nodes[edge.target].id : undefined;
+
+    // Find the slider index for this question node before deletion
+    const questionNodeIndices = nodes.filter(n => n.type === 'n').map(n => n.index);
+    const sliderIndex = questionNodeIndices.indexOf(edge.source);
+
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        if (node.id === sourceNode.id) {
+          // Remove the connection
+          const updatedConnections = node.connections.filter(conn => {
+            const isMatchingConnection = targetNodeId ?
+              conn.targetId === targetNodeId :
+              conn.targetX === edge.targetX && conn.targetY === edge.targetY;
+            return !isMatchingConnection;
+          });
+
+          // If node now has only 1 connection, convert from QUESTION to INTERMEDIATE
+          // Also convert the remaining connection from YES/NO to E100
+          let finalConnections = updatedConnections;
+          let updatedType = node.type;
+
+          if (updatedConnections.length === 1) {
+            updatedType = 'i';
+            finalConnections = updatedConnections.map(conn => ({
+              ...conn,
+              type: '-' as const,
+              label: undefined,
+            }));
+          }
+
+          return { ...node, connections: finalConnections, type: updatedType };
+        }
+        return node;
+      });
+
+      return { ...prev, nodes: updatedNodes };
+    });
+
+    // Remove the slider value for the deleted question
+    if (sliderIndex !== -1) {
+      setSliderValues(prev => {
+        const newValues = [...prev];
+        newValues.splice(sliderIndex, 1);
+        return newValues;
+      });
+    }
+
+    setHasUnsavedGraphChanges(true);
+    setSelectedEdgeIndex(-1);
+  }, [edges, nodes]);
+
+  // Add arrow handler
+  const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right') => {
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        if (node.id === nodeId) {
+          // Calculate floating endpoint position based on direction
+          const offset = 150; // Distance from node center
+          let targetX = node.position.x;
+          let targetY = node.position.y;
+
+          switch (direction) {
+            case 'top':
+              targetY -= offset;
+              break;
+            case 'bottom':
+              targetY += offset;
+              break;
+            case 'left':
+              targetX -= offset;
+              break;
+            case 'right':
+              targetX += offset;
+              break;
+          }
+
+          // Convert existing connection from E100 to YES
+          const updatedExistingConnections = node.connections.map(conn => {
+            if (conn.type === '-') {
+              return { ...conn, type: 'y' as const, label: 'Yes' };
+            }
+            return conn;
+          });
+
+          // Add new connection with NO type
+          const newConnection = {
+            type: 'n' as const,
+            targetX,
+            targetY,
+            label: 'No',
+          };
+
+          const updatedConnections = [...updatedExistingConnections, newConnection];
+
+          // Convert node from INTERMEDIATE to QUESTION
+          return { ...node, connections: updatedConnections, type: 'n' as const };
+        }
+        return node;
+      });
+
+      return { ...prev, nodes: updatedNodes };
+    });
+
+    // Add a slider value for the newly created question node
+    // Find the index this question will have among all questions
+    setSliderValues(prev => {
+      // After the graph update, recalculate which nodes are questions
+      const updatedGraphNodes = graphData.nodes.map(node => {
+        if (node.id === nodeId) {
+          return { ...node, type: 'n' as const };
+        }
+        return node;
+      });
+
+      const questionNodes = updatedGraphNodes.filter(n => n.type === 'n');
+      const newQuestionIndex = questionNodes.findIndex(n => n.id === nodeId);
+
+      // Insert default value at the appropriate index
+      const newValues = [...prev];
+      newValues.splice(newQuestionIndex, 0, SLIDER_DEFAULT_VALUE);
+      return newValues;
+    });
+
+    setHasUnsavedGraphChanges(true);
+  }, [graphData.nodes]);
 
   // Reset sliders to 50%
   const handleResetSliders = useCallback(() => {
@@ -650,6 +788,7 @@ export default function Home() {
       // Reset selection if needed
       if (shouldResetSelection) {
         setSelectedNodeIndex(startNodeIndex);
+        setSelectedNodeId(null);
       }
 
       // Update graph data
@@ -705,6 +844,20 @@ export default function Home() {
   const handleCancelDelete = useCallback(() => {
     setDeleteDialogOpen(false);
     setNodeToDelete(null);
+  }, []);
+
+  const handleInitiateDeleteEdge = useCallback((edgeIndex: number) => {
+    const edge = edges[edgeIndex];
+    if (!edge) return;
+
+    const sourceNode = graphData.nodes[edge.source];
+    setEdgeToDelete({ index: edgeIndex, sourceNodeTitle: sourceNode.title });
+    setDeleteEdgeDialogOpen(true);
+  }, [edges, graphData.nodes]);
+
+  const handleCancelDeleteEdge = useCallback(() => {
+    setDeleteEdgeDialogOpen(false);
+    setEdgeToDelete(null);
   }, []);
 
   // Change node type handler
@@ -950,6 +1103,8 @@ export default function Home() {
             onEdgeClick={handleEdgeClick}
             onEdgeReconnect={handleEdgeReconnect}
             onEdgeLabelUpdate={handleEdgeLabelUpdate}
+            onDeleteEdge={handleInitiateDeleteEdge}
+            onAddArrow={handleAddArrow}
             onBackgroundClick={handleBackgroundClick}
             onSliderChange={handleSliderChange}
             onSliderChangeComplete={handleSliderChangeComplete}
@@ -983,6 +1138,20 @@ export default function Home() {
         nodeTitle={nodeToDelete?.title || ''}
         onConfirm={() => nodeToDelete && handleDeleteNode(nodeToDelete.id)}
         onCancel={handleCancelDelete}
+      />
+
+      {/* Delete Edge Dialog */}
+      <DeleteEdgeDialog
+        isOpen={deleteEdgeDialogOpen}
+        sourceNodeTitle={edgeToDelete?.sourceNodeTitle || ''}
+        onConfirm={() => {
+          if (edgeToDelete) {
+            handleDeleteEdge(edgeToDelete.index);
+            setDeleteEdgeDialogOpen(false);
+            setEdgeToDelete(null);
+          }
+        }}
+        onCancel={handleCancelDeleteEdge}
       />
 
       {/* Dev-only buttons */}

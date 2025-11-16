@@ -3,6 +3,8 @@ import NodeComponent from './Node';
 import EdgeComponent from './Edge';
 import ConnectorDots from './ConnectorDots';
 import ContextMenu from './ContextMenu';
+import DeleteEdgeButton from './DeleteEdgeButton';
+import AddArrowButtons from './AddArrowButtons';
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 
@@ -20,6 +22,7 @@ interface FlowchartProps {
   maxOutcomeProbability: number;
   zoom: number;
   resetTrigger: number;
+  newArrowPreview?: { nodeId: string; pos: { x: number; y: number } } | null;
   onZoomChange: (newZoom: number, cursorX?: number, cursorY?: number) => void;
   onNodeClick: (index: number) => void;
   onNodeHover: (index: number) => void;
@@ -34,6 +37,11 @@ interface FlowchartProps {
   onEdgeClick?: (edgeIndex: number) => void;
   onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeId: string) => void;
   onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
+  onDeleteEdge?: (edgeIndex: number) => void;
+  onAddArrow?: (nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', targetX?: number, targetY?: number) => void;
+  onNewArrowPreviewChange?: (nodeId: string, pos: { x: number; y: number } | null) => void;
+  onCancelNewArrow?: (nodeId: string) => void;
+  onConfirmNewArrow?: (nodeId: string, targetX: number, targetY: number) => void;
   onBackgroundClick?: () => void;
   onSliderChange?: (sliderIndex: number, value: number) => void;
   onSliderChangeComplete?: () => void;
@@ -53,6 +61,7 @@ export default function Flowchart({
   maxOutcomeProbability,
   zoom,
   resetTrigger,
+  newArrowPreview,
   onZoomChange,
   onNodeClick,
   onNodeHover,
@@ -67,6 +76,11 @@ export default function Flowchart({
   onEdgeClick,
   onEdgeReconnect,
   onEdgeLabelUpdate,
+  onDeleteEdge,
+  onAddArrow,
+  onNewArrowPreviewChange,
+  onCancelNewArrow,
+  onConfirmNewArrow,
   onBackgroundClick,
   onSliderChange,
   onSliderChangeComplete,
@@ -442,10 +456,28 @@ export default function Flowchart({
                 return { x: canvasX, y: canvasY };
               };
 
+              // Check if this is the newest edge from the node in newArrowPreview
+              // (the most recent NO connection that's being dragged)
+              let isNewArrowPreview = false;
+              let newArrowPreviewPos: { x: number; y: number } | null = null;
+              if (newArrowPreview && sourceNode.id === newArrowPreview.nodeId) {
+                // Find the newest NO edge from this node (last one in the connections array)
+                const noEdgesFromNode = edges.filter(e =>
+                  nodes[e.source].id === sourceNode.id &&
+                  e.yn === 'n' &&
+                  e.label === 'No'
+                );
+                const newestNoEdge = noEdgesFromNode[noEdgesFromNode.length - 1];
+                if (newestNoEdge && edge === newestNoEdge) {
+                  isNewArrowPreview = true;
+                  newArrowPreviewPos = newArrowPreview.pos;
+                }
+              }
+
               // Create stable key for edge based on source and target IDs
               const edgeKey = targetNode
-                ? `${sourceNode.id}-${targetNode.id}-${edge.type}`
-                : `${sourceNode.id}-floating-${edge.targetX}-${edge.targetY}-${edge.type}`;
+                ? `${sourceNode.id}-${targetNode.id}-${edge.yn}`
+                : `${sourceNode.id}-floating-${edge.targetX}-${edge.targetY}-${edge.yn}`;
 
               return (
                 <EdgeComponent
@@ -467,7 +499,7 @@ export default function Flowchart({
                   onEditorClose={handleEditorClose}
                   previewTargetNode={index === selectedEdgeIndex ? edgePreview.node : null}
                   previewTargetBounds={index === selectedEdgeIndex && edgePreview.node ? nodeBounds.get(edgePreview.node.id) : undefined}
-                  previewFloatingPos={index === selectedEdgeIndex ? edgePreview.pos : null}
+                  previewFloatingPos={isNewArrowPreview ? newArrowPreviewPos : (index === selectedEdgeIndex ? edgePreview.pos : null)}
                 />
               );
             })}
@@ -549,6 +581,70 @@ export default function Flowchart({
                 onReconnect={onEdgeReconnect}
                 screenToCanvasCoords={screenToCanvasCoords}
                 onPreviewChange={handlePreviewChange}
+              />
+            );
+          })()}
+
+          {/* Delete edge button (shown when edge from question node is selected) */}
+          {selectedEdgeIndex !== -1 && onDeleteEdge && (() => {
+            const edge = edges[selectedEdgeIndex];
+            if (!edge) return null;
+
+            const sourceNode = nodes[edge.source];
+
+            // Only show delete button if source node is a question (has 2 outgoing arrows)
+            const outgoingEdges = edges.filter(e => e.source === edge.source);
+            if (outgoingEdges.length !== 2) return null;
+
+            const sourceBounds = nodeBounds.get(sourceNode.id);
+            const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
+            const targetBounds = targetNode ? nodeBounds.get(targetNode.id) : undefined;
+
+            // Calculate label position at center of arrow (matching Edge.tsx)
+            const x1 = sourceBounds ? sourceBounds.x + sourceBounds.width / 2 : sourceNode.x;
+            const y1 = sourceBounds ? sourceBounds.y + sourceBounds.height / 2 : sourceNode.y;
+            const x2 = targetBounds ? targetBounds.x + targetBounds.width / 2 :
+                       (targetNode ? targetNode.x : (edge.targetX ?? 0));
+            const y2 = targetBounds ? targetBounds.y + targetBounds.height / 2 :
+                       (targetNode ? targetNode.y : (edge.targetY ?? 0));
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const labelX = x1 + dx * 0.5; // Center of arrow
+            const labelY = y1 + dy * 0.5;
+
+            // Position button at top-right of label (offset by ~25px right, ~12px up from label center)
+            const buttonX = labelX + 25;
+            const buttonY = labelY - 12;
+
+            return (
+              <DeleteEdgeButton
+                key={`delete-edge-${selectedEdgeIndex}`}
+                edgeIndex={selectedEdgeIndex}
+                sourceNodeTitle={sourceNode.text}
+                position={{ x: buttonX, y: buttonY }}
+                onDelete={() => onDeleteEdge(selectedEdgeIndex)}
+              />
+            );
+          })()}
+
+          {/* Add arrow buttons (shown when intermediate node is selected) */}
+          {selectedNodeIndex !== -1 && onAddArrow && (() => {
+            const node = nodes[selectedNodeIndex];
+            if (!node) return null;
+
+            // Only show add arrow buttons if node is intermediate (has 1 outgoing arrow)
+            const outgoingEdges = edges.filter(e => e.source === selectedNodeIndex);
+            if (outgoingEdges.length !== 1) return null;
+
+            const bounds = nodeBounds.get(node.id);
+            if (!bounds) return null;
+
+            return (
+              <AddArrowButtons
+                key={`add-arrows-${node.id}`}
+                nodeId={node.id}
+                nodeBounds={bounds}
+                onAddArrow={(direction) => onAddArrow(node.id, direction)}
               />
             );
           })()}
