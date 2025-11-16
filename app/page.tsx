@@ -364,7 +364,12 @@ export default function Home() {
         <div className="fixed bottom-4 right-4 flex gap-2 z-50">
           {/* Clear Site Data button */}
           <button
-            onClick={() => {
+            onClick={async () => {
+              // Sign out from Supabase (clears auth cookies)
+              const { createClient } = await import('@/lib/supabase/client');
+              const supabase = createClient();
+              await supabase.auth.signOut();
+
               // Clear localStorage
               localStorage.clear();
               // Clear sessionStorage
