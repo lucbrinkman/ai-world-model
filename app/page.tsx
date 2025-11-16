@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Flowchart from '@/components/Flowchart';
@@ -8,6 +9,7 @@ import ZoomControls from '@/components/ZoomControls';
 import DragHint from '@/components/DragHint';
 import { WelcomeModal } from '@/components/WelcomeModal';
 import { CookieSettings } from '@/components/CookieSettings';
+import DeleteNodeDialog from '@/components/DeleteNodeDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from '@/lib/graphData';
@@ -28,6 +30,9 @@ export default function Home() {
   const [selectedNodeIndex, setSelectedNodeIndex] = useState(startNodeIndex);
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(-1);
   const [selectedEdgeIndex, setSelectedEdgeIndex] = useState(-1);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [nodeToDelete, setNodeToDelete] = useState<{ id: string; title: string } | null>(null);
   const [boldPaths, setBoldPaths] = useState(true);
   const [transparentPaths, setTransparentPaths] = useState(false);
   const [minOpacity, setMinOpacity] = useState(20);
@@ -590,7 +595,8 @@ export default function Home() {
       connections: [
         {
           type: '-' as const, // Always connection
-          targetId: graphData.nodes[0]?.id || 'start', // Connect to first node or 'start'
+          targetX: x + 150, // Free-floating edge pointing to the right
+          targetY: y,
           label: 'Always',
         },
       ],
@@ -604,6 +610,231 @@ export default function Home() {
 
     setHasUnsavedGraphChanges(true);
   }, [graphData]);
+
+  const handleInitiateDelete = useCallback((nodeId: string) => {
+    // Find the node to delete
+    const node = graphData.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    // Prevent deleting the start node
+    if (node.type === 's') {
+      alert('Cannot delete the start node');
+      return;
+    }
+
+    // Open confirmation dialog
+    setNodeToDelete({ id: nodeId, title: node.title });
+    setDeleteDialogOpen(true);
+  }, [graphData]);
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    // Find the node to delete
+    const nodeToDelete = graphData.nodes.find(n => n.id === nodeId);
+    if (!nodeToDelete) return;
+
+    // Get the node's position for converting incoming edges to free-floating
+    const nodePosition = nodeToDelete.position;
+
+    // Check if we need to reset selectedNodeIndex
+    const deletedNodeIndex = nodes.findIndex(n => n.id === nodeId);
+    const shouldResetSelection = deletedNodeIndex === selectedNodeIndex;
+
+    // Use flushSync to ensure all state updates happen synchronously
+    // This prevents intermediate renders with mismatched indices
+    flushSync(() => {
+      // Clear UI state
+      setSelectedNodeId(null);
+      setDeleteDialogOpen(false);
+      setNodeToDelete(null);
+
+      // Reset selection if needed
+      if (shouldResetSelection) {
+        setSelectedNodeIndex(startNodeIndex);
+      }
+
+      // Update graph data
+      setGraphData(prev => {
+        // Remove the node from the array
+        const updatedNodes = prev.nodes.filter(n => n.id !== nodeId);
+
+        // Convert incoming edges to free-floating endpoints
+        const nodesWithUpdatedConnections = updatedNodes.map(node => {
+          const updatedConnections = node.connections.map(conn => {
+            if (conn.targetId === nodeId) {
+              // Convert to free-floating endpoint
+              return {
+                ...conn,
+                targetId: undefined,
+                targetX: nodePosition.x,
+                targetY: nodePosition.y,
+              };
+            }
+            return conn;
+          });
+
+          return {
+            ...node,
+            connections: updatedConnections,
+          };
+        });
+
+        // Re-index slider indices if deleting a question node
+        const deletedSliderIndex = nodeToDelete.sliderIndex;
+        const finalNodes = deletedSliderIndex !== null && deletedSliderIndex !== undefined
+          ? nodesWithUpdatedConnections.map(node => {
+              if (node.sliderIndex !== null && node.sliderIndex !== undefined && node.sliderIndex > deletedSliderIndex) {
+                return {
+                  ...node,
+                  sliderIndex: node.sliderIndex - 1,
+                };
+              }
+              return node;
+            })
+          : nodesWithUpdatedConnections;
+
+        return {
+          ...prev,
+          nodes: finalNodes,
+        };
+      });
+
+      setHasUnsavedGraphChanges(true);
+    });
+  }, [graphData, nodes, selectedNodeIndex]);
+
+  const handleCancelDelete = useCallback(() => {
+    setDeleteDialogOpen(false);
+    setNodeToDelete(null);
+  }, []);
+
+  // Change node type handler
+  const handleChangeNodeType = useCallback((nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => {
+    const node = graphData.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    // Don't allow changing start node type
+    if (node.type === 's') {
+      alert('Cannot change the type of the start node');
+      return;
+    }
+
+    const oldType = node.type;
+    if (oldType === newType) return; // No change
+
+    flushSync(() => {
+      setGraphData(prev => {
+        const updatedNodes = prev.nodes.map(n => {
+          if (n.id !== nodeId) return n;
+
+          // Changing TO question node
+          if (newType === 'n') {
+            // Find the highest sliderIndex among existing questions
+            const questionNodes = prev.nodes.filter(node => node.type === 'n');
+            const maxSliderIndex = questionNodes.reduce((max, node) =>
+              node.sliderIndex !== null && node.sliderIndex > max ? node.sliderIndex : max, -1);
+            const newSliderIndex = maxSliderIndex + 1;
+
+            // Ensure node has exactly 2 connections (YES and NO)
+            let connections = [...n.connections];
+            if (connections.length === 0) {
+              // Create 2 new free-floating connections
+              connections = [
+                { type: 'y' as const, targetX: n.position.x + 150, targetY: n.position.y - 50, label: 'Yes' },
+                { type: 'n' as const, targetX: n.position.x + 150, targetY: n.position.y + 50, label: 'No' },
+              ];
+            } else if (connections.length === 1) {
+              // Keep existing as YES, add NO
+              connections[0] = { ...connections[0], type: 'y' as const };
+              connections.push({ type: 'n' as const, targetX: n.position.x + 150, targetY: n.position.y + 50, label: 'No' });
+            } else {
+              // Has 2+ connections: convert first to YES, second to NO, keep rest as-is
+              connections[0] = { ...connections[0], type: 'y' as const };
+              connections[1] = { ...connections[1], type: 'n' as const };
+            }
+
+            return {
+              ...n,
+              type: newType,
+              sliderIndex: newSliderIndex,
+              connections,
+            };
+          }
+
+          // Changing FROM question node to something else
+          if (oldType === 'n') {
+            // Convert YES/NO connections to ALWAYS
+            const connections = n.connections.map(conn => ({
+              ...conn,
+              type: '-' as const,
+            }));
+
+            return {
+              ...n,
+              type: newType,
+              sliderIndex: null,
+              connections,
+            };
+          }
+
+          // Other type changes (just change the type)
+          return {
+            ...n,
+            type: newType,
+          };
+        });
+
+        // If changing FROM question, need to re-index remaining questions and update sliderValues
+        if (oldType === 'n') {
+          const oldSliderIndex = node.sliderIndex;
+          if (oldSliderIndex !== null) {
+            // Re-index all questions that had higher indices
+            const finalNodes = updatedNodes.map(n => {
+              if (n.type === 'n' && n.sliderIndex !== null && n.sliderIndex > oldSliderIndex) {
+                return { ...n, sliderIndex: n.sliderIndex - 1 };
+              }
+              return n;
+            });
+
+            // Update sliderValues array (remove the slider at oldSliderIndex)
+            setSliderValues(prev => {
+              const newValues = [...prev];
+              newValues.splice(oldSliderIndex, 1);
+              return newValues;
+            });
+
+            return { ...prev, nodes: finalNodes };
+          }
+        }
+
+        // If changing TO question, add a new slider value (default 50)
+        if (newType === 'n') {
+          setSliderValues(prev => [...prev, 50]);
+        }
+
+        return { ...prev, nodes: updatedNodes };
+      });
+
+      setHasUnsavedGraphChanges(true);
+    });
+  }, [graphData]);
+
+  // Keyboard handler for Delete/Backspace keys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger if a node is selected and we're not editing text
+      if (!selectedNodeId) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if ((e.target as HTMLElement).contentEditable === 'true') return;
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        handleInitiateDelete(selectedNodeId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId, handleInitiateDelete]);
 
   // Settings change handlers with analytics
   const handleBoldPathsChange = useCallback((value: boolean) => {
@@ -698,6 +929,7 @@ export default function Home() {
             selectedNodeIndex={selectedNodeIndex}
             hoveredNodeIndex={hoveredNodeIndex}
             selectedEdgeIndex={selectedEdgeIndex}
+            selectedNodeId={selectedNodeId}
             boldPaths={boldPaths}
             transparentPaths={transparentPaths}
             minOpacity={minOpacity}
@@ -712,10 +944,15 @@ export default function Home() {
             onNodeDragStateChange={handleNodeDragStateChange}
             onUpdateNodeText={handleUpdateNodeText}
             onAddNode={handleAddNode}
+            onNodeSelect={setSelectedNodeId}
+            onDeleteNode={handleInitiateDelete}
+            onChangeNodeType={handleChangeNodeType}
             onEdgeClick={handleEdgeClick}
             onEdgeReconnect={handleEdgeReconnect}
             onEdgeLabelUpdate={handleEdgeLabelUpdate}
             onBackgroundClick={handleBackgroundClick}
+            onSliderChange={handleSliderChange}
+            onSliderChangeComplete={handleSliderChangeComplete}
           />
           <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />
           <ZoomControls
@@ -738,6 +975,14 @@ export default function Home() {
       <CookieSettings
         isOpen={showCookieSettings}
         onClose={() => setShowCookieSettings(false)}
+      />
+
+      {/* Delete Node Dialog */}
+      <DeleteNodeDialog
+        isOpen={deleteDialogOpen}
+        nodeTitle={nodeToDelete?.title || ''}
+        onConfirm={() => nodeToDelete && handleDeleteNode(nodeToDelete.id)}
+        onCancel={handleCancelDelete}
       />
 
       {/* Dev-only buttons */}

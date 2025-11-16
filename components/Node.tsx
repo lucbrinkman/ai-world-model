@@ -11,6 +11,7 @@ interface NodeProps {
   node: NodeType;
   isSelected: boolean;
   isHovered: boolean;
+  isNodeSelected: boolean;
   transparentPaths: boolean;
   minOpacity: number;
   maxOutcomeProbability: number;
@@ -23,12 +24,19 @@ interface NodeProps {
   onDragStateChange: NodeDragStateHandler;
   onUpdateText?: (nodeId: string, newText: string) => void;
   onEditorClose?: () => void;
+  onSelect?: (nodeId: string | null) => void;
+  onDelete?: (nodeId: string) => void;
+  onChangeType?: (nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => void;
+  sliderValue?: number;
+  onSliderChange?: (value: number) => void;
+  onSliderChangeComplete?: () => void;
 }
 
 const Node = forwardRef<HTMLDivElement, NodeProps>(({
   node,
   isSelected,
   isHovered,
+  isNodeSelected,
   transparentPaths,
   minOpacity,
   maxOutcomeProbability,
@@ -41,6 +49,12 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   onDragStateChange,
   onUpdateText,
   onEditorClose,
+  onSelect,
+  onDelete,
+  onChangeType,
+  sliderValue,
+  onSliderChange,
+  onSliderChangeComplete,
 }, ref) => {
   const { x, y, text, p, type } = node;
 
@@ -57,6 +71,9 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(text);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Slider popup hover state
+  const [isSliderHovered, setIsSliderHovered] = useState(false);
 
   // Combined ref callback to set both internal ref and forwarded ref
   const setRefs = useCallback((node: HTMLDivElement | null) => {
@@ -140,8 +157,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   // Calculate opacity
   const opacity = calculateAlpha(p, transparentPaths, minOpacity, isSelected || isHovered, maxOutcomeProbability);
 
-  // Calculate border width
-  const borderWidth = calculateNodeBorderWidth(p, isSelected || isHovered);
+  // Calculate border width (only change on selection, not hover)
+  const borderWidth = calculateNodeBorderWidth(p, isSelected);
 
   // Get colors based on node type and state
   const getBorderColor = () => {
@@ -373,6 +390,10 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         // Only trigger onClick if we didn't drag
         if (!didDragRef.current) {
           onClick();
+          // Toggle selection: if already selected, deselect; otherwise select
+          if (onSelect) {
+            onSelect(isNodeSelected ? null : node.id);
+          }
         }
       }}
       onDoubleClick={handleDoubleClick}
@@ -456,6 +477,100 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
               {i < lines.length - 1 && <br />}
             </span>
           ))}
+        </div>
+      )}
+
+      {/* Type selector - shown when node is selected (except for start node) */}
+      {isNodeSelected && onChangeType && node.type !== 's' && (
+        <select
+          value={node.type}
+          onChange={(e) => {
+            e.stopPropagation();
+            const newType = e.target.value as 'n' | 'i' | 'g' | 'a' | 'e';
+            onChangeType(node.id, newType);
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute -top-8 -right-2 bg-white text-gray-900 border border-gray-300 rounded px-2 py-1 text-xs shadow-lg z-10 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          title="Change node type"
+        >
+          <option value="i">Intermediate</option>
+          <option value="n">Question</option>
+          <option value="g">Good Outcome</option>
+          <option value="a">Ambivalent Outcome</option>
+          <option value="e">Existential Risk</option>
+        </select>
+      )}
+
+      {/* Delete button - shown when node is selected */}
+      {isNodeSelected && onDelete && node.type !== 's' && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(node.id);
+          }}
+          className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg transition-colors z-10"
+          title="Delete node (Delete/Backspace)"
+          style={{
+            fontSize: '14px',
+            lineHeight: '1',
+          }}
+        >
+          ×
+        </button>
+      )}
+
+      {/* Pop-up slider - shown when hovering on question nodes */}
+      {(isHovered || isSliderHovered) && !isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange && (
+        <div
+          className="absolute pointer-events-auto"
+          style={{
+            top: '100%',
+            left: '-12px',
+            right: '-12px',
+            paddingTop: '8px', // Invisible area to bridge gap above
+            paddingBottom: '12px', // Invisible area below
+            paddingLeft: '12px', // Invisible area on left
+            paddingRight: '12px', // Invisible area on right
+            zIndex: 1000,
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseEnter={() => setIsSliderHovered(true)}
+          onMouseLeave={() => setIsSliderHovered(false)}
+        >
+          <div
+            className="bg-gray-900 rounded-lg shadow-xl px-2 flex items-center"
+            style={{
+              paddingTop: '4px',
+              paddingBottom: '4px',
+            }}
+          >
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={sliderValue}
+              onChange={(e) => {
+                e.stopPropagation();
+                onSliderChange(Number(e.target.value));
+              }}
+              onMouseUp={(e) => {
+                e.stopPropagation();
+                onSliderChangeComplete?.();
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+                onSliderChangeComplete?.();
+              }}
+              className="w-full h-1 rounded-lg appearance-none cursor-pointer block"
+              style={{
+                background: `linear-gradient(to right, ${NODE_COLORS.QUESTION.hover} 0%, ${NODE_COLORS.QUESTION.hover} ${sliderValue}%, #374151 ${sliderValue}%, #374151 100%)`,
+                outline: 'none',
+                margin: 0,
+                padding: 0,
+              }}
+            />
+          </div>
         </div>
       )}
     </div>
