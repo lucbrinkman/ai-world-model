@@ -157,8 +157,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   // Calculate opacity
   const opacity = calculateAlpha(p, transparentPaths, minOpacity, isSelected || isHovered, maxOutcomeProbability);
 
-  // Calculate border width
-  const borderWidth = calculateNodeBorderWidth(p, isSelected || isHovered);
+  // Calculate border width (only change on selection, not hover)
+  const borderWidth = calculateNodeBorderWidth(p, isSelected);
 
   // Get colors based on node type and state
   const getBorderColor = () => {
