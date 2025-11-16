@@ -82,11 +82,6 @@ export default function Home() {
     }
   }, [user, authLoading]);
 
-  // Update URL whenever slider values change
-  useEffect(() => {
-    updateUrlWithSliderValues(sliderValues);
-  }, [sliderValues]);
-
   // Calculate probabilities using useMemo (only recalculate when dependencies change)
   const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
     const result = calculateProbabilities(sliderValues, selectedNodeIndex);
@@ -129,6 +124,9 @@ export default function Home() {
     setSliderValues(current => {
       // Track analytics
       analytics.trackSliderChange(index, current[index]);
+
+      // Update URL with final values (only on release, not during dragging)
+      updateUrlWithSliderValues(current);
 
       const currentState = current.join('i');
       setUndoStack(prev => {
@@ -180,6 +178,9 @@ export default function Home() {
     setSliderValues(newValues);
     setUndoStack(prev => [...prev, newValues.join('i')]);
 
+    // Update URL
+    updateUrlWithSliderValues(newValues);
+
     // Track analytics
     analytics.trackAction('reset');
   }, []);
@@ -189,6 +190,9 @@ export default function Home() {
     const authorValues = decodeSliderValues(AUTHORS_ESTIMATES);
     setSliderValues(authorValues);
     setUndoStack(prev => [...prev, authorValues.join('i')]);
+
+    // Update URL
+    updateUrlWithSliderValues(authorValues);
 
     // Track analytics
     analytics.trackAction('load_authors_estimates');
@@ -201,7 +205,11 @@ export default function Home() {
         const newStack = [...prev];
         newStack.pop();
         const previousState = newStack[newStack.length - 1];
-        setSliderValues(decodeSliderValues(previousState));
+        const previousValues = decodeSliderValues(previousState);
+        setSliderValues(previousValues);
+
+        // Update URL
+        updateUrlWithSliderValues(previousValues);
 
         // Track analytics
         analytics.trackAction('undo');
@@ -243,6 +251,9 @@ export default function Home() {
   const handleLoadScenario = useCallback((loadedValues: number[]) => {
     setSliderValues(loadedValues);
     setUndoStack(prev => [...prev, loadedValues.join('i')]);
+
+    // Update URL
+    updateUrlWithSliderValues(loadedValues);
   }, []);
 
   // Zoom control handlers
