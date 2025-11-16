@@ -359,15 +359,46 @@ export default function Home() {
         userEmail={user?.email || ''}
       />
 
-      {/* Dev-only: Test Welcome Modal button */}
-      {process.env.NODE_ENV === 'development' && user && (
-        <button
-          onClick={() => setShowWelcomeModal(true)}
-          className="fixed bottom-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-md shadow-lg hover:bg-orange-600 text-sm z-50"
-          title="Dev only: Test welcome modal"
-        >
-          Test Welcome
-        </button>
+      {/* Dev-only buttons */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 right-4 flex gap-2 z-50">
+          {/* Clear Site Data button */}
+          <button
+            onClick={() => {
+              // Clear localStorage
+              localStorage.clear();
+              // Clear sessionStorage
+              sessionStorage.clear();
+              // Clear IndexedDB (where PostHog stores data)
+              if (window.indexedDB) {
+                window.indexedDB.databases().then(databases => {
+                  databases.forEach(db => {
+                    if (db.name) {
+                      window.indexedDB.deleteDatabase(db.name);
+                    }
+                  });
+                });
+              }
+              // Reload page to reset everything
+              window.location.reload();
+            }}
+            className="bg-red-500 text-white px-4 py-2 rounded-md shadow-lg hover:bg-red-600 text-sm"
+            title="Dev only: Clear all site data and reload"
+          >
+            Clear Site Data
+          </button>
+
+          {/* Test Welcome Modal button */}
+          {user && (
+            <button
+              onClick={() => setShowWelcomeModal(true)}
+              className="bg-orange-500 text-white px-4 py-2 rounded-md shadow-lg hover:bg-orange-600 text-sm"
+              title="Dev only: Test welcome modal"
+            >
+              Test Welcome
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
