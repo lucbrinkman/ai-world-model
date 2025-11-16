@@ -524,7 +524,8 @@ export default function Home() {
       connections: [
         {
           type: '-' as const, // Always connection
-          targetId: graphData.nodes[0]?.id || 'start', // Connect to first node or 'start'
+          targetX: x + 150, // Free-floating edge pointing to the right
+          targetY: y,
           label: 'Always',
         },
       ],
