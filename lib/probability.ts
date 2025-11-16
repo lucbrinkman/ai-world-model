@@ -258,3 +258,61 @@ function interpolate(p: number, min: number, max: number): number {
   const clamped = clamp01(p);
   return min + (max - min) * clamped;
 }
+
+/**
+ * Check if a node is an ancestor of another node (i.e., if it comes earlier in the chain)
+ * This is used to prevent creating cycles in the graph.
+ *
+ * @param potentialAncestorId - The ID of the node we're checking if it's an ancestor
+ * @param nodeId - The ID of the node we're checking against
+ * @param edges - All edges in the graph
+ * @param nodes - All nodes in the graph
+ * @returns true if potentialAncestorId is an ancestor of nodeId
+ */
+export function isAncestorOf(
+  potentialAncestorId: string,
+  nodeId: string,
+  edges: Edge[],
+  nodes: Node[]
+): boolean {
+  // If they're the same node, return true (can't connect to self)
+  if (potentialAncestorId === nodeId) return true;
+
+  // Build a map of node ID to node index for quick lookup
+  const nodeIdToIndex = new Map<string, number>();
+  nodes.forEach(node => {
+    nodeIdToIndex.set(node.id, node.index);
+  });
+
+  const ancestorIndex = nodeIdToIndex.get(potentialAncestorId);
+  const startIndex = nodeIdToIndex.get(nodeId);
+
+  if (ancestorIndex === undefined || startIndex === undefined) return false;
+
+  // BFS to find all ancestors of the start node
+  const visited = new Set<number>();
+  const queue: number[] = [startIndex];
+
+  while (queue.length > 0) {
+    const currentIndex = queue.shift()!;
+
+    if (visited.has(currentIndex)) continue;
+    visited.add(currentIndex);
+
+    // If we found the potential ancestor, it is indeed an ancestor
+    if (currentIndex === ancestorIndex) return true;
+
+    // Find all incoming edges to the current node
+    const incomingEdges = edges.filter(edge => edge.target === currentIndex);
+
+    // Add all source nodes to the queue
+    for (const edge of incomingEdges) {
+      if (!visited.has(edge.source)) {
+        queue.push(edge.source);
+      }
+    }
+  }
+
+  // We didn't find the potential ancestor, so it's not an ancestor
+  return false;
+}

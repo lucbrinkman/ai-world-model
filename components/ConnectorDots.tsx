@@ -1,5 +1,6 @@
 import { Edge as EdgeType, Node, SNAP_DISTANCE } from '@/lib/types';
-import { useState, useCallback, useEffect } from 'react';
+import { isAncestorOf } from '@/lib/probability';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 interface ConnectorDotsProps {
   edge: EdgeType;
@@ -7,6 +8,7 @@ interface ConnectorDotsProps {
   sourceNode: Node;
   targetNode?: Node;
   allNodes: Node[];
+  allEdges: EdgeType[];
   nodeBounds: DOMRect[];
   sourceBounds?: DOMRect;
   targetBounds?: DOMRect;
@@ -21,6 +23,7 @@ export default function ConnectorDots({
   sourceNode,
   targetNode,
   allNodes,
+  allEdges,
   nodeBounds,
   sourceBounds,
   targetBounds,
@@ -32,6 +35,7 @@ export default function ConnectorDots({
   const [hoveredConnector, setHoveredConnector] = useState<'source' | 'target' | null>(null);
   const [previewTargetNode, setPreviewTargetNode] = useState<Node | null>(null);
   const [previewFloatingPos, setPreviewFloatingPos] = useState<{ x: number; y: number } | null>(null);
+  const [blockedNodeTooltip, setBlockedNodeTooltip] = useState<{ x: number; y: number } | null>(null);
 
   // Notify parent of preview state changes
   useEffect(() => {
@@ -103,6 +107,13 @@ export default function ConnectorDots({
     setDraggingConnector(end);
   }, []);
 
+  // Clear tooltip when dragging stops
+  useEffect(() => {
+    if (!draggingConnector) {
+      setBlockedNodeTooltip(null);
+    }
+  }, [draggingConnector]);
+
   // Global mouse handlers
   useEffect(() => {
     if (!draggingConnector || !onReconnect) return;
@@ -127,6 +138,9 @@ export default function ConnectorDots({
 
         // Don't allow connecting back to the source node
         if (node.id === sourceNode.id) continue;
+
+        // Don't allow creating cycles - check if the candidate node is an ancestor of the source
+        if (isAncestorOf(node.id, sourceNode.id, allEdges, allNodes)) continue;
 
         const closestX = Math.max(bounds.left, Math.min(canvasPos.x, bounds.right));
         const closestY = Math.max(bounds.top, Math.min(canvasPos.y, bounds.bottom));
@@ -156,8 +170,12 @@ export default function ConnectorDots({
 
       const canvasPos = screenToCanvasCoords(e.clientX, e.clientY);
       const SNAP_DISTANCE_SQUARED = SNAP_DISTANCE * SNAP_DISTANCE;
+      const TOOLTIP_DISTANCE = 80; // Larger distance for showing tooltip warning
+      const TOOLTIP_DISTANCE_SQUARED = TOOLTIP_DISTANCE * TOOLTIP_DISTANCE;
       let closestNode: Node | null = null;
+      let closestBlockedNode: { node: Node; bounds: DOMRect } | null = null;
       let minDistanceSquared = SNAP_DISTANCE_SQUARED;
+      let minBlockedDistanceSquared = TOOLTIP_DISTANCE_SQUARED;
 
       for (let i = 0; i < allNodes.length; i++) {
         const node = allNodes[i];
@@ -173,10 +191,29 @@ export default function ConnectorDots({
         const dy = closestY - canvasPos.y;
         const distSquared = dx * dx + dy * dy;
 
+        // Don't allow creating cycles - check if the candidate node is an ancestor of the source
+        if (isAncestorOf(node.id, sourceNode.id, allEdges, allNodes)) {
+          // Track the closest blocked node for tooltip
+          if (distSquared < minBlockedDistanceSquared) {
+            minBlockedDistanceSquared = distSquared;
+            closestBlockedNode = { node, bounds };
+          }
+          continue;
+        }
+
         if (distSquared < minDistanceSquared) {
           minDistanceSquared = distSquared;
           closestNode = node;
         }
+      }
+
+      // Handle blocked node tooltip - show immediately
+      if (closestBlockedNode) {
+        const tooltipX = closestBlockedNode.bounds.x + closestBlockedNode.bounds.width / 2;
+        const tooltipY = closestBlockedNode.bounds.y - 10; // Position above the node
+        setBlockedNodeTooltip({ x: tooltipX, y: tooltipY });
+      } else {
+        setBlockedNodeTooltip(null);
       }
 
       if (closestNode) {
@@ -195,7 +232,7 @@ export default function ConnectorDots({
       window.removeEventListener('mouseup', handleGlobalMouseUp);
       window.removeEventListener('mousemove', handleGlobalMouseMove);
     };
-  }, [draggingConnector, onReconnect, edgeIndex, allNodes, nodeBounds, screenToCanvasCoords]);
+  }, [draggingConnector, onReconnect, edgeIndex, allNodes, allEdges, nodeBounds, sourceNode, screenToCanvasCoords]);
 
   return (
     <>
@@ -255,6 +292,31 @@ export default function ConnectorDots({
         onMouseEnter={() => setHoveredConnector('target')}
         onMouseLeave={() => setHoveredConnector(null)}
       />
+
+      {/* Blocked node tooltip */}
+      {blockedNodeTooltip && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${blockedNodeTooltip.x}px`,
+            top: `${blockedNodeTooltip.y}px`,
+            transform: 'translate(-50%, -100%)',
+            backgroundColor: '#6b7280',
+            color: 'white',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: '500',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            zIndex: 200,
+            border: '2px solid #4b5563',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          Can&apos;t connect to an earlier node
+        </div>
+      )}
     </>
   );
 }

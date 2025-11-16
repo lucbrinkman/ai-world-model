@@ -301,6 +301,11 @@ export default function Flowchart({
     setContextMenu(null);
   };
 
+  // Handle edge preview changes (memoized to prevent infinite loops)
+  const handlePreviewChange = useCallback((node: NodeType | null, pos: { x: number; y: number } | null) => {
+    setEdgePreview({ node, pos });
+  }, []);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging && scrollContainerRef.current) {
       const deltaX = e.clientX - dragStartRef.current.x;
@@ -382,7 +387,7 @@ export default function Flowchart({
               width={CANVAS_WIDTH}
               height={CANVAS_HEIGHT}
               fill="transparent"
-              style={{ cursor: 'grab', pointerEvents: 'all' }}
+              style={{ cursor: isDragging ? 'grabbing' : 'grab', pointerEvents: 'all' }}
               onClick={handleBackgroundClick}
             />
 
@@ -491,12 +496,13 @@ export default function Flowchart({
                 sourceNode={sourceNode}
                 targetNode={targetNode}
                 allNodes={nodes}
+                allEdges={edges}
                 nodeBounds={nodeBounds}
                 sourceBounds={sourceBounds}
                 targetBounds={targetBounds}
                 onReconnect={onEdgeReconnect}
                 screenToCanvasCoords={screenToCanvasCoords}
-                onPreviewChange={(node, pos) => setEdgePreview({ node, pos })}
+                onPreviewChange={handlePreviewChange}
               />
             );
           })()}
