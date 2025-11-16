@@ -331,9 +331,68 @@ export default function Home() {
         }
         return node;
       });
+
+      // Push away any floating arrow endpoints that are underneath this node
+      const nodeWidth = 145;
+      const nodeHeight = 55;
+      const padding = 10; // Small padding around the node
+
+      const nodeBounds = {
+        left: newX - nodeWidth / 2 - padding,
+        right: newX + nodeWidth / 2 + padding,
+        top: newY - nodeHeight / 2 - padding,
+        bottom: newY + nodeHeight / 2 + padding,
+      };
+
+      const updatedNodesWithPushedEndpoints = updatedNodes.map(node => {
+        const updatedConnections = node.connections.map(connection => {
+          // Check if this is a floating endpoint
+          if (connection.targetX !== undefined && connection.targetY !== undefined) {
+            // Check if the endpoint is within the moved node's bounds
+            if (
+              connection.targetX >= nodeBounds.left &&
+              connection.targetX <= nodeBounds.right &&
+              connection.targetY >= nodeBounds.top &&
+              connection.targetY <= nodeBounds.bottom
+            ) {
+              // Calculate direction from node center to endpoint
+              const dx = connection.targetX - newX;
+              const dy = connection.targetY - newY;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+
+              // If endpoint is at the exact center, push it to the right
+              if (distance === 0) {
+                return {
+                  ...connection,
+                  targetX: nodeBounds.right + 5,
+                  targetY: newY,
+                };
+              }
+
+              // Normalize direction and push endpoint just outside the bounds
+              const normalizedDx = dx / distance;
+              const normalizedDy = dy / distance;
+              const pushDistance = Math.max(nodeWidth, nodeHeight) / 2 + padding + 5;
+
+              return {
+                ...connection,
+                targetX: newX + normalizedDx * pushDistance,
+                targetY: newY + normalizedDy * pushDistance,
+              };
+            }
+          }
+          return connection;
+        });
+
+        return {
+          ...node,
+          connections: updatedConnections,
+        };
+      });
+
       return {
         ...prev,
-        nodes: updatedNodes,
+        nodes: updatedNodesWithPushedEndpoints,
       };
     });
 
