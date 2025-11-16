@@ -25,16 +25,45 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST
 
     if (posthogKey && posthogHost && typeof window !== 'undefined') {
+      // Check if CookieYes has given consent for analytics
+      // CookieYes sets this global variable when consent is managed
+      const checkConsent = () => {
+        // @ts-ignore - CookieYes global
+        if (typeof window.CookieConsent !== 'undefined') {
+          // @ts-ignore - CookieYes global
+          const consentCategories = window.CookieConsent.getCategories()
+          // If analytics category is not accepted, opt out
+          if (!consentCategories.includes('analytics')) {
+            posthog.opt_out_capturing()
+            return false
+          }
+        }
+        return true
+      }
+
       posthog.init(posthogKey, {
         api_host: posthogHost,
         capture_pageview: false, // We'll manually capture pageviews
         capture_pageleave: true,
         autocapture: false, // We'll manually track events
         loaded: (posthog) => {
+          // Check consent after PostHog loads
+          checkConsent()
+
           if (process.env.NODE_ENV === 'development') {
             posthog.debug()
           }
         },
+      })
+
+      // Listen for CookieYes consent changes
+      // @ts-ignore - CookieYes event
+      document.addEventListener('cookieyes_consent_update', () => {
+        if (checkConsent()) {
+          posthog.opt_in_capturing()
+        } else {
+          posthog.opt_out_capturing()
+        }
       })
     }
   }, [])
