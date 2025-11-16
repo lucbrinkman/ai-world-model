@@ -4,79 +4,64 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Next.js application called "Map of AI Futures" - an interactive probability flowchart that visualizes different potential AI future scenarios. Users adjust probability sliders to explore how different decisions and outcomes affect the likelihood of various AI futures (from utopian to existential risk scenarios).
+Next.js application called "Map of AI Futures" - an interactive probability flowchart visualizing potential AI future scenarios. Users adjust probability sliders to explore how different decisions affect outcome likelihoods.
 
-## Development Commands
+**Key Features:**
+- Interactive probability sliders with real-time DAG-based calculations
+- Zoom and pan canvas navigation
+- Supabase authentication (passwordless magic link)
+- Save/load/share scenarios via URL
 
-- `npm run dev` - Start development server (default: http://localhost:3000)
+## Development
+
+**Commands:**
+- `npm run dev` - Start dev server (http://localhost:3000)
 - `npm run build` - Build for production
-- `npm start` - Start production server
 - `npm run lint` - Run ESLint
+
+**Environment Variables:**
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-side only)
+
+**Database:** Supabase with `saved_scenarios` table storing user scenarios.
 
 ## Architecture
 
-### Core Probability System
+### Core System
 
-The application is built around a directed acyclic graph (DAG) of nodes and edges representing different AI future scenarios and decision points. The probability calculation system is the heart of the application:
+**Probability Engine:**
+- **DAG Structure** (`lib/graphData.ts`, `graphData.json`): Nodes (question/start/outcome types) and edges with conditional probabilities
+- **Calculation** (`lib/probability.ts`): Recursive probability propagation with memoization. Question nodes (21 total) use slider values to control YES/NO branch probabilities
+- **URL State** (`lib/urlState.ts`): Slider values encoded as `?p=50i70i25i...` (integers separated by 'i')
 
-1. **Graph Data** (`lib/graphData.ts`): Contains raw node and edge data parsed from string format, originally ported from v4/graph.js. Nodes have types (question, start, good, ambivalent, existential, intermediate) and positions. Edges connect nodes with YES/NO branches or always-100% connections.
+**Authentication:**
+- Supabase passwordless magic link (`lib/supabase/`)
+- Server actions in `lib/actions/scenarios.ts`
+- Custom `useAuth` hook (`hooks/useAuth.ts`)
 
-2. **Probability Calculation** (`lib/probability.ts`): The `calculateProbabilities()` function implements recursive probability propagation:
-   - Starts from a probability root node (default: start node, or user-selected node)
-   - Calculates node probabilities by summing incoming edge probabilities
-   - Calculates edge probabilities as parent node probability × conditional probability
-   - Uses memoization to avoid recalculation
-   - Question nodes (type 'n') have associated slider values that control YES/NO branch probabilities
+### Key Components
 
-3. **URL State Management** (`lib/urlState.ts`): Slider values are encoded in URL query param 'p' as 'i'-separated integers (e.g., `?p=50i70i25i96i...`). This allows sharing specific probability configurations.
+- `app/page.tsx` - Main state orchestrator (slider values, selected node, settings)
+- `components/Flowchart.tsx` - DAG visualization with zoom/pan
+- `components/Sidebar.tsx` - 21 probability sliders + controls
+- `components/Node.tsx` - Individual nodes (click to set probability root)
+- `components/Edge.tsx` - SVG arrows with adaptive styling
+- `components/WelcomeModal.tsx` - New user onboarding
 
-### Component Structure
+### Important Implementation Details
 
-- **Page Component** (`app/page.tsx`): Main orchestrator managing all state (slider values, selected node, hover state, settings). Uses `useMemo` for probability calculations to avoid unnecessary recomputation.
+**Node Interaction:**
+- Clicking a node sets it as probability root (recalculates all probabilities from that point)
+- Clicking same node again resets to start node
+- Slider hover highlights corresponding flowchart node
 
-- **Flowchart Component** (`components/Flowchart.tsx`): Renders the DAG visualization. Uses refs to track actual DOM node bounds for accurate edge drawing. Positions nodes absolutely based on calculated x/y coordinates.
+**Edge Rendering:**
+- Uses refs to track actual DOM node bounds for accurate arrow positioning
+- Adjusts for zoom scale when calculating edge paths
+- Adaptive opacity/width based on probability values
 
-- **Node Component** (`components/Node.tsx`): Renders individual nodes with type-specific styling. Handles click (to set probability root) and hover interactions.
-
-- **Edge Component** (`components/Edge.tsx`): Renders SVG arrows between nodes. Implements visual features like:
-  - Bold paths: arrow width/head size scales with probability
-  - Transparent paths: opacity scales with probability
-  - Dynamic arrow routing to connect node edges
-
-- **Sidebar Component** (`components/Sidebar.tsx`): Contains 21 probability sliders (one per question node), visualization settings, and action buttons (reset, load author's estimates, undo).
-
-- **Slider Component** (`components/Slider.tsx`): Individual slider control with hover effects that highlight corresponding nodes in the flowchart.
-
-### Important Constants
-
-- `SLIDER_COUNT = 21` - Number of question nodes with associated sliders
-- `SLIDER_DEFAULT_VALUE = 50` - Default probability (50%)
-- `AUTHORS_ESTIMATES` - Pre-configured probability values from original author
-- Node type constants in `lib/types.ts` define the taxonomy of outcomes
-
-### State Synchronization
-
-The app maintains bidirectional synchronization:
-- Slider values ↔ URL query params (for sharing)
-- Slider hover ↔ Node highlight (for visual feedback)
-- Node selection ↔ Probability root (for exploring conditional probabilities)
-
-### Styling
-
-Uses Tailwind CSS with custom color scheme defined in `tailwind.config.ts`. Node colors are semantic:
-- Purple: Question nodes
-- Blue: Start/intermediate nodes
-- Green: Good outcomes
-- Yellow: Ambivalent outcomes
-- Red: Existential risk outcomes
-- Orange: Selected node
-
-Font: Plus Jakarta Sans (loaded from Google Fonts)
-
-## Key Behaviors
-
-- Clicking a node sets it as the probability root, recalculating all probabilities from that node
-- Clicking the same node again resets to the start node
-- Hovering over a slider highlights the corresponding question node in the flowchart
-- Undo functionality tracks slider state history using a stack
-- The flowchart canvas is 900×1200px with padding for node positioning
+**State Management:**
+- URL params sync bidirectionally with slider values
+- `useMemo` for probability calculations to prevent unnecessary recomputation
+- Undo stack tracks slider history

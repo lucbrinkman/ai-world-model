@@ -8,11 +8,12 @@ import ZoomControls from '@/components/ZoomControls';
 import DragHint from '@/components/DragHint';
 import { WelcomeModal } from '@/components/WelcomeModal';
 import { useAuth } from '@/hooks/useAuth';
-import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } from '@/lib/types';
-import { startNodeIndex, AUTHORS_ESTIMATES } from '@/lib/graphData';
+import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData } from '@/lib/types';
+import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
 import { readSliderValuesFromUrl, updateUrlWithSliderValues, decodeSliderValues } from '@/lib/urlState';
 import { loadCustomPositions, saveNodePosition, resetAllPositions, hasCustomPositions, type CustomNodePositions } from '@/lib/nodePositionState';
+import { getDefaultGraph } from '@/lib/actions/graphs';
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
@@ -42,6 +43,11 @@ export default function Home() {
   const [dragShiftHeld, setDragShiftHeld] = useState(false);
   const [dragCursorPos, setDragCursorPos] = useState({ x: 0, y: 0 });
 
+  // Editable graph data state
+  const [graphData, setGraphData] = useState<GraphData>(defaultGraphData);
+  const [currentGraphId, setCurrentGraphId] = useState<string | null>(null);
+  const [hasUnsavedGraphChanges, setHasUnsavedGraphChanges] = useState(false);
+
   // Load slider values from URL on mount (after hydration)
   useEffect(() => {
     const urlValues = readSliderValuesFromUrl();
@@ -53,6 +59,19 @@ export default function Home() {
     const positions = loadCustomPositions();
     setCustomNodePositions(positions);
   }, []);
+
+  // Load user's default graph from database on mount (if authenticated)
+  useEffect(() => {
+    if (!authLoading && user) {
+      getDefaultGraph().then(({ data, error }) => {
+        if (!error && data) {
+          setGraphData(data.graph_data);
+          setCurrentGraphId(data.id);
+          setHasUnsavedGraphChanges(false);
+        }
+      });
+    }
+  }, [user, authLoading]);
 
   // Check if user is new and show welcome modal
   useEffect(() => {
@@ -88,7 +107,7 @@ export default function Home() {
 
   // Calculate probabilities using useMemo (only recalculate when dependencies change)
   const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
-    const result = calculateProbabilities(sliderValues, selectedNodeIndex);
+    const result = calculateProbabilities(sliderValues, selectedNodeIndex, graphData);
 
     // Apply custom node positions (overlay on top of calculated positions)
     const nodesWithCustomPositions = result.nodes.map(node => {
@@ -112,7 +131,7 @@ export default function Home() {
     );
 
     return { nodes: nodesWithCustomPositions, edges: result.edges, maxOutcomeProbability };
-  }, [sliderValues, selectedNodeIndex, customNodePositions]);
+  }, [sliderValues, selectedNodeIndex, customNodePositions, graphData]);
 
   // Slider change handler
   const handleSliderChange = useCallback((index: number, value: number) => {
@@ -197,6 +216,25 @@ export default function Home() {
       ...prev,
       [nodeId]: { x: newX, y: newY },
     }));
+
+    // Update graph data with new position
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            position: { x: newX, y: newY },
+          };
+        }
+        return node;
+      });
+      return {
+        ...prev,
+        nodes: updatedNodes,
+      };
+    });
+
+    setHasUnsavedGraphChanges(true);
   }, []);
 
   // Reset node positions handler
@@ -247,6 +285,91 @@ export default function Home() {
 
   const handleZoomChange = useCallback((newZoom: number) => {
     setZoom(newZoom);
+  }, []);
+
+  // Graph editing handlers
+  const handleUpdateNodeText = useCallback((nodeId: string, newText: string) => {
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            title: newText,
+          };
+        }
+        return node;
+      });
+      return {
+        ...prev,
+        nodes: updatedNodes,
+      };
+    });
+    setHasUnsavedGraphChanges(true);
+  }, []);
+
+  const handleUpdateConnectionLabel = useCallback((nodeId: string, connectionIndex: number, newLabel: string) => {
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        if (node.id === nodeId) {
+          const updatedConnections = [...node.connections];
+          updatedConnections[connectionIndex] = {
+            ...updatedConnections[connectionIndex],
+            label: newLabel,
+          };
+          return {
+            ...node,
+            connections: updatedConnections,
+          };
+        }
+        return node;
+      });
+      return {
+        ...prev,
+        nodes: updatedNodes,
+      };
+    });
+    setHasUnsavedGraphChanges(true);
+  }, []);
+
+  const handleUpdateConnectionTarget = useCallback((nodeId: string, connectionIndex: number, newTargetId: string) => {
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        if (node.id === nodeId) {
+          const updatedConnections = [...node.connections];
+          updatedConnections[connectionIndex] = {
+            ...updatedConnections[connectionIndex],
+            targetId: newTargetId,
+          };
+          return {
+            ...node,
+            connections: updatedConnections,
+          };
+        }
+        return node;
+      });
+      return {
+        ...prev,
+        nodes: updatedNodes,
+      };
+    });
+    setHasUnsavedGraphChanges(true);
+  }, []);
+
+  const handleLoadGraph = useCallback((loadedGraphData: GraphData, graphId: string | null = null) => {
+    setGraphData(loadedGraphData);
+    setCurrentGraphId(graphId);
+    setHasUnsavedGraphChanges(false);
+    // Clear custom positions when loading a new graph
+    resetAllPositions();
+    setCustomNodePositions({});
+  }, []);
+
+  const handleResetToDefaultGraph = useCallback(() => {
+    setGraphData(defaultGraphData);
+    setCurrentGraphId(null);
+    setHasUnsavedGraphChanges(false);
+    resetAllPositions();
+    setCustomNodePositions({});
   }, []);
 
   return (
@@ -310,6 +433,7 @@ export default function Home() {
             onNodeLeave={handleNodeLeave}
             onNodeDragEnd={handleNodeDragEnd}
             onNodeDragStateChange={handleNodeDragStateChange}
+            onUpdateNodeText={handleUpdateNodeText}
           />
           <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />
           <ZoomControls

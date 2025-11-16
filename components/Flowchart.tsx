@@ -23,6 +23,7 @@ interface FlowchartProps {
   onNodeLeave: () => void;
   onNodeDragEnd: NodeDragEndHandler;
   onNodeDragStateChange: NodeDragStateHandler;
+  onUpdateNodeText?: (nodeId: string, newText: string) => void;
 }
 
 export default function Flowchart({
@@ -43,6 +44,7 @@ export default function Flowchart({
   onNodeLeave,
   onNodeDragEnd,
   onNodeDragStateChange,
+  onUpdateNodeText,
 }: FlowchartProps) {
   // Create refs for all nodes
   const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -323,6 +325,7 @@ export default function Flowchart({
               onDragMove={updateBounds}
               onDragEnd={onNodeDragEnd}
               onDragStateChange={onNodeDragStateChange}
+              onUpdateText={onUpdateNodeText}
             />
           ))}
         </div>

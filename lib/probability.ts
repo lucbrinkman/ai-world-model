@@ -1,5 +1,69 @@
-import { Node, Edge, EdgeType, NodeType } from './types';
-import { nodes as initialNodes, edges as initialEdges, adjacencyList, questionNodeIndices } from './graphData';
+import { Node, Edge, EdgeType, NodeType, type GraphData } from './types';
+import { graphData as defaultGraphData } from './graphData';
+
+/**
+ * Build runtime nodes and edges from GraphData
+ */
+function buildNodesAndEdges(graphData: GraphData): {
+  nodes: Node[];
+  edges: Edge[];
+  adjacencyList: Map<number, number[]>;
+  questionNodeIndices: number[];
+  nodeIdMap: Map<string, number>;
+} {
+  // Transform GraphNode[] to Node[] (add index and probability field)
+  const nodes: Node[] = graphData.nodes.map((graphNode, index) => ({
+    index,
+    id: graphNode.id,
+    type: graphNode.type,
+    x: graphNode.position.x,
+    y: graphNode.position.y,
+    text: graphNode.title,
+    p: 1.0, // Initial probability, will be calculated
+  }));
+
+  // Create id-to-index mapping
+  const nodeIdMap = new Map<string, number>();
+  nodes.forEach((node, index) => {
+    nodeIdMap.set(node.id, index);
+  });
+
+  // Build edges array from node connections
+  const edges: Edge[] = [];
+  graphData.nodes.forEach((graphNode, sourceIndex) => {
+    graphNode.connections.forEach(connection => {
+      const targetIndex = nodeIdMap.get(connection.targetId);
+
+      if (targetIndex === undefined) {
+        throw new Error(`Unknown target node: ${connection.targetId} in connections from ${graphNode.id}`);
+      }
+
+      edges.push({
+        yn: connection.type,
+        source: sourceIndex,
+        target: targetIndex,
+        p: 0.0, // Initial probability, will be calculated
+        label: connection.label,
+      });
+    });
+  });
+
+  // Get question nodes (type 'n') indices
+  const questionNodeIndices = nodes
+    .filter(n => n.type === NodeType.QUESTION)
+    .map(n => n.index);
+
+  // Build adjacency list (target -> incoming edges)
+  const adjacencyList = new Map<number, number[]>();
+  edges.forEach((edge, edgeIndex) => {
+    if (!adjacencyList.has(edge.target)) {
+      adjacencyList.set(edge.target, []);
+    }
+    adjacencyList.get(edge.target)!.push(edgeIndex);
+  });
+
+  return { nodes, edges, adjacencyList, questionNodeIndices, nodeIdMap };
+}
 
 /**
  * Calculate probabilities for all nodes and edges based on slider values
@@ -7,8 +71,12 @@ import { nodes as initialNodes, edges as initialEdges, adjacencyList, questionNo
  */
 export function calculateProbabilities(
   sliderValues: number[],
-  probabilityRootIndex: number
+  probabilityRootIndex: number,
+  graphData: GraphData = defaultGraphData
 ): { nodes: Node[]; edges: Edge[] } {
+  // Build nodes and edges from graph data
+  const { nodes: initialNodes, edges: initialEdges, adjacencyList, questionNodeIndices } = buildNodesAndEdges(graphData);
+
   // Clone nodes and edges to avoid mutation
   const nodes = initialNodes.map(n => ({ ...n }));
   const edges = initialEdges.map(e => ({ ...e }));

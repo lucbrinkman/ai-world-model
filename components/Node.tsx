@@ -21,6 +21,7 @@ interface NodeProps {
   onDragMove: (nodeIndex: number, deltaX: number, deltaY: number) => void;
   onDragEnd: NodeDragEndHandler;
   onDragStateChange: NodeDragStateHandler;
+  onUpdateText?: (nodeId: string, newText: string) => void;
 }
 
 const Node = forwardRef<HTMLDivElement, NodeProps>(({
@@ -37,6 +38,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   onDragMove,
   onDragEnd,
   onDragStateChange,
+  onUpdateText,
 }, ref) => {
   const { x, y, text, p, type } = node;
 
@@ -49,6 +51,11 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   const lastUpdateTimeRef = useRef<number>(0);
   const updateIntervalMs = 16; // Update arrows at ~60 FPS (every 16ms) during drag
 
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(text);
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
+
   // Combined ref callback to set both internal ref and forwarded ref
   const setRefs = useCallback((node: HTMLDivElement | null) => {
     internalRef.current = node;
@@ -58,6 +65,51 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
       (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
     }
   }, [ref]);
+
+  // Update edit text when node text changes
+  useEffect(() => {
+    setEditText(text);
+  }, [text]);
+
+  // Auto-focus textarea when entering edit mode
+  useEffect(() => {
+    if (isEditing && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [isEditing]);
+
+  // Edit handlers
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    if (onUpdateText && !isDragging) {
+      e.stopPropagation();
+      setIsEditing(true);
+    }
+  };
+
+  const handleEditBlur = () => {
+    if (isEditing) {
+      saveEdit();
+    }
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setEditText(text); // Revert changes
+    }
+  };
+
+  const saveEdit = () => {
+    const newText = editText.trim();
+    if (newText && newText !== text && onUpdateText) {
+      onUpdateText(node.id, newText);
+    }
+    setIsEditing(false);
+  };
 
   // Calculate opacity
   const opacity = calculateAlpha(p, transparentPaths, minOpacity, isSelected || isHovered, maxOutcomeProbability);
@@ -296,7 +348,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
           onClick();
         }
       }}
-      onMouseDown={handleMouseDown}
+      onDoubleClick={handleDoubleClick}
+      onMouseDown={isEditing ? undefined : handleMouseDown}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -323,40 +376,61 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
       </div>
 
       {/* Node text */}
-      <div
-        className="text-xs font-normal leading-tight text-center"
-        style={{
-          color: getTextColor(),
-          fontWeight: 400,
-          paddingTop: '0.12rem',
-          paddingBottom: '0.12rem',
-        }}
-      >
-        {/* Invisible spacer to push first line text to the right */}
-        <span
+      {isEditing ? (
+        <textarea
+          ref={editInputRef}
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          onBlur={handleEditBlur}
+          onKeyDown={handleEditKeyDown}
+          className="text-xs font-normal leading-tight text-center resize-none outline-none"
           style={{
-            float: 'left',
-            width: `${spacerWidth}px`,
-            height: '1px',
-            // backgroundColor: 'red', // Red highlight for debugging
+            color: getTextColor(),
+            backgroundColor: 'transparent',
+            fontWeight: 400,
+            padding: '0.12rem',
+            width: '100%',
+            minHeight: '40px',
+            border: 'none',
           }}
+          onClick={(e) => e.stopPropagation()}
         />
-        {/* Invisible spacer on right for symmetry */}
-        <span
+      ) : (
+        <div
+          className="text-xs font-normal leading-tight text-center"
           style={{
-            float: 'right',
-            width: `${spacerWidth}px`,
-            height: '1px',
-            // backgroundColor: 'red', // Red highlight for debugging
+            color: getTextColor(),
+            fontWeight: 400,
+            paddingTop: '0.12rem',
+            paddingBottom: '0.12rem',
           }}
-        />
-        {lines.map((line, i) => (
-          <span key={i}>
-            {line}
-            {i < lines.length - 1 && <br />}
-          </span>
-        ))}
-      </div>
+        >
+          {/* Invisible spacer to push first line text to the right */}
+          <span
+            style={{
+              float: 'left',
+              width: `${spacerWidth}px`,
+              height: '1px',
+              // backgroundColor: 'red', // Red highlight for debugging
+            }}
+          />
+          {/* Invisible spacer on right for symmetry */}
+          <span
+            style={{
+              float: 'right',
+              width: `${spacerWidth}px`,
+              height: '1px',
+              // backgroundColor: 'red', // Red highlight for debugging
+            }}
+          />
+          {lines.map((line, i) => (
+            <span key={i}>
+              {line}
+              {i < lines.length - 1 && <br />}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 });
