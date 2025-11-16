@@ -538,9 +538,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
           onMouseLeave={() => setIsSliderHovered(false)}
         >
           <div
-            className="bg-gray-900 border-2 rounded-lg shadow-xl px-2 flex items-center"
+            className="bg-gray-900 rounded-lg shadow-xl px-2 flex items-center"
             style={{
-              borderColor: NODE_COLORS.QUESTION.hover,
               paddingTop: '4px',
               paddingBottom: '4px',
             }}
