@@ -27,6 +27,9 @@ interface NodeProps {
   onSelect?: (nodeId: string | null) => void;
   onDelete?: (nodeId: string) => void;
   onChangeType?: (nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => void;
+  sliderValue?: number;
+  onSliderChange?: (value: number) => void;
+  onSliderChangeComplete?: () => void;
 }
 
 const Node = forwardRef<HTMLDivElement, NodeProps>(({
@@ -49,6 +52,9 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   onSelect,
   onDelete,
   onChangeType,
+  sliderValue,
+  onSliderChange,
+  onSliderChangeComplete,
 }, ref) => {
   const { x, y, text, p, type } = node;
 
@@ -65,6 +71,9 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(text);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Slider popup hover state
+  const [isSliderHovered, setIsSliderHovered] = useState(false);
 
   // Combined ref callback to set both internal ref and forwarded ref
   const setRefs = useCallback((node: HTMLDivElement | null) => {
@@ -507,6 +516,62 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         >
           ×
         </button>
+      )}
+
+      {/* Pop-up slider - shown when hovering on question nodes */}
+      {(isHovered || isSliderHovered) && !isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange && (
+        <div
+          className="absolute pointer-events-auto"
+          style={{
+            top: '100%',
+            left: '-12px',
+            right: '-12px',
+            paddingTop: '8px', // Invisible area to bridge gap above
+            paddingBottom: '12px', // Invisible area below
+            paddingLeft: '12px', // Invisible area on left
+            paddingRight: '12px', // Invisible area on right
+            zIndex: 1000,
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseEnter={() => setIsSliderHovered(true)}
+          onMouseLeave={() => setIsSliderHovered(false)}
+        >
+          <div
+            className="bg-gray-900 border-2 rounded-lg shadow-xl px-2 flex items-center"
+            style={{
+              borderColor: NODE_COLORS.QUESTION.hover,
+              paddingTop: '4px',
+              paddingBottom: '4px',
+            }}
+          >
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={sliderValue}
+              onChange={(e) => {
+                e.stopPropagation();
+                onSliderChange(Number(e.target.value));
+              }}
+              onMouseUp={(e) => {
+                e.stopPropagation();
+                onSliderChangeComplete?.();
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+                onSliderChangeComplete?.();
+              }}
+              className="w-full h-1 rounded-lg appearance-none cursor-pointer block"
+              style={{
+                background: `linear-gradient(to right, ${NODE_COLORS.QUESTION.hover} 0%, ${NODE_COLORS.QUESTION.hover} ${sliderValue}%, #374151 ${sliderValue}%, #374151 100%)`,
+                outline: 'none',
+                margin: 0,
+                padding: 0,
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

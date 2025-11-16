@@ -880,6 +880,8 @@ export default function Home() {
             onEdgeReconnect={handleEdgeReconnect}
             onEdgeLabelUpdate={handleEdgeLabelUpdate}
             onBackgroundClick={handleBackgroundClick}
+            onSliderChange={handleSliderChange}
+            onSliderChangeComplete={handleSliderChangeComplete}
           />
           <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />
           <ZoomControls

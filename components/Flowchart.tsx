@@ -35,6 +35,8 @@ interface FlowchartProps {
   onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeId: string) => void;
   onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
   onBackgroundClick?: () => void;
+  onSliderChange?: (sliderIndex: number, value: number) => void;
+  onSliderChangeComplete?: () => void;
 }
 
 export default function Flowchart({
@@ -66,6 +68,8 @@ export default function Flowchart({
   onEdgeReconnect,
   onEdgeLabelUpdate,
   onBackgroundClick,
+  onSliderChange,
+  onSliderChangeComplete,
 }: FlowchartProps) {
   // Create refs for all nodes, indexed by node ID (not array index!)
   const nodeRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -461,31 +465,43 @@ export default function Flowchart({
           </svg>
 
           {/* Nodes (HTML divs positioned absolutely) */}
-          {nodes.map((node) => (
-            <NodeComponent
-              key={node.id}
-              ref={(el) => { nodeRefs.current.set(node.id, el) }}
-              node={node}
-              isSelected={node.index === selectedNodeIndex}
-              isHovered={node.index === hoveredNodeIndex}
-              isNodeSelected={node.id === selectedNodeId}
-              transparentPaths={transparentPaths}
-              minOpacity={minOpacity}
-              maxOutcomeProbability={maxOutcomeProbability}
-              zoom={zoom}
-              onClick={() => handleNodeClick(node.index)}
-              onMouseEnter={() => onNodeHover(node.index)}
-              onMouseLeave={onNodeLeave}
-              onDragMove={updateBounds}
-              onDragEnd={onNodeDragEnd}
-              onDragStateChange={onNodeDragStateChange}
-              onUpdateText={onUpdateNodeText}
-              onEditorClose={handleEditorClose}
-              onSelect={onNodeSelect}
-              onDelete={onDeleteNode}
-              onChangeType={onChangeNodeType}
-            />
-          ))}
+          {nodes.map((node) => {
+            // Calculate slider index for question nodes
+            const questionNodeIndices = nodes
+              .filter(n => n.type === NT.QUESTION)
+              .map(n => n.index);
+            const sliderIndex = questionNodeIndices.indexOf(node.index);
+            const nodeSliderValue = sliderIndex >= 0 ? sliderValues[sliderIndex] : undefined;
+
+            return (
+              <NodeComponent
+                key={node.id}
+                ref={(el) => { nodeRefs.current.set(node.id, el) }}
+                node={node}
+                isSelected={node.index === selectedNodeIndex}
+                isHovered={node.index === hoveredNodeIndex}
+                isNodeSelected={node.id === selectedNodeId}
+                transparentPaths={transparentPaths}
+                minOpacity={minOpacity}
+                maxOutcomeProbability={maxOutcomeProbability}
+                zoom={zoom}
+                onClick={() => handleNodeClick(node.index)}
+                onMouseEnter={() => onNodeHover(node.index)}
+                onMouseLeave={onNodeLeave}
+                onDragMove={updateBounds}
+                onDragEnd={onNodeDragEnd}
+                onDragStateChange={onNodeDragStateChange}
+                onUpdateText={onUpdateNodeText}
+                onEditorClose={handleEditorClose}
+                onSelect={onNodeSelect}
+                onDelete={onDeleteNode}
+                onChangeType={onChangeNodeType}
+                sliderValue={nodeSliderValue}
+                onSliderChange={nodeSliderValue !== undefined && onSliderChange ? (value) => onSliderChange(sliderIndex, value) : undefined}
+                onSliderChangeComplete={onSliderChangeComplete}
+              />
+            );
+          })}
 
           {/* Connector dots (HTML, rendered on top of nodes) */}
           {selectedEdgeIndex !== -1 && (() => {
