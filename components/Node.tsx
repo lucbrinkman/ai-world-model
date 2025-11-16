@@ -11,6 +11,7 @@ interface NodeProps {
   node: NodeType;
   isSelected: boolean;
   isHovered: boolean;
+  isNodeSelected: boolean;
   transparentPaths: boolean;
   minOpacity: number;
   maxOutcomeProbability: number;
@@ -23,12 +24,15 @@ interface NodeProps {
   onDragStateChange: NodeDragStateHandler;
   onUpdateText?: (nodeId: string, newText: string) => void;
   onEditorClose?: () => void;
+  onSelect?: (nodeId: string | null) => void;
+  onDelete?: (nodeId: string) => void;
 }
 
 const Node = forwardRef<HTMLDivElement, NodeProps>(({
   node,
   isSelected,
   isHovered,
+  isNodeSelected,
   transparentPaths,
   minOpacity,
   maxOutcomeProbability,
@@ -41,6 +45,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   onDragStateChange,
   onUpdateText,
   onEditorClose,
+  onSelect,
+  onDelete,
 }, ref) => {
   const { x, y, text, p, type } = node;
 
@@ -372,6 +378,10 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         // Only trigger onClick if we didn't drag
         if (!didDragRef.current) {
           onClick();
+          // Toggle selection: if already selected, deselect; otherwise select
+          if (onSelect) {
+            onSelect(isNodeSelected ? null : node.id);
+          }
         }
       }}
       onDoubleClick={handleDoubleClick}
@@ -456,6 +466,24 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
             </span>
           ))}
         </div>
+      )}
+
+      {/* Delete button - shown when node is selected */}
+      {isNodeSelected && onDelete && node.type !== 's' && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(node.id);
+          }}
+          className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg transition-colors z-10"
+          title="Delete node (Delete/Backspace)"
+          style={{
+            fontSize: '14px',
+            lineHeight: '1',
+          }}
+        >
+          ×
+        </button>
       )}
     </div>
   );

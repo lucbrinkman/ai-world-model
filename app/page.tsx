@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Flowchart from '@/components/Flowchart';
@@ -8,6 +9,7 @@ import ZoomControls from '@/components/ZoomControls';
 import DragHint from '@/components/DragHint';
 import { WelcomeModal } from '@/components/WelcomeModal';
 import { CookieSettings } from '@/components/CookieSettings';
+import DeleteNodeDialog from '@/components/DeleteNodeDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from '@/lib/graphData';
@@ -28,6 +30,9 @@ export default function Home() {
   const [selectedNodeIndex, setSelectedNodeIndex] = useState(startNodeIndex);
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(-1);
   const [selectedEdgeIndex, setSelectedEdgeIndex] = useState(-1);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [nodeToDelete, setNodeToDelete] = useState<{ id: string; title: string } | null>(null);
   const [boldPaths, setBoldPaths] = useState(true);
   const [transparentPaths, setTransparentPaths] = useState(false);
   const [minOpacity, setMinOpacity] = useState(20);
@@ -534,6 +539,120 @@ export default function Home() {
     setHasUnsavedGraphChanges(true);
   }, [graphData]);
 
+  const handleInitiateDelete = useCallback((nodeId: string) => {
+    // Find the node to delete
+    const node = graphData.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    // Prevent deleting the start node
+    if (node.type === 's') {
+      alert('Cannot delete the start node');
+      return;
+    }
+
+    // Open confirmation dialog
+    setNodeToDelete({ id: nodeId, title: node.title });
+    setDeleteDialogOpen(true);
+  }, [graphData]);
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    // Find the node to delete
+    const nodeToDelete = graphData.nodes.find(n => n.id === nodeId);
+    if (!nodeToDelete) return;
+
+    // Get the node's position for converting incoming edges to free-floating
+    const nodePosition = nodeToDelete.position;
+
+    // Check if we need to reset selectedNodeIndex
+    const deletedNodeIndex = nodes.findIndex(n => n.id === nodeId);
+    const shouldResetSelection = deletedNodeIndex === selectedNodeIndex;
+
+    // Use flushSync to ensure all state updates happen synchronously
+    // This prevents intermediate renders with mismatched indices
+    flushSync(() => {
+      // Clear UI state
+      setSelectedNodeId(null);
+      setDeleteDialogOpen(false);
+      setNodeToDelete(null);
+
+      // Reset selection if needed
+      if (shouldResetSelection) {
+        setSelectedNodeIndex(startNodeIndex);
+      }
+
+      // Update graph data
+      setGraphData(prev => {
+        // Remove the node from the array
+        const updatedNodes = prev.nodes.filter(n => n.id !== nodeId);
+
+        // Convert incoming edges to free-floating endpoints
+        const nodesWithUpdatedConnections = updatedNodes.map(node => {
+          const updatedConnections = node.connections.map(conn => {
+            if (conn.targetId === nodeId) {
+              // Convert to free-floating endpoint
+              return {
+                ...conn,
+                targetId: undefined,
+                targetX: nodePosition.x,
+                targetY: nodePosition.y,
+              };
+            }
+            return conn;
+          });
+
+          return {
+            ...node,
+            connections: updatedConnections,
+          };
+        });
+
+        // Re-index slider indices if deleting a question node
+        const deletedSliderIndex = nodeToDelete.sliderIndex;
+        const finalNodes = deletedSliderIndex !== null && deletedSliderIndex !== undefined
+          ? nodesWithUpdatedConnections.map(node => {
+              if (node.sliderIndex !== null && node.sliderIndex !== undefined && node.sliderIndex > deletedSliderIndex) {
+                return {
+                  ...node,
+                  sliderIndex: node.sliderIndex - 1,
+                };
+              }
+              return node;
+            })
+          : nodesWithUpdatedConnections;
+
+        return {
+          ...prev,
+          nodes: finalNodes,
+        };
+      });
+
+      setHasUnsavedGraphChanges(true);
+    });
+  }, [graphData, nodes, selectedNodeIndex]);
+
+  const handleCancelDelete = useCallback(() => {
+    setDeleteDialogOpen(false);
+    setNodeToDelete(null);
+  }, []);
+
+  // Keyboard handler for Delete/Backspace keys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger if a node is selected and we're not editing text
+      if (!selectedNodeId) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if ((e.target as HTMLElement).contentEditable === 'true') return;
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        handleInitiateDelete(selectedNodeId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId, handleInitiateDelete]);
+
   // Settings change handlers with analytics
   const handleBoldPathsChange = useCallback((value: boolean) => {
     setBoldPaths(value);
@@ -627,6 +746,7 @@ export default function Home() {
             selectedNodeIndex={selectedNodeIndex}
             hoveredNodeIndex={hoveredNodeIndex}
             selectedEdgeIndex={selectedEdgeIndex}
+            selectedNodeId={selectedNodeId}
             boldPaths={boldPaths}
             transparentPaths={transparentPaths}
             minOpacity={minOpacity}
@@ -641,6 +761,8 @@ export default function Home() {
             onNodeDragStateChange={handleNodeDragStateChange}
             onUpdateNodeText={handleUpdateNodeText}
             onAddNode={handleAddNode}
+            onNodeSelect={setSelectedNodeId}
+            onDeleteNode={handleInitiateDelete}
             onEdgeClick={handleEdgeClick}
             onEdgeReconnect={handleEdgeReconnect}
             onEdgeLabelUpdate={handleEdgeLabelUpdate}
@@ -667,6 +789,14 @@ export default function Home() {
       <CookieSettings
         isOpen={showCookieSettings}
         onClose={() => setShowCookieSettings(false)}
+      />
+
+      {/* Delete Node Dialog */}
+      <DeleteNodeDialog
+        isOpen={deleteDialogOpen}
+        nodeTitle={nodeToDelete?.title || ''}
+        onConfirm={() => nodeToDelete && handleDeleteNode(nodeToDelete.id)}
+        onCancel={handleCancelDelete}
       />
 
       {/* Dev-only buttons */}

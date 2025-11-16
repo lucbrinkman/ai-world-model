@@ -1,5 +1,4 @@
-import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, NodeDragStateHandler, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING } from '@/lib/types';
-import { questionNodeIndices } from '@/lib/graphData';
+import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, NodeDragStateHandler, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING, NodeType as NT } from '@/lib/types';
 import NodeComponent from './Node';
 import EdgeComponent from './Edge';
 import ConnectorDots from './ConnectorDots';
@@ -14,6 +13,7 @@ interface FlowchartProps {
   selectedNodeIndex: number;
   hoveredNodeIndex: number;
   selectedEdgeIndex: number;
+  selectedNodeId: string | null;
   boldPaths: boolean;
   transparentPaths: boolean;
   minOpacity: number;
@@ -28,6 +28,8 @@ interface FlowchartProps {
   onNodeDragStateChange: NodeDragStateHandler;
   onUpdateNodeText?: (nodeId: string, newText: string) => void;
   onAddNode?: (x: number, y: number) => void;
+  onNodeSelect?: (nodeId: string | null) => void;
+  onDeleteNode?: (nodeId: string) => void;
   onEdgeClick?: (edgeIndex: number) => void;
   onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeId: string) => void;
   onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
@@ -41,6 +43,7 @@ export default function Flowchart({
   selectedNodeIndex,
   hoveredNodeIndex,
   selectedEdgeIndex,
+  selectedNodeId,
   boldPaths,
   transparentPaths,
   minOpacity,
@@ -55,14 +58,16 @@ export default function Flowchart({
   onNodeDragStateChange,
   onUpdateNodeText,
   onAddNode,
+  onNodeSelect,
+  onDeleteNode,
   onEdgeClick,
   onEdgeReconnect,
   onEdgeLabelUpdate,
   onBackgroundClick,
 }: FlowchartProps) {
-  // Create refs for all nodes
-  const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [nodeBounds, setNodeBounds] = useState<DOMRect[]>([]);
+  // Create refs for all nodes, indexed by node ID (not array index!)
+  const nodeRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  const [nodeBounds, setNodeBounds] = useState<Map<string, DOMRect>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -91,8 +96,14 @@ export default function Flowchart({
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!containerRect) return;
 
-    const bounds = nodeRefs.current.map((ref, index) => {
-      if (!ref) return new DOMRect();
+    const bounds = new Map<string, DOMRect>();
+    nodes.forEach((node, index) => {
+      const ref = nodeRefs.current.get(node.id);
+      if (!ref) {
+        bounds.set(node.id, new DOMRect());
+        return;
+      }
+
       const rect = ref.getBoundingClientRect();
       // Convert to container-relative coordinates, then adjust for zoom scale
       // Since the container is scaled, we need to divide by zoom to get unscaled canvas coordinates
@@ -103,18 +114,18 @@ export default function Flowchart({
       // If this is the node being dragged, use the node's original position + delta
       // (getBoundingClientRect returns position AFTER CSS transform, which would double the offset)
       if (index === dragNodeIndex && dragDeltaX !== undefined && dragDeltaY !== undefined) {
-        // nodes[index].x is the center position, but DOMRect.x should be top-left
+        // node.x is the center position, but DOMRect.x should be top-left
         // So we need to subtract half the width/height to convert from center to top-left
-        x = nodes[index].x - rect.width / (zoomFactor * 2) + dragDeltaX;
-        y = nodes[index].y - rect.height / (zoomFactor * 2) + dragDeltaY;
+        x = node.x - rect.width / (zoomFactor * 2) + dragDeltaX;
+        y = node.y - rect.height / (zoomFactor * 2) + dragDeltaY;
       }
 
-      return new DOMRect(
+      bounds.set(node.id, new DOMRect(
         x,
         y,
         rect.width / zoomFactor,
         rect.height / zoomFactor
-      );
+      ));
     });
 
     // Update bounds - React will batch these updates efficiently
@@ -391,12 +402,16 @@ export default function Flowchart({
               const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
 
               // Get slider value for this edge (if source is a question node)
+              // Calculate question node indices dynamically from current nodes
+              const questionNodeIndices = nodes
+                .filter(n => n.type === NT.QUESTION)
+                .map(n => n.index);
               const sliderIndex = questionNodeIndices.indexOf(edge.source);
               const sliderValue = sliderIndex >= 0 ? sliderValues[sliderIndex] : null;
 
-              // Get bounding boxes for source and target
-              const sourceBounds = nodeBounds[edge.source];
-              const targetBounds = edge.target !== undefined ? nodeBounds[edge.target] : undefined;
+              // Get bounding boxes for source and target using node IDs
+              const sourceBounds = nodeBounds.get(sourceNode.id);
+              const targetBounds = targetNode ? nodeBounds.get(targetNode.id) : undefined;
 
               // Coordinate conversion function for floating endpoints
               const screenToCanvasCoords = (screenX: number, screenY: number) => {
@@ -412,9 +427,14 @@ export default function Flowchart({
                 return { x: canvasX, y: canvasY };
               };
 
+              // Create stable key for edge based on source and target IDs
+              const edgeKey = targetNode
+                ? `${sourceNode.id}-${targetNode.id}-${edge.type}`
+                : `${sourceNode.id}-floating-${edge.targetX}-${edge.targetY}-${edge.type}`;
+
               return (
                 <EdgeComponent
-                  key={index}
+                  key={edgeKey}
                   edge={edge}
                   edgeIndex={index}
                   sourceNode={sourceNode}
@@ -431,7 +451,7 @@ export default function Flowchart({
                   onLabelUpdate={onEdgeLabelUpdate}
                   onEditorClose={handleEditorClose}
                   previewTargetNode={index === selectedEdgeIndex ? edgePreview.node : null}
-                  previewTargetBounds={index === selectedEdgeIndex && edgePreview.node ? nodeBounds[edgePreview.node.index] : undefined}
+                  previewTargetBounds={index === selectedEdgeIndex && edgePreview.node ? nodeBounds.get(edgePreview.node.id) : undefined}
                   previewFloatingPos={index === selectedEdgeIndex ? edgePreview.pos : null}
                 />
               );
@@ -441,11 +461,12 @@ export default function Flowchart({
           {/* Nodes (HTML divs positioned absolutely) */}
           {nodes.map((node) => (
             <NodeComponent
-              key={node.index}
-              ref={(el) => { nodeRefs.current[node.index] = el }}
+              key={node.id}
+              ref={(el) => { nodeRefs.current.set(node.id, el) }}
               node={node}
               isSelected={node.index === selectedNodeIndex}
               isHovered={node.index === hoveredNodeIndex}
+              isNodeSelected={node.id === selectedNodeId}
               transparentPaths={transparentPaths}
               minOpacity={minOpacity}
               maxOutcomeProbability={maxOutcomeProbability}
@@ -458,6 +479,8 @@ export default function Flowchart({
               onDragStateChange={onNodeDragStateChange}
               onUpdateText={onUpdateNodeText}
               onEditorClose={handleEditorClose}
+              onSelect={onNodeSelect}
+              onDelete={onDeleteNode}
             />
           ))}
 
@@ -468,8 +491,8 @@ export default function Flowchart({
 
             const sourceNode = nodes[edge.source];
             const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
-            const sourceBounds = nodeBounds[edge.source];
-            const targetBounds = edge.target !== undefined ? nodeBounds[edge.target] : undefined;
+            const sourceBounds = nodeBounds.get(sourceNode.id);
+            const targetBounds = targetNode ? nodeBounds.get(targetNode.id) : undefined;
 
             const screenToCanvasCoords = (screenX: number, screenY: number) => {
               if (!containerRef.current || !scrollContainerRef.current) return { x: 0, y: 0 };

@@ -7,7 +7,7 @@ interface ConnectorDotsProps {
   sourceNode: Node;
   targetNode?: Node;
   allNodes: Node[];
-  nodeBounds: DOMRect[];
+  nodeBounds: Map<string, DOMRect>;
   sourceBounds?: DOMRect;
   targetBounds?: DOMRect;
   onReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
@@ -42,7 +42,7 @@ export default function ConnectorDots({
   const effectiveTargetNode = previewFloatingPos ? undefined :
     ((draggingConnector === 'target' && previewTargetNode) ? previewTargetNode : targetNode);
   const effectiveTargetBounds = previewFloatingPos ? undefined :
-    ((draggingConnector === 'target' && previewTargetNode) ? nodeBounds[previewTargetNode.index] : targetBounds);
+    ((draggingConnector === 'target' && previewTargetNode) ? nodeBounds.get(previewTargetNode.id) : targetBounds);
 
   let x1 = sourceBounds ? sourceBounds.x + sourceBounds.width / 2 : sourceNode.x;
   let y1 = sourceBounds ? sourceBounds.y + sourceBounds.height / 2 : sourceNode.y;
@@ -122,7 +122,7 @@ export default function ConnectorDots({
 
       for (let i = 0; i < allNodes.length; i++) {
         const node = allNodes[i];
-        const bounds = nodeBounds[i];
+        const bounds = nodeBounds.get(node.id);
         if (!bounds) continue;
 
         // Don't allow connecting back to the source node
@@ -161,7 +161,7 @@ export default function ConnectorDots({
 
       for (let i = 0; i < allNodes.length; i++) {
         const node = allNodes[i];
-        const bounds = nodeBounds[i];
+        const bounds = nodeBounds.get(node.id);
         if (!bounds) continue;
 
         // Don't allow connecting back to the source node
