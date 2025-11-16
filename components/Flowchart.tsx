@@ -91,14 +91,18 @@ export default function Flowchart({
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!containerRect) return;
 
+    // Container border width (must match the border in the container's style)
+    const CONTAINER_BORDER_WIDTH = 2;
+
     const bounds = nodeRefs.current.map((ref, index) => {
       if (!ref) return new DOMRect();
       const rect = ref.getBoundingClientRect();
       // Convert to container-relative coordinates, then adjust for zoom scale
       // Since the container is scaled, we need to divide by zoom to get unscaled canvas coordinates
+      // IMPORTANT: Subtract border width because SVG starts at padding edge, not border edge
       const zoomFactor = zoom / 100;
-      let x = (rect.left - containerRect.left) / zoomFactor;
-      let y = (rect.top - containerRect.top) / zoomFactor;
+      let x = (rect.left - containerRect.left) / zoomFactor - CONTAINER_BORDER_WIDTH;
+      let y = (rect.top - containerRect.top) / zoomFactor - CONTAINER_BORDER_WIDTH;
 
       // If this is the node being dragged, use the node's original position + delta
       // (getBoundingClientRect returns position AFTER CSS transform, which would double the offset)

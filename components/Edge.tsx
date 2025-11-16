@@ -112,36 +112,125 @@ export default function Edge({
   let dx = x2 - x1;
   let dy = y2 - y1;
 
-  // Adjust arrow start point to align with box edges (from original v4.html lines 755-764)
-  // Make arrow endpoints align with mid-line or corner points of the boxes
-  if (dx > sourceWidth / 2) {
-    x1 += sourceWidth / 2;
-  } else if (dx < -sourceWidth / 2) {
-    x1 -= sourceWidth / 2;
-  }
-  if (dy > sourceHeight / 2) {
-    y1 += sourceHeight / 2;
-  } else if (dy < -sourceHeight / 2) {
-    y1 -= sourceHeight / 2;
-  }
+  // Helper function to adjust point for rounded corners
+  const adjustForRoundedCorner = (
+    centerX: number,
+    centerY: number,
+    targetX: number,
+    targetY: number,
+    width: number,
+    height: number,
+    topLeftRadius: number,
+    topRightRadius: number,
+    bottomLeftRadius: number,
+    bottomRightRadius: number
+  ): { x: number; y: number } => {
+    const dx = targetX - centerX;
+    const dy = targetY - centerY;
 
-  // Adjust arrow end point to align with target box edges
-  if (dx > (sourceWidth + targetWidth) / 2) {
-    x2 -= targetWidth / 2;
-  } else if (dx < -(sourceWidth + targetWidth) / 2) {
-    x2 += targetWidth / 2;
-  }
-  if (dy > (sourceHeight + targetHeight) / 2) {
-    y2 -= targetHeight / 2;
-  } else if (dy < -(sourceHeight + targetHeight) / 2) {
-    y2 += targetHeight / 2;
-  }
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
 
-  // Small adjustments for pixel-perfect alignment (from original)
-  x1 -= 1;
-  x2 -= 1;
-  y1 -= 1;
-  y2 -= 1;
+    // Calculate which edge/corner the arrow is pointing toward
+    const absRatioX = Math.abs(dx) / halfWidth;
+    const absRatioY = Math.abs(dy) / halfHeight;
+
+    // Determine if we're in a corner region
+    // Only treat as corner if we're clearly pointing toward a corner, not just an edge
+    const cornerThreshold = 0.95;
+    const inCorner = absRatioX > cornerThreshold && absRatioY > cornerThreshold;
+
+    if (inCorner) {
+      // Determine which corner
+      let cornerRadius = 0;
+      let cornerCenterX = centerX;
+      let cornerCenterY = centerY;
+
+      if (dx > 0 && dy < 0) {
+        // Top-right corner
+        cornerRadius = topRightRadius;
+        cornerCenterX = centerX + halfWidth - cornerRadius;
+        cornerCenterY = centerY - halfHeight + cornerRadius;
+      } else if (dx > 0 && dy > 0) {
+        // Bottom-right corner
+        cornerRadius = bottomRightRadius;
+        cornerCenterX = centerX + halfWidth - cornerRadius;
+        cornerCenterY = centerY + halfHeight - cornerRadius;
+      } else if (dx < 0 && dy < 0) {
+        // Top-left corner
+        cornerRadius = topLeftRadius;
+        cornerCenterX = centerX - halfWidth + cornerRadius;
+        cornerCenterY = centerY - halfHeight + cornerRadius;
+      } else {
+        // Bottom-left corner
+        cornerRadius = bottomLeftRadius;
+        cornerCenterX = centerX - halfWidth + cornerRadius;
+        cornerCenterY = centerY + halfHeight - cornerRadius;
+      }
+
+      // Calculate intersection with the circular arc
+      const dcx = targetX - cornerCenterX;
+      const dcy = targetY - cornerCenterY;
+      const distToCornerCenter = Math.sqrt(dcx * dcx + dcy * dcy);
+
+      if (distToCornerCenter > 0) {
+        const scale = cornerRadius / distToCornerCenter;
+        return {
+          x: cornerCenterX + dcx * scale,
+          y: cornerCenterY + dcy * scale
+        };
+      }
+    }
+
+    // Not in corner region - use standard edge intersection
+    let resultX = centerX;
+    let resultY = centerY;
+
+    if (absRatioX > absRatioY) {
+      // Hit left or right edge
+      resultX = dx > 0 ? centerX + halfWidth : centerX - halfWidth;
+      resultY = centerY + (dy / absRatioX);
+    } else {
+      // Hit top or bottom edge
+      resultX = centerX + (dx / absRatioY);
+      resultY = dy > 0 ? centerY + halfHeight : centerY - halfHeight;
+    }
+
+    return { x: resultX, y: resultY };
+  };
+
+  // Node corner radii (matching Node.tsx)
+  const topLeftRadius = 8;
+  const topRightRadius = 12;
+  const bottomLeftRadius = 12;
+  const bottomRightRadius = 12;
+
+  // Adjust arrow start point to account for rounded corners
+  const sourceAdjusted = adjustForRoundedCorner(
+    x1, y1, x2, y2,
+    sourceWidth, sourceHeight,
+    topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius
+  );
+
+  // Add 1px clearance by pulling back from the node edge
+  const CLEARANCE = 1;
+  const sourceAngle = Math.atan2(y2 - sourceAdjusted.y, x2 - sourceAdjusted.x);
+  x1 = sourceAdjusted.x + Math.cos(sourceAngle) * CLEARANCE;
+  y1 = sourceAdjusted.y + Math.sin(sourceAngle) * CLEARANCE;
+
+  // Adjust arrow end point to account for rounded corners (only if there's a target node)
+  if (effectiveTargetNode) {
+    const targetAdjusted = adjustForRoundedCorner(
+      x2, y2, x1, y1,
+      targetWidth, targetHeight,
+      topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius
+    );
+
+    // Add 1px clearance by pulling back from the node edge
+    const targetAngle = Math.atan2(y1 - targetAdjusted.y, x1 - targetAdjusted.x);
+    x2 = targetAdjusted.x + Math.cos(targetAngle) * CLEARANCE;
+    y2 = targetAdjusted.y + Math.sin(targetAngle) * CLEARANCE;
+  }
 
   // Recalculate dx, dy with adjusted positions
   dx = x2 - x1;
