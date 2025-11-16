@@ -129,7 +129,9 @@ export default function ConnectorDots({
       const canvasPos = screenToCanvasCoords(e.clientX, e.clientY);
       const SNAP_DISTANCE_SQUARED = SNAP_DISTANCE * SNAP_DISTANCE;
       let closestNode: Node | null = null;
+      let closestBlockedNode: Node | null = null;
       let minDistanceSquared = SNAP_DISTANCE_SQUARED;
+      let minBlockedDistanceSquared = SNAP_DISTANCE_SQUARED;
 
       for (let i = 0; i < allNodes.length; i++) {
         const node = allNodes[i];
@@ -139,14 +141,21 @@ export default function ConnectorDots({
         // Don't allow connecting back to the source node
         if (node.id === sourceNode.id) continue;
 
-        // Don't allow creating cycles - check if the candidate node is an ancestor of the source
-        if (isAncestorOf(node.id, sourceNode.id, allEdges, allNodes)) continue;
-
         const closestX = Math.max(bounds.left, Math.min(canvasPos.x, bounds.right));
         const closestY = Math.max(bounds.top, Math.min(canvasPos.y, bounds.bottom));
         const dx = closestX - canvasPos.x;
         const dy = closestY - canvasPos.y;
         const distSquared = dx * dx + dy * dy;
+
+        // Don't allow creating cycles - check if the candidate node is an ancestor of the source
+        if (isAncestorOf(node.id, sourceNode.id, allEdges, allNodes)) {
+          // Track the closest blocked node
+          if (distSquared < minBlockedDistanceSquared) {
+            minBlockedDistanceSquared = distSquared;
+            closestBlockedNode = node;
+          }
+          continue;
+        }
 
         if (distSquared < minDistanceSquared) {
           minDistanceSquared = distSquared;
@@ -154,11 +163,15 @@ export default function ConnectorDots({
         }
       }
 
+      // Only reconnect if we have a valid target (not a blocked node)
       if (closestNode) {
         onReconnect?.(edgeIndex, 'target', closestNode.id);
-      } else {
+      } else if (!closestBlockedNode) {
+        // Only set floating position if we're not hovering over a blocked node
         onReconnect?.(edgeIndex, 'target', canvasPos);
       }
+      // If closestBlockedNode exists but no closestNode, don't call onReconnect
+      // This leaves the edge at its original position
 
       setDraggingConnector(null);
       setPreviewTargetNode(null);
