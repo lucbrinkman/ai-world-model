@@ -256,12 +256,13 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         newY = snapToGrid(newY, GRID_SIZE_Y);
       }
 
-      // Convert back to delta for transform
-      const snappedDeltaX = (newX - dragStartRef.current.nodeX) * zoomFactor;
-      const snappedDeltaY = (newY - dragStartRef.current.nodeY) * zoomFactor;
+      // Calculate delta in canvas coordinates (no zoom conversion needed since parent is scaled)
+      const snappedDeltaX = newX - dragStartRef.current.nodeX;
+      const snappedDeltaY = newY - dragStartRef.current.nodeY;
 
       // Apply snapped transform to DOM element with lift effect
-      element.style.transform = `translate(-50%, -50%) scale(1.03) translate(${snappedDeltaX}px, ${snappedDeltaY}px)`;
+      // Use separate transforms to avoid scale affecting translation
+      element.style.transform = `translate(calc(-50% + ${snappedDeltaX}px), calc(-50% + ${snappedDeltaY}px)) scale(1.03)`;
       element.style.filter = 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))';
 
       // Throttle edge updates to avoid performance issues
