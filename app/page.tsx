@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
@@ -12,12 +12,15 @@ import { CookieSettings } from '@/components/CookieSettings';
 import DeleteNodeDialog from '@/components/DeleteNodeDialog';
 import DeleteEdgeDialog from '@/components/DeleteEdgeDialog';
 import { useAuth } from '@/hooks/useAuth';
-import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData } from '@/lib/types';
+import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData, type DocumentData } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
 import { decodeSliderValues } from '@/lib/urlState';
-import { loadCustomPositions, saveNodePosition, resetAllPositions, hasCustomPositions, type CustomNodePositions } from '@/lib/nodePositionState';
-import { getDefaultGraph, saveGraph, updateGraph } from '@/lib/actions/graphs';
+import { loadFromLocalStorage, saveToLocalStorage, createDefaultDocumentData, clearLocalStorage } from '@/lib/documentState';
+import { getLastOpenedDocument, loadDocument } from '@/lib/actions/documents';
+import { useAutoSave } from '@/lib/autoSave';
+import AutoSaveIndicator from '@/components/AutoSaveIndicator';
+import DocumentPicker from '@/components/DocumentPicker';
 import { analytics } from '@/lib/analytics';
 
 export default function Home() {
@@ -42,40 +45,51 @@ export default function Home() {
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showCookieSettings, setShowCookieSettings] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   // Zoom state (pan is now handled by native scrolling)
   const [zoom, setZoom] = useState(100);
   const [resetTrigger, setResetTrigger] = useState(1); // Start at 1 to trigger initial positioning
-
-  // Custom node positions (stored in localStorage)
-  const [customNodePositions, setCustomNodePositions] = useState<CustomNodePositions>({});
 
   // Drag hint state
   const [isDraggingNode, setIsDraggingNode] = useState(false);
   const [dragShiftHeld, setDragShiftHeld] = useState(false);
   const [dragCursorPos, setDragCursorPos] = useState({ x: 0, y: 0 });
 
-  // Editable graph data state
+  // Document state (unified storage)
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+  const [documentName, setDocumentName] = useState('Untitled Document');
   const [graphData, setGraphData] = useState<GraphData>(defaultGraphData);
-  const [currentGraphId, setCurrentGraphId] = useState<string | null>(null);
-  const [hasUnsavedGraphChanges, setHasUnsavedGraphChanges] = useState(false);
 
-  // Load custom node positions from localStorage on mount
-  useEffect(() => {
-    const positions = loadCustomPositions();
-    setCustomNodePositions(positions);
-  }, []);
+  // Track if we've done the initial document load
+  const hasLoadedInitialDocument = useRef(false);
 
-  // Load user's default graph from database on mount (if authenticated)
+  // Load document on mount (only once)
   useEffect(() => {
-    if (!authLoading && user) {
-      getDefaultGraph().then(({ data, error }) => {
+    if (authLoading || hasLoadedInitialDocument.current) return;
+
+    hasLoadedInitialDocument.current = true;
+
+    if (user) {
+      // Authenticated user: load last opened document from cloud
+      getLastOpenedDocument().then(({ data, error }) => {
         if (!error && data) {
-          setGraphData(data.graph_data);
-          setCurrentGraphId(data.id);
-          setHasUnsavedGraphChanges(false);
+          setCurrentDocumentId(data.id);
+          setDocumentName(data.name);
+          setGraphData({ metadata: data.data.metadata, nodes: data.data.nodes });
+          setSliderValues(data.data.sliderValues);
+          // Clear localStorage since we're now using cloud storage
+          clearLocalStorage();
         }
       });
+    } else {
+      // Anonymous user: load from localStorage
+      const draft = loadFromLocalStorage();
+      if (draft) {
+        setGraphData({ metadata: draft.metadata, nodes: draft.nodes });
+        setSliderValues(draft.sliderValues);
+        setDocumentName('My Draft');
+      }
     }
   }, [user, authLoading]);
 
@@ -110,20 +124,8 @@ export default function Home() {
   const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
     const result = calculateProbabilities(sliderValues, selectedNodeIndex, graphData);
 
-    // Apply custom node positions (overlay on top of calculated positions)
-    const nodesWithCustomPositions = result.nodes.map(node => {
-      if (customNodePositions[node.id]) {
-        return {
-          ...node,
-          x: customNodePositions[node.id].x,
-          y: customNodePositions[node.id].y,
-        };
-      }
-      return node;
-    });
-
     // Find max probability among outcome nodes (good, ambivalent, existential)
-    const outcomeNodes = nodesWithCustomPositions.filter(
+    const outcomeNodes = result.nodes.filter(
       n => n.type === 'g' || n.type === 'a' || n.type === 'e'
     );
     const maxOutcomeProbability = Math.max(
@@ -131,8 +133,24 @@ export default function Home() {
       0 // Fallback to 0 if no outcome nodes
     );
 
-    return { nodes: nodesWithCustomPositions, edges: result.edges, maxOutcomeProbability };
-  }, [sliderValues, selectedNodeIndex, customNodePositions, graphData]);
+    return { nodes: result.nodes, edges: result.edges, maxOutcomeProbability };
+  }, [sliderValues, selectedNodeIndex, graphData]);
+
+  // Create document data for auto-save
+  const documentData: DocumentData = useMemo(() => ({
+    nodes: graphData.nodes,
+    sliderValues,
+    metadata: graphData.metadata,
+  }), [graphData, sliderValues]);
+
+  // Auto-save hook
+  const { saveStatus, error: saveError, lastSavedAt } = useAutoSave({
+    documentId: currentDocumentId,
+    documentName,
+    data: documentData,
+    isAuthenticated: !!user,
+    authLoading,
+  });
 
   // Slider change handler
   const handleSliderChange = useCallback((index: number, value: number) => {
@@ -248,7 +266,6 @@ export default function Home() {
       return { ...prev, nodes: updatedNodes };
     });
 
-    setHasUnsavedGraphChanges(true);
   }, [edges, nodes]);
 
   // Edge label update handler
@@ -277,7 +294,6 @@ export default function Home() {
       return { ...prev, nodes: updatedNodes };
     });
 
-    setHasUnsavedGraphChanges(true);
   }, [edges, nodes]);
 
   // Delete edge handler
@@ -454,16 +470,7 @@ export default function Home() {
 
   // Node drag end handler
   const handleNodeDragEnd = useCallback((nodeId: string, newX: number, newY: number) => {
-    // Save to localStorage
-    saveNodePosition(nodeId, newX, newY);
-
-    // Update state
-    setCustomNodePositions(prev => ({
-      ...prev,
-      [nodeId]: { x: newX, y: newY },
-    }));
-
-    // Update graph data with new position
+    // Update graph data with new position (auto-save will handle persistence)
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
         if (node.id === nodeId) {
@@ -551,13 +558,21 @@ export default function Home() {
       };
     });
 
-    setHasUnsavedGraphChanges(true);
   }, []);
 
   // Reset node positions handler
   const handleResetNodePositions = useCallback(() => {
-    resetAllPositions();
-    setCustomNodePositions({});
+    // Reset positions to defaults from defaultGraphData
+    setGraphData(prev => ({
+      ...prev,
+      nodes: prev.nodes.map(node => {
+        const defaultNode = defaultGraphData.nodes.find(n => n.id === node.id);
+        if (defaultNode) {
+          return { ...node, position: defaultNode.position };
+        }
+        return node;
+      }),
+    }));
   }, []);
 
   // Node drag state handler
@@ -569,10 +584,28 @@ export default function Home() {
     }
   }, []);
 
-  // Load scenario handler
-  const handleLoadScenario = useCallback((loadedValues: number[]) => {
-    setSliderValues(loadedValues);
-    setUndoStack(prev => [...prev, loadedValues.join('i')]);
+  // Document picker handlers
+  const handleDocumentSelect = useCallback(async (documentId: string) => {
+    const { data, error } = await loadDocument(documentId);
+    if (!error && data) {
+      setCurrentDocumentId(data.id);
+      setDocumentName(data.name);
+      setGraphData({ metadata: data.data.metadata, nodes: data.data.nodes });
+      setSliderValues(data.data.sliderValues);
+      setSelectedNodeIndex(startNodeIndex); // Reset to start
+    }
+  }, []);
+
+  const handleCreateNewDocument = useCallback(() => {
+    setCurrentDocumentId(null);
+    setDocumentName('Untitled Document');
+    setGraphData(defaultGraphData);
+    setSliderValues(Array(SLIDER_COUNT).fill(SLIDER_DEFAULT_VALUE));
+    setSelectedNodeIndex(startNodeIndex);
+  }, []);
+
+  const handleRenameDocument = useCallback((newName: string) => {
+    setDocumentName(newName);
   }, []);
 
   // Zoom control handlers
@@ -621,7 +654,6 @@ export default function Home() {
         nodes: updatedNodes,
       };
     });
-    setHasUnsavedGraphChanges(true);
   }, []);
 
   const handleUpdateConnectionLabel = useCallback((nodeId: string, connectionIndex: number, newLabel: string) => {
@@ -645,7 +677,6 @@ export default function Home() {
         nodes: updatedNodes,
       };
     });
-    setHasUnsavedGraphChanges(true);
   }, []);
 
   const handleUpdateConnectionTarget = useCallback((nodeId: string, connectionIndex: number, newTargetId: string) => {
@@ -669,55 +700,8 @@ export default function Home() {
         nodes: updatedNodes,
       };
     });
-    setHasUnsavedGraphChanges(true);
   }, []);
 
-  const handleLoadGraph = useCallback((loadedGraphData: GraphData, graphId: string | null = null) => {
-    setGraphData(loadedGraphData);
-    setCurrentGraphId(graphId);
-    setHasUnsavedGraphChanges(false);
-    // Clear custom positions when loading a new graph
-    resetAllPositions();
-    setCustomNodePositions({});
-  }, []);
-
-  const handleResetToDefaultGraph = useCallback(() => {
-    setGraphData(defaultGraphData);
-    setCurrentGraphId(null);
-    setHasUnsavedGraphChanges(false);
-    resetAllPositions();
-    setCustomNodePositions({});
-  }, []);
-
-  const handleSaveGraph = useCallback(async () => {
-    if (!user) {
-      alert('Please sign in to save graphs');
-      return;
-    }
-
-    const graphName = prompt('Enter a name for this graph:');
-    if (!graphName) return;
-
-    if (currentGraphId) {
-      // Update existing graph
-      const { error } = await updateGraph(currentGraphId, graphName, graphData, true);
-      if (error) {
-        alert(`Error updating graph: ${error}`);
-      } else {
-        alert('Graph updated successfully!');
-        setHasUnsavedGraphChanges(false);
-      }
-    } else {
-      // Save new graph
-      const { error } = await saveGraph(graphName, graphData, true);
-      if (error) {
-        alert(`Error saving graph: ${error}`);
-      } else {
-        alert('Graph saved successfully!');
-        setHasUnsavedGraphChanges(false);
-      }
-    }
-  }, [user, graphData, currentGraphId]);
 
   const handleAddNode = useCallback((x: number, y: number) => {
     // Generate a unique ID for the new node
@@ -746,7 +730,6 @@ export default function Home() {
       nodes: [...prev.nodes, newNode],
     }));
 
-    setHasUnsavedGraphChanges(true);
   }, [graphData]);
 
   const handleInitiateDelete = useCallback((nodeId: string) => {
@@ -837,8 +820,7 @@ export default function Home() {
         };
       });
 
-      setHasUnsavedGraphChanges(true);
-    });
+      });
   }, [graphData, nodes, selectedNodeIndex]);
 
   const handleCancelDelete = useCallback(() => {
@@ -967,8 +949,7 @@ export default function Home() {
         return { ...prev, nodes: updatedNodes };
       });
 
-      setHasUnsavedGraphChanges(true);
-    });
+      });
   }, [graphData]);
 
   // Keyboard handler for Delete/Backspace keys
@@ -1016,7 +997,8 @@ export default function Home() {
         hoveredNodeIndex={hoveredNodeIndex}
         selectedNodeIndex={selectedNodeIndex}
         graphData={graphData}
-        hasUnsavedGraphChanges={hasUnsavedGraphChanges}
+        authModalOpen={authModalOpen}
+        onAuthModalOpenChange={setAuthModalOpen}
         onSliderChange={handleSliderChange}
         onSliderChangeComplete={handleSliderChangeComplete}
         onBoldPathsChange={handleBoldPathsChange}
@@ -1028,12 +1010,8 @@ export default function Home() {
         onLoadAuthorsEstimates={handleLoadAuthorsEstimates}
         onUndo={handleUndo}
         onResetNodePositions={handleResetNodePositions}
-        onLoadScenario={handleLoadScenario}
         onUpdateConnectionLabel={handleUpdateConnectionLabel}
         onUpdateConnectionTarget={handleUpdateConnectionTarget}
-        onSaveGraph={handleSaveGraph}
-        onLoadGraph={handleLoadGraph}
-        onResetGraph={handleResetToDefaultGraph}
       />
 
       {/* Main content */}
@@ -1041,9 +1019,26 @@ export default function Home() {
         {/* Header */}
         <header className="border-b border-gray-800 p-4 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">
-              Map of AI Futures
-            </h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold">
+                Map of AI Futures
+              </h1>
+              <DocumentPicker
+                currentDocumentId={currentDocumentId}
+                currentDocumentName={documentName}
+                isAuthenticated={!!user}
+                onDocumentSelect={handleDocumentSelect}
+                onCreateNew={handleCreateNewDocument}
+                onRename={handleRenameDocument}
+              />
+              <AutoSaveIndicator
+                saveStatus={saveStatus}
+                isAuthenticated={!!user}
+                error={saveError}
+                lastSavedAt={lastSavedAt}
+                onSignInClick={() => setAuthModalOpen(true)}
+              />
+            </div>
             <div className="flex items-center gap-3">
               <Link
                 href="/about"

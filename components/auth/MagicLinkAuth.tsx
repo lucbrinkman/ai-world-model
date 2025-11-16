@@ -104,7 +104,7 @@ export function MagicLinkAuth({ onClose, onSwitchToPassword }: MagicLinkAuthProp
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Sign In</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Sign In / Sign Up</h2>
         <button
           onClick={onClose}
           className="text-gray-400 hover:text-gray-600"

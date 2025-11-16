@@ -100,6 +100,24 @@ export interface GraphData {
   nodes: GraphNode[];
 }
 
+// Document data structure (stored in documents.data JSONB column)
+export interface DocumentData {
+  nodes: GraphNode[];
+  sliderValues: number[];
+  metadata: GraphMetadata;
+}
+
+// Document interface (database record)
+export interface Document {
+  id: string;
+  user_id: string;
+  name: string;
+  data: DocumentData;
+  created_at: string;
+  updated_at: string;
+  last_opened_at: string;
+}
+
 // Constants
 export const CANVAS_WIDTH = 1400;
 export const CANVAS_HEIGHT = 1800;

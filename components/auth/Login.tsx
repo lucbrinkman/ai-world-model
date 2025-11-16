@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { flushSync } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 
 interface LoginProps {
@@ -29,9 +30,10 @@ export function Login({ onClose, onSwitchToMagicLink, initialEmail = '' }: Login
 
       if (error) throw error
 
-      // Success - close modal and refresh
-      onClose()
-      window.location.reload()
+      // Success - close modal immediately before auth state updates
+      flushSync(() => {
+        onClose()
+      })
     } catch (err: any) {
       setError(err.message || 'An error occurred during login')
     } finally {
@@ -42,7 +44,7 @@ export function Login({ onClose, onSwitchToMagicLink, initialEmail = '' }: Login
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Sign In</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Sign In / Sign Up</h2>
         <button
           onClick={onClose}
           className="text-gray-400 hover:text-gray-600"
