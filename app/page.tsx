@@ -402,6 +402,35 @@ export default function Home() {
     }
   }, [user, graphData, currentGraphId]);
 
+  const handleAddNode = useCallback((x: number, y: number) => {
+    // Generate a unique ID for the new node
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(2, 9);
+    const newNodeId = `node_${timestamp}_${randomSuffix}`;
+
+    // Create a new intermediate node at the clicked position
+    const newNode = {
+      id: newNodeId,
+      type: 'i' as const, // Intermediate node type
+      title: 'New Node',
+      connections: [
+        {
+          type: '-' as const, // Always connection
+          targetId: graphData.nodes[0]?.id || 'start', // Connect to first node or 'start'
+          label: 'Always',
+        },
+      ],
+      position: { x, y },
+    };
+
+    setGraphData(prev => ({
+      ...prev,
+      nodes: [...prev.nodes, newNode],
+    }));
+
+    setHasUnsavedGraphChanges(true);
+  }, [graphData]);
+
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
@@ -471,6 +500,7 @@ export default function Home() {
             onNodeDragEnd={handleNodeDragEnd}
             onNodeDragStateChange={handleNodeDragStateChange}
             onUpdateNodeText={handleUpdateNodeText}
+            onAddNode={handleAddNode}
           />
           <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />
           <ZoomControls
@@ -488,17 +518,6 @@ export default function Home() {
         onClose={() => setShowWelcomeModal(false)}
         userEmail={user?.email || ''}
       />
-
-      {/* Dev-only: Test Welcome Modal button */}
-      {process.env.NODE_ENV === 'development' && user && (
-        <button
-          onClick={() => setShowWelcomeModal(true)}
-          className="fixed bottom-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-md shadow-lg hover:bg-orange-600 text-sm z-50"
-          title="Dev only: Test welcome modal"
-        >
-          Test Welcome
-        </button>
-      )}
     </div>
   );
 }

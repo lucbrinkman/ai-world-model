@@ -2,6 +2,7 @@ import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, NodeDragStateHa
 import { questionNodeIndices } from '@/lib/graphData';
 import NodeComponent from './Node';
 import EdgeComponent from './Edge';
+import ContextMenu from './ContextMenu';
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 
@@ -24,6 +25,7 @@ interface FlowchartProps {
   onNodeDragEnd: NodeDragEndHandler;
   onNodeDragStateChange: NodeDragStateHandler;
   onUpdateNodeText?: (nodeId: string, newText: string) => void;
+  onAddNode?: (x: number, y: number) => void;
 }
 
 export default function Flowchart({
@@ -45,6 +47,7 @@ export default function Flowchart({
   onNodeDragEnd,
   onNodeDragStateChange,
   onUpdateNodeText,
+  onAddNode,
 }: FlowchartProps) {
   // Create refs for all nodes
   const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -54,6 +57,7 @@ export default function Flowchart({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
   const [isPositioned, setIsPositioned] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   // Ref callback to set initial scroll position immediately on mount
   const scrollContainerRefCallback = useCallback((node: HTMLDivElement | null) => {
@@ -210,6 +214,51 @@ export default function Flowchart({
     }
   };
 
+  // Handle canvas click for context menu (fires after mouseup if no drag occurred)
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const isNode = target.closest('[data-node]') ||
+                   target.tagName === 'BUTTON' ||
+                   target.closest('button');
+
+    if (!isNode) {
+      // Clicking on canvas
+      e.preventDefault();
+
+      // If context menu is already open, close it instead of opening a new one
+      if (contextMenu) {
+        setContextMenu(null);
+      } else {
+        setContextMenu({ x: e.clientX, y: e.clientY });
+      }
+    } else {
+      // Clicking on a node - close context menu if open
+      if (contextMenu) {
+        setContextMenu(null);
+      }
+    }
+  };
+
+  // Handle adding a node from context menu
+  const handleAddNodeFromMenu = () => {
+    if (!contextMenu || !onAddNode || !containerRef.current || !scrollContainerRef.current) {
+      setContextMenu(null);
+      return;
+    }
+
+    // Convert screen coordinates to canvas coordinates
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const scrollContainer = scrollContainerRef.current;
+    const zoomFactor = zoom / 100;
+
+    // Calculate canvas position accounting for scroll, zoom, and padding
+    const canvasX = (scrollContainer.scrollLeft + contextMenu.x - containerRect.left - CANVAS_PADDING) / zoomFactor;
+    const canvasY = (scrollContainer.scrollTop + contextMenu.y - containerRect.top - CANVAS_PADDING) / zoomFactor;
+
+    onAddNode(canvasX, canvasY);
+    setContextMenu(null);
+  };
+
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging && scrollContainerRef.current) {
       const deltaX = e.clientX - dragStartRef.current.x;
@@ -239,6 +288,7 @@ export default function Flowchart({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onClick={handleCanvasClick}
       style={{
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: isDragging ? 'none' : 'auto',
@@ -331,6 +381,16 @@ export default function Flowchart({
           ))}
         </div>
       </div>
+
+      {/* Context menu for adding nodes */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onAddNode={handleAddNodeFromMenu}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 }
