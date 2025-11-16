@@ -30,6 +30,7 @@ interface FlowchartProps {
   onAddNode?: (x: number, y: number) => void;
   onNodeSelect?: (nodeId: string | null) => void;
   onDeleteNode?: (nodeId: string) => void;
+  onChangeNodeType?: (nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => void;
   onEdgeClick?: (edgeIndex: number) => void;
   onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeId: string) => void;
   onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
@@ -60,6 +61,7 @@ export default function Flowchart({
   onAddNode,
   onNodeSelect,
   onDeleteNode,
+  onChangeNodeType,
   onEdgeClick,
   onEdgeReconnect,
   onEdgeLabelUpdate,
@@ -481,6 +483,7 @@ export default function Flowchart({
               onEditorClose={handleEditorClose}
               onSelect={onNodeSelect}
               onDelete={onDeleteNode}
+              onChangeType={onChangeNodeType}
             />
           ))}
 

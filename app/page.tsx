@@ -636,6 +636,117 @@ export default function Home() {
     setNodeToDelete(null);
   }, []);
 
+  // Change node type handler
+  const handleChangeNodeType = useCallback((nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => {
+    const node = graphData.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    // Don't allow changing start node type
+    if (node.type === 's') {
+      alert('Cannot change the type of the start node');
+      return;
+    }
+
+    const oldType = node.type;
+    if (oldType === newType) return; // No change
+
+    flushSync(() => {
+      setGraphData(prev => {
+        const updatedNodes = prev.nodes.map(n => {
+          if (n.id !== nodeId) return n;
+
+          // Changing TO question node
+          if (newType === 'n') {
+            // Find the highest sliderIndex among existing questions
+            const questionNodes = prev.nodes.filter(node => node.type === 'n');
+            const maxSliderIndex = questionNodes.reduce((max, node) =>
+              node.sliderIndex !== null && node.sliderIndex > max ? node.sliderIndex : max, -1);
+            const newSliderIndex = maxSliderIndex + 1;
+
+            // Ensure node has exactly 2 connections (YES and NO)
+            let connections = [...n.connections];
+            if (connections.length === 0) {
+              // Create 2 new free-floating connections
+              connections = [
+                { type: 'y' as const, targetX: n.position.x + 150, targetY: n.position.y - 50, label: 'Yes' },
+                { type: 'n' as const, targetX: n.position.x + 150, targetY: n.position.y + 50, label: 'No' },
+              ];
+            } else if (connections.length === 1) {
+              // Keep existing as YES, add NO
+              connections[0] = { ...connections[0], type: 'y' as const };
+              connections.push({ type: 'n' as const, targetX: n.position.x + 150, targetY: n.position.y + 50, label: 'No' });
+            } else {
+              // Has 2+ connections: convert first to YES, second to NO, keep rest as-is
+              connections[0] = { ...connections[0], type: 'y' as const };
+              connections[1] = { ...connections[1], type: 'n' as const };
+            }
+
+            return {
+              ...n,
+              type: newType,
+              sliderIndex: newSliderIndex,
+              connections,
+            };
+          }
+
+          // Changing FROM question node to something else
+          if (oldType === 'n') {
+            // Convert YES/NO connections to ALWAYS
+            const connections = n.connections.map(conn => ({
+              ...conn,
+              type: '-' as const,
+            }));
+
+            return {
+              ...n,
+              type: newType,
+              sliderIndex: null,
+              connections,
+            };
+          }
+
+          // Other type changes (just change the type)
+          return {
+            ...n,
+            type: newType,
+          };
+        });
+
+        // If changing FROM question, need to re-index remaining questions and update sliderValues
+        if (oldType === 'n') {
+          const oldSliderIndex = node.sliderIndex;
+          if (oldSliderIndex !== null) {
+            // Re-index all questions that had higher indices
+            const finalNodes = updatedNodes.map(n => {
+              if (n.type === 'n' && n.sliderIndex !== null && n.sliderIndex > oldSliderIndex) {
+                return { ...n, sliderIndex: n.sliderIndex - 1 };
+              }
+              return n;
+            });
+
+            // Update sliderValues array (remove the slider at oldSliderIndex)
+            setSliderValues(prev => {
+              const newValues = [...prev];
+              newValues.splice(oldSliderIndex, 1);
+              return newValues;
+            });
+
+            return { ...prev, nodes: finalNodes };
+          }
+        }
+
+        // If changing TO question, add a new slider value (default 50)
+        if (newType === 'n') {
+          setSliderValues(prev => [...prev, 50]);
+        }
+
+        return { ...prev, nodes: updatedNodes };
+      });
+
+      setHasUnsavedGraphChanges(true);
+    });
+  }, [graphData]);
+
   // Keyboard handler for Delete/Backspace keys
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -764,6 +875,7 @@ export default function Home() {
             onAddNode={handleAddNode}
             onNodeSelect={setSelectedNodeId}
             onDeleteNode={handleInitiateDelete}
+            onChangeNodeType={handleChangeNodeType}
             onEdgeClick={handleEdgeClick}
             onEdgeReconnect={handleEdgeReconnect}
             onEdgeLabelUpdate={handleEdgeLabelUpdate}

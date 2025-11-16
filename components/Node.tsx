@@ -26,6 +26,7 @@ interface NodeProps {
   onEditorClose?: () => void;
   onSelect?: (nodeId: string | null) => void;
   onDelete?: (nodeId: string) => void;
+  onChangeType?: (nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => void;
 }
 
 const Node = forwardRef<HTMLDivElement, NodeProps>(({
@@ -47,6 +48,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   onEditorClose,
   onSelect,
   onDelete,
+  onChangeType,
 }, ref) => {
   const { x, y, text, p, type } = node;
 
@@ -466,6 +468,27 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
             </span>
           ))}
         </div>
+      )}
+
+      {/* Type selector - shown when node is selected (except for start node) */}
+      {isNodeSelected && onChangeType && node.type !== 's' && (
+        <select
+          value={node.type}
+          onChange={(e) => {
+            e.stopPropagation();
+            const newType = e.target.value as 'n' | 'i' | 'g' | 'a' | 'e';
+            onChangeType(node.id, newType);
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute -top-8 -right-2 bg-white text-gray-900 border border-gray-300 rounded px-2 py-1 text-xs shadow-lg z-10 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          title="Change node type"
+        >
+          <option value="i">Intermediate</option>
+          <option value="n">Question</option>
+          <option value="g">Good Outcome</option>
+          <option value="a">Ambivalent Outcome</option>
+          <option value="e">Existential Risk</option>
+        </select>
       )}
 
       {/* Delete button - shown when node is selected */}
