@@ -234,6 +234,18 @@ export default function Flowchart({
     lastInteractionRef.current = { type: 'editor-close', timestamp: Date.now() };
   }, []);
 
+  // Wrap node click to also close context menu
+  const handleNodeClick = useCallback((index: number) => {
+    setContextMenu(null);
+    onNodeClick(index);
+  }, [onNodeClick]);
+
+  // Wrap edge click to also close context menu
+  const handleEdgeClick = useCallback((index: number) => {
+    setContextMenu(null);
+    onEdgeClick?.(index);
+  }, [onEdgeClick]);
+
   // Handle background canvas click for context menu
   // This is ONLY called when clicking the explicit background rect
   const handleBackgroundClick = useCallback((e: React.MouseEvent) => {
@@ -245,9 +257,9 @@ export default function Flowchart({
       return;
     }
 
-    // Check 2: Don't open context menu if we just closed an editor (within 100ms)
+    // Check 2: Don't open context menu if we just closed an editor (within 300ms)
     const timeSinceLastInteraction = Date.now() - lastInteractionRef.current.timestamp;
-    if (lastInteractionRef.current.type === 'editor-close' && timeSinceLastInteraction < 100) {
+    if (lastInteractionRef.current.type === 'editor-close' && timeSinceLastInteraction < 300) {
       lastInteractionRef.current = { type: null, timestamp: 0 };
       return;
     }
@@ -415,7 +427,7 @@ export default function Flowchart({
                   sourceBounds={sourceBounds}
                   targetBounds={targetBounds}
                   isSelected={index === selectedEdgeIndex}
-                  onClick={onEdgeClick ? () => onEdgeClick(index) : undefined}
+                  onClick={onEdgeClick ? () => handleEdgeClick(index) : undefined}
                   onLabelUpdate={onEdgeLabelUpdate}
                   onEditorClose={handleEditorClose}
                   previewTargetNode={index === selectedEdgeIndex ? edgePreview.node : null}
@@ -438,7 +450,7 @@ export default function Flowchart({
               minOpacity={minOpacity}
               maxOutcomeProbability={maxOutcomeProbability}
               zoom={zoom}
-              onClick={() => onNodeClick(node.index)}
+              onClick={() => handleNodeClick(node.index)}
               onMouseEnter={() => onNodeHover(node.index)}
               onMouseLeave={onNodeLeave}
               onDragMove={updateBounds}
