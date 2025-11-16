@@ -130,7 +130,7 @@ export default function Flowchart({
       updateBounds();
     }, 250); // Wait slightly longer than the 200ms transition
 
-    // Update on window resize (wrap to avoid type mismatch)
+    // Update on window resize - use wrapper to match event listener signature
     const handleResize = () => updateBounds();
     window.addEventListener('resize', handleResize);
     return () => {

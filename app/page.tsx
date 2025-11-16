@@ -7,13 +7,15 @@ import Flowchart from '@/components/Flowchart';
 import ZoomControls from '@/components/ZoomControls';
 import DragHint from '@/components/DragHint';
 import { WelcomeModal } from '@/components/WelcomeModal';
+import { CookieSettings } from '@/components/CookieSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
-import { readSliderValuesFromUrl, updateUrlWithSliderValues, decodeSliderValues } from '@/lib/urlState';
+import { decodeSliderValues } from '@/lib/urlState';
 import { loadCustomPositions, saveNodePosition, resetAllPositions, hasCustomPositions, type CustomNodePositions } from '@/lib/nodePositionState';
 import { getDefaultGraph, saveGraph, updateGraph } from '@/lib/actions/graphs';
+import { analytics } from '@/lib/analytics';
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
@@ -31,6 +33,7 @@ export default function Home() {
   const [minOpacity, setMinOpacity] = useState(20);
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showCookieSettings, setShowCookieSettings] = useState(false);
 
   // Zoom state (pan is now handled by native scrolling)
   const [zoom, setZoom] = useState(100);
@@ -48,12 +51,6 @@ export default function Home() {
   const [graphData, setGraphData] = useState<GraphData>(defaultGraphData);
   const [currentGraphId, setCurrentGraphId] = useState<string | null>(null);
   const [hasUnsavedGraphChanges, setHasUnsavedGraphChanges] = useState(false);
-
-  // Load slider values from URL on mount (after hydration)
-  useEffect(() => {
-    const urlValues = readSliderValuesFromUrl();
-    setSliderValues(urlValues);
-  }, []);
 
   // Load custom node positions from localStorage on mount
   useEffect(() => {
@@ -101,11 +98,6 @@ export default function Home() {
     }
   }, [user, authLoading]);
 
-  // Update URL whenever slider values change
-  useEffect(() => {
-    updateUrlWithSliderValues(sliderValues);
-  }, [sliderValues]);
-
   // Calculate probabilities using useMemo (only recalculate when dependencies change)
   const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
     const result = calculateProbabilities(sliderValues, selectedNodeIndex, graphData);
@@ -146,6 +138,9 @@ export default function Home() {
   // Slider change complete handler (for undo)
   const handleSliderChangeComplete = useCallback((index: number) => {
     setSliderValues(current => {
+      // Track analytics
+      analytics.trackSliderChange(index, current[index]);
+
       const currentState = current.join('i');
       setUndoStack(prev => {
         if (prev.length === 0 || prev[prev.length - 1] !== currentState) {
@@ -160,6 +155,17 @@ export default function Home() {
   // Node click handler
   const handleNodeClick = useCallback((index: number) => {
     setSelectedNodeIndex(prev => {
+      const newIndex = index === prev ? startNodeIndex : index;
+
+      // Track analytics (after calculating new index)
+      const nodeId = nodes[index]?.id || `node-${index}`;
+      const nodeType = nodes[index]?.type || 'unknown';
+      analytics.trackNodeClick(nodeId, nodeType);
+
+      // Track probability root change
+      const newNodeId = newIndex === startNodeIndex ? null : (nodes[newIndex]?.id || `node-${newIndex}`);
+      analytics.trackProbabilityRootChange(newNodeId);
+
       if (index === prev) {
         // Click same node again = reset to start
         return startNodeIndex;
@@ -169,7 +175,7 @@ export default function Home() {
     });
     // Deselect any selected edge when clicking a node
     setSelectedEdgeIndex(-1);
-  }, []);
+  }, [nodes]);
 
   // Node hover handler
   const handleNodeHover = useCallback((index: number) => {
@@ -269,6 +275,9 @@ export default function Home() {
     const newValues = Array(SLIDER_COUNT).fill(SLIDER_DEFAULT_VALUE);
     setSliderValues(newValues);
     setUndoStack(prev => [...prev, newValues.join('i')]);
+
+    // Track analytics
+    analytics.trackAction('reset');
   }, []);
 
   // Load author's estimates
@@ -276,6 +285,9 @@ export default function Home() {
     const authorValues = decodeSliderValues(AUTHORS_ESTIMATES);
     setSliderValues(authorValues);
     setUndoStack(prev => [...prev, authorValues.join('i')]);
+
+    // Track analytics
+    analytics.trackAction('load_authors_estimates');
   }, []);
 
   // Undo handler
@@ -285,7 +297,12 @@ export default function Home() {
         const newStack = [...prev];
         newStack.pop();
         const previousState = newStack[newStack.length - 1];
-        setSliderValues(decodeSliderValues(previousState));
+        const previousValues = decodeSliderValues(previousState);
+        setSliderValues(previousValues);
+
+        // Track analytics
+        analytics.trackAction('undo');
+
         return newStack;
       }
       return prev;
@@ -517,6 +534,22 @@ export default function Home() {
     setHasUnsavedGraphChanges(true);
   }, [graphData]);
 
+  // Settings change handlers with analytics
+  const handleBoldPathsChange = useCallback((value: boolean) => {
+    setBoldPaths(value);
+    analytics.trackSettingChange('bold_paths', value);
+  }, []);
+
+  const handleTransparentPathsChange = useCallback((value: boolean) => {
+    setTransparentPaths(value);
+    analytics.trackSettingChange('transparent_paths', value);
+  }, []);
+
+  const handleMinOpacityChange = useCallback((value: number) => {
+    setMinOpacity(value);
+    analytics.trackSettingChange('min_opacity', value);
+  }, []);
+
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
@@ -531,9 +564,9 @@ export default function Home() {
         hasUnsavedGraphChanges={hasUnsavedGraphChanges}
         onSliderChange={handleSliderChange}
         onSliderChangeComplete={handleSliderChangeComplete}
-        onBoldPathsChange={setBoldPaths}
-        onTransparentPathsChange={setTransparentPaths}
-        onMinOpacityChange={setMinOpacity}
+        onBoldPathsChange={handleBoldPathsChange}
+        onTransparentPathsChange={handleTransparentPathsChange}
+        onMinOpacityChange={handleMinOpacityChange}
         onSliderHover={handleNodeHover}
         onSliderLeave={handleNodeLeave}
         onResetSliders={handleResetSliders}
@@ -556,12 +589,32 @@ export default function Home() {
             <h1 className="text-2xl font-bold">
               Map of AI Futures
             </h1>
-            <Link
-              href="/about"
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-m text-sm transition-colors"
-            >
-              About
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/about"
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition-colors"
+              >
+                About
+              </Link>
+              <button
+                onClick={() => setShowCookieSettings(true)}
+                className="p-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                title="Cookie Settings"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </header>
 
@@ -609,6 +662,59 @@ export default function Home() {
         onClose={() => setShowWelcomeModal(false)}
         userEmail={user?.email || ''}
       />
+
+      {/* Cookie Settings Modal */}
+      <CookieSettings
+        isOpen={showCookieSettings}
+        onClose={() => setShowCookieSettings(false)}
+      />
+
+      {/* Dev-only buttons */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 right-4 flex gap-2 z-50">
+          {/* Clear Site Data button */}
+          <button
+            onClick={async () => {
+              // Sign out from Supabase (clears auth cookies)
+              const { createClient } = await import('@/lib/supabase/client');
+              const supabase = createClient();
+              await supabase.auth.signOut();
+
+              // Clear localStorage
+              localStorage.clear();
+              // Clear sessionStorage
+              sessionStorage.clear();
+              // Clear IndexedDB (where PostHog stores data)
+              if (window.indexedDB) {
+                window.indexedDB.databases().then(databases => {
+                  databases.forEach(db => {
+                    if (db.name) {
+                      window.indexedDB.deleteDatabase(db.name);
+                    }
+                  });
+                });
+              }
+              // Reload page to reset everything
+              window.location.reload();
+            }}
+            className="bg-red-500 text-white px-4 py-2 rounded-md shadow-lg hover:bg-red-600 text-sm"
+            title="Dev only: Clear all site data and reload"
+          >
+            Clear Site Data
+          </button>
+
+          {/* Test Welcome Modal button */}
+          {user && (
+            <button
+              onClick={() => setShowWelcomeModal(true)}
+              className="bg-orange-500 text-white px-4 py-2 rounded-md shadow-lg hover:bg-orange-600 text-sm"
+              title="Dev only: Test welcome modal"
+            >
+              Test Welcome
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

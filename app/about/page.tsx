@@ -14,16 +14,21 @@ export default function About() {
             Back to Map
           </Link>
         </div>
-        <p className="text-gray-400">
-          <a
-            href="https://swantescholz.github.io/aifutures"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            swantescholz.github.io/aifutures
-          </a>
-        </p>
+        <div className="text-gray-300 space-y-2">
+          <p>
+            This is a fork of{' '}
+            <a
+              href="https://swantescholz.github.io/aifutures"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Swante Scholz&apos;s Map of AI Futures
+            </a>
+            , extended with additional features including user accounts, saved scenarios, and
+            interactive node positioning.
+          </p>
+        </div>
       </header>
 
       {/* Background */}
@@ -35,8 +40,8 @@ export default function About() {
             catastrophic, or even existential risks to humanity.
           </p>
           <p>
-            I think we should take these concerns extremely seriously, and work hard to ensure
-            that AI is developed in a way that is safe and beneficial for humanity.
+            These concerns should be taken extremely seriously. It&apos;s crucial to work hard to
+            ensure that AI is developed in a way that is safe and beneficial for humanity.
           </p>
           <p>
             This map is an attempt to visualize some of the key questions and uncertainties that
@@ -90,9 +95,10 @@ export default function About() {
         <h2 className="text-2xl font-bold mb-4">Caveats</h2>
         <ul className="space-y-2 text-gray-300 list-disc list-inside">
           <li>
-            The future is notoriously difficult to predict. I&apos;m not an AI expert, and I&apos;m sure
-            this map is flawed in various ways. Any outcome probabilities computed here are highly
-            speculative, and should be taken with a grain of salt.
+            The future is notoriously difficult to predict. This map is intended as a tool for
+            exploring different scenarios rather than making precise predictions. Any outcome
+            probabilities computed here are highly speculative, and should be taken with a grain of
+            salt.
           </li>
           <li>
             Consider this map as a reflection and conversation tool for exploring your own
@@ -102,18 +108,6 @@ export default function About() {
           <li>
             The sliders represent <strong>conditional</strong> probabilities, i.e. the probability
             for the given question assuming we reached the corresponding node in the graph.
-          </li>
-          <li>
-            I&apos;m planning to publish updated/improved version of this site.{' '}
-            <a
-              href="https://swantescholz.github.io/aifutures"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              swantescholz.github.io/aifutures
-            </a>{' '}
-            will always forward you to the newest version.
           </li>
         </ul>
       </section>
@@ -202,43 +196,52 @@ export default function About() {
         </ul>
       </section>
 
-      {/* Feedback */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Feedback</h2>
-        <p className="text-gray-300 mb-2">
-          If you have any feedback about this map (both about the questions/structure or the user
-          interface), please let me know via this{' '}
-          <a
-            href="https://forms.gle/begpVWQZ29qijYUu6"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            Feedback Form
-          </a>
-          .
-        </p>
-        <p className="text-gray-300">
-          I&apos;m planning to incorporate the feedback I receive in future versions of this map.
-        </p>
-      </section>
-
       {/* Authors */}
       <section className="mb-8">
         <h2 className="text-2xl font-bold mb-4">Authors</h2>
-        <p className="text-gray-300 mb-2">
-          Swante Scholz, 2024.{' '}
-          <a
-            href="https://github.com/swantescholz/aifutures/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            Code repository (Github)
-          </a>
-          . Feel free to modify and share this code. It is released under the Unlicense.
-        </p>
-        <p className="text-gray-300">All views expressed here are my own.</p>
+        <div className="space-y-4 text-gray-300">
+          <div>
+            <p className="mb-2">
+              <strong>Original Map:</strong> Swante Scholz, 2024.{' '}
+              <a
+                href="https://github.com/swantescholz/aifutures/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Original repository (GitHub)
+              </a>
+            </p>
+            <p className="text-sm">
+              Released under the Unlicense. The original map can be accessed at{' '}
+              <a
+                href="https://swantescholz.github.io/aifutures"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                swantescholz.github.io/aifutures
+              </a>
+              .
+            </p>
+          </div>
+          <div>
+            <p className="mb-2">
+              <strong>This Fork:</strong> Luc Brinkman, 2025.{' '}
+              <a
+                href="https://github.com/lucbrnkmn/ai-world-model"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Fork repository (GitHub)
+              </a>
+            </p>
+            <p className="text-sm">
+              Extended with user authentication, saved scenarios, draggable nodes, and privacy-focused analytics.
+            </p>
+          </div>
+        </div>
       </section>
     </div>
   );

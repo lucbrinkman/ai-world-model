@@ -99,10 +99,24 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">7. Cookies</h2>
-            <p>
-              We use cookies only for authentication purposes. These are essential for the
-              functionality of user accounts and are not used for tracking or analytics.
+            <h2 className="text-2xl font-bold mb-4 text-white">7. Cookies and Analytics</h2>
+            <p className="mb-4">We use cookies for the following purposes:</p>
+            <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
+              <li>
+                <strong>Essential Cookies (Supabase):</strong> Required for authentication and user
+                account functionality. These cookies are necessary for the site to work properly.
+              </li>
+              <li>
+                <strong>Analytics Cookies (PostHog):</strong> We use PostHog to collect anonymous
+                usage data to help us understand how users interact with the application and improve
+                the user experience. These cookies track actions like slider adjustments, node
+                clicks, and navigation patterns.
+              </li>
+            </ul>
+            <p className="mt-4">
+              You can opt out of analytics cookies by clicking &quot;Decline&quot; in the cookie banner. This
+              will not affect your ability to use the site, but essential cookies for authentication
+              will still be used if you create an account.
             </p>
           </section>
 
@@ -113,11 +127,50 @@ export default function PrivacyPolicy() {
               <li>
                 <strong>Supabase:</strong> For authentication and database services
               </li>
+              <li>
+                <strong>PostHog (EU):</strong> For privacy-focused analytics. Data is stored on EU
+                servers and is not shared with third parties. You can opt out via the cookie banner.
+              </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">9. Data Retention</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">9. Geographic Consent Requirements</h2>
+            <p className="mb-4">
+              Our cookie consent approach varies by region to comply with local privacy laws:
+            </p>
+            <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
+              <li>
+                <strong>EU/EEA, UK, Switzerland, Brazil:</strong> Cookie consent banner appears
+                before analytics cookies are placed. You can choose &quot;Essential Only&quot; to
+                decline analytics cookies or &quot;Accept Analytics&quot; to enable them.
+              </li>
+              <li>
+                <strong>United States and other regions:</strong> Analytics cookies are enabled by
+                default (no banner shown). While we don&apos;t show a consent banner in these
+                regions, you have the right to opt out of analytics at any time.
+              </li>
+            </ul>
+            <p className="mt-4">
+              <strong>For US users - Your Privacy Rights:</strong> Under California&apos;s CCPA/CPRA
+              and similar state laws, you have the right to know what data we collect and to opt out
+              of analytics. To opt out of analytics tracking, you can:
+            </p>
+            <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
+              <li>Clear your browser cookies and localStorage for this site</li>
+              <li>
+                Use browser privacy features or ad blockers that block PostHog (eu.i.posthog.com)
+              </li>
+              <li>Contact us to manually opt out your IP address</li>
+            </ul>
+            <p className="mt-4 text-sm text-gray-400">
+              Note: We do not sell your personal information. We use analytics solely to improve
+              this AI safety research tool.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold mb-4 text-white">10. Data Retention</h2>
             <p>
               We retain your data until you delete your account. You can delete your account at
               any time from your profile page.
@@ -125,7 +178,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">10. Changes to This Policy</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">11. Changes to This Policy</h2>
             <p>
               We may update this privacy policy from time to time. We will notify users of any
               material changes by updating the policy on this page.
@@ -133,7 +186,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">11. Contact</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">12. Contact</h2>
             <p>
               If you have any questions about this privacy policy or your data, please contact us
               through our GitHub repository.
