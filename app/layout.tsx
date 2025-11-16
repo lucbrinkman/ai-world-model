@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { PostHogProvider } from "@/providers/posthog";
+import { CookieBanner } from "@/components/CookieBanner";
 
 export const metadata: Metadata = {
   title: "AI World Model",
@@ -21,7 +22,10 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <PostHogProvider>{children}</PostHogProvider>
+        <PostHogProvider>
+          {children}
+          <CookieBanner />
+        </PostHogProvider>
       </body>
     </html>
   );

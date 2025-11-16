@@ -99,10 +99,24 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 text-white">7. Cookies</h2>
-            <p>
-              We use cookies only for authentication purposes. These are essential for the
-              functionality of user accounts and are not used for tracking or analytics.
+            <h2 className="text-2xl font-bold mb-4 text-white">7. Cookies and Analytics</h2>
+            <p className="mb-4">We use cookies for the following purposes:</p>
+            <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
+              <li>
+                <strong>Essential Cookies (Supabase):</strong> Required for authentication and user
+                account functionality. These cookies are necessary for the site to work properly.
+              </li>
+              <li>
+                <strong>Analytics Cookies (PostHog):</strong> We use PostHog to collect anonymous
+                usage data to help us understand how users interact with the application and improve
+                the user experience. These cookies track actions like slider adjustments, node
+                clicks, and navigation patterns.
+              </li>
+            </ul>
+            <p className="mt-4">
+              You can opt out of analytics cookies by clicking &quot;Decline&quot; in the cookie banner. This
+              will not affect your ability to use the site, but essential cookies for authentication
+              will still be used if you create an account.
             </p>
           </section>
 
@@ -112,6 +126,10 @@ export default function PrivacyPolicy() {
             <ul className="list-disc list-inside ml-4 mt-2 space-y-2">
               <li>
                 <strong>Supabase:</strong> For authentication and database services
+              </li>
+              <li>
+                <strong>PostHog (EU):</strong> For privacy-focused analytics. Data is stored on EU
+                servers and is not shared with third parties. You can opt out via the cookie banner.
               </li>
             </ul>
           </section>
