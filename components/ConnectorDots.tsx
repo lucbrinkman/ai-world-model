@@ -72,33 +72,113 @@ export default function ConnectorDots({
   let dx = x2 - x1;
   let dy = y2 - y1;
 
-  // Adjust to align with box edges
-  if (dx > sourceWidth / 2) {
-    x1 += sourceWidth / 2;
-  } else if (dx < -sourceWidth / 2) {
-    x1 -= sourceWidth / 2;
-  }
-  if (dy > sourceHeight / 2) {
-    y1 += sourceHeight / 2;
-  } else if (dy < -sourceHeight / 2) {
-    y1 -= sourceHeight / 2;
-  }
+  // Helper function to adjust point for rounded corners (same as Edge.tsx)
+  const adjustForRoundedCorner = (
+    centerX: number,
+    centerY: number,
+    targetX: number,
+    targetY: number,
+    width: number,
+    height: number,
+    topLeftRadius: number,
+    topRightRadius: number,
+    bottomLeftRadius: number,
+    bottomRightRadius: number
+  ): { x: number; y: number } => {
+    const dx = targetX - centerX;
+    const dy = targetY - centerY;
 
-  if (dx > (sourceWidth + targetWidth) / 2) {
-    x2 -= targetWidth / 2;
-  } else if (dx < -(sourceWidth + targetWidth) / 2) {
-    x2 += targetWidth / 2;
-  }
-  if (dy > (sourceHeight + targetHeight) / 2) {
-    y2 -= targetHeight / 2;
-  } else if (dy < -(sourceHeight + targetHeight) / 2) {
-    y2 += targetHeight / 2;
-  }
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
 
-  x1 -= 1;
-  x2 -= 1;
-  y1 -= 1;
-  y2 -= 1;
+    const absRatioX = Math.abs(dx) / halfWidth;
+    const absRatioY = Math.abs(dy) / halfHeight;
+
+    const cornerThreshold = 0.95;
+    const inCorner = absRatioX > cornerThreshold && absRatioY > cornerThreshold;
+
+    if (inCorner) {
+      let cornerRadius = 0;
+      let cornerCenterX = centerX;
+      let cornerCenterY = centerY;
+
+      if (dx > 0 && dy < 0) {
+        cornerRadius = topRightRadius;
+        cornerCenterX = centerX + halfWidth - cornerRadius;
+        cornerCenterY = centerY - halfHeight + cornerRadius;
+      } else if (dx > 0 && dy > 0) {
+        cornerRadius = bottomRightRadius;
+        cornerCenterX = centerX + halfWidth - cornerRadius;
+        cornerCenterY = centerY + halfHeight - cornerRadius;
+      } else if (dx < 0 && dy < 0) {
+        cornerRadius = topLeftRadius;
+        cornerCenterX = centerX - halfWidth + cornerRadius;
+        cornerCenterY = centerY - halfHeight + cornerRadius;
+      } else {
+        cornerRadius = bottomLeftRadius;
+        cornerCenterX = centerX - halfWidth + cornerRadius;
+        cornerCenterY = centerY + halfHeight - cornerRadius;
+      }
+
+      const dcx = targetX - cornerCenterX;
+      const dcy = targetY - cornerCenterY;
+      const distToCornerCenter = Math.sqrt(dcx * dcx + dcy * dcy);
+
+      if (distToCornerCenter > 0) {
+        const scale = cornerRadius / distToCornerCenter;
+        return {
+          x: cornerCenterX + dcx * scale,
+          y: cornerCenterY + dcy * scale
+        };
+      }
+    }
+
+    let resultX = centerX;
+    let resultY = centerY;
+
+    if (absRatioX > absRatioY) {
+      resultX = dx > 0 ? centerX + halfWidth : centerX - halfWidth;
+      resultY = centerY + (dy / absRatioX);
+    } else {
+      resultX = centerX + (dx / absRatioY);
+      resultY = dy > 0 ? centerY + halfHeight : centerY - halfHeight;
+    }
+
+    return { x: resultX, y: resultY };
+  };
+
+  // Node corner radii (matching Node.tsx)
+  const topLeftRadius = 8;
+  const topRightRadius = 12;
+  const bottomLeftRadius = 12;
+  const bottomRightRadius = 12;
+
+  // Adjust arrow start point to account for rounded corners
+  const sourceAdjusted = adjustForRoundedCorner(
+    x1, y1, x2, y2,
+    sourceWidth, sourceHeight,
+    topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius
+  );
+
+  // Add 1px clearance by pulling back from the node edge
+  const CLEARANCE = 1;
+  const sourceAngle = Math.atan2(y2 - sourceAdjusted.y, x2 - sourceAdjusted.x);
+  x1 = sourceAdjusted.x + Math.cos(sourceAngle) * CLEARANCE;
+  y1 = sourceAdjusted.y + Math.sin(sourceAngle) * CLEARANCE;
+
+  // Adjust arrow end point to account for rounded corners (only if there's a target node)
+  if (effectiveTargetNode) {
+    const targetAdjusted = adjustForRoundedCorner(
+      x2, y2, x1, y1,
+      targetWidth, targetHeight,
+      topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius
+    );
+
+    // Add 1px clearance by pulling back from the node edge
+    const targetAngle = Math.atan2(y1 - targetAdjusted.y, x1 - targetAdjusted.x);
+    x2 = targetAdjusted.x + Math.cos(targetAngle) * CLEARANCE;
+    y2 = targetAdjusted.y + Math.sin(targetAngle) * CLEARANCE;
+  }
 
   // Handle connector drag
   const handleConnectorMouseDown = useCallback((e: React.MouseEvent, end: 'source' | 'target') => {
