@@ -13,6 +13,7 @@ import { startNodeIndex, AUTHORS_ESTIMATES } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
 import { readSliderValuesFromUrl, updateUrlWithSliderValues, decodeSliderValues } from '@/lib/urlState';
 import { loadCustomPositions, saveNodePosition, resetAllPositions, hasCustomPositions, type CustomNodePositions } from '@/lib/nodePositionState';
+import { analytics } from '@/lib/analytics';
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
@@ -126,6 +127,9 @@ export default function Home() {
   // Slider change complete handler (for undo)
   const handleSliderChangeComplete = useCallback((index: number) => {
     setSliderValues(current => {
+      // Track analytics
+      analytics.trackSliderChange(index, current[index]);
+
       const currentState = current.join('i');
       setUndoStack(prev => {
         if (prev.length === 0 || prev[prev.length - 1] !== currentState) {
@@ -140,6 +144,17 @@ export default function Home() {
   // Node click handler
   const handleNodeClick = useCallback((index: number) => {
     setSelectedNodeIndex(prev => {
+      const newIndex = index === prev ? startNodeIndex : index;
+
+      // Track analytics (after calculating new index)
+      const nodeId = nodes[index]?.id || `node-${index}`;
+      const nodeType = nodes[index]?.type || 'unknown';
+      analytics.trackNodeClick(nodeId, nodeType);
+
+      // Track probability root change
+      const newNodeId = newIndex === startNodeIndex ? null : (nodes[newIndex]?.id || `node-${newIndex}`);
+      analytics.trackProbabilityRootChange(newNodeId);
+
       if (index === prev) {
         // Click same node again = reset to start
         return startNodeIndex;
@@ -147,7 +162,7 @@ export default function Home() {
         return index;
       }
     });
-  }, []);
+  }, [nodes]);
 
   // Node hover handler
   const handleNodeHover = useCallback((index: number) => {
@@ -164,6 +179,9 @@ export default function Home() {
     const newValues = Array(SLIDER_COUNT).fill(SLIDER_DEFAULT_VALUE);
     setSliderValues(newValues);
     setUndoStack(prev => [...prev, newValues.join('i')]);
+
+    // Track analytics
+    analytics.trackAction('reset');
   }, []);
 
   // Load author's estimates
@@ -171,6 +189,9 @@ export default function Home() {
     const authorValues = decodeSliderValues(AUTHORS_ESTIMATES);
     setSliderValues(authorValues);
     setUndoStack(prev => [...prev, authorValues.join('i')]);
+
+    // Track analytics
+    analytics.trackAction('load_authors_estimates');
   }, []);
 
   // Undo handler
@@ -181,6 +202,10 @@ export default function Home() {
         newStack.pop();
         const previousState = newStack[newStack.length - 1];
         setSliderValues(decodeSliderValues(previousState));
+
+        // Track analytics
+        analytics.trackAction('undo');
+
         return newStack;
       }
       return prev;
@@ -249,6 +274,22 @@ export default function Home() {
     setZoom(newZoom);
   }, []);
 
+  // Settings change handlers with analytics
+  const handleBoldPathsChange = useCallback((value: boolean) => {
+    setBoldPaths(value);
+    analytics.trackSettingChange('bold_paths', value);
+  }, []);
+
+  const handleTransparentPathsChange = useCallback((value: boolean) => {
+    setTransparentPaths(value);
+    analytics.trackSettingChange('transparent_paths', value);
+  }, []);
+
+  const handleMinOpacityChange = useCallback((value: number) => {
+    setMinOpacity(value);
+    analytics.trackSettingChange('min_opacity', value);
+  }, []);
+
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
@@ -261,9 +302,9 @@ export default function Home() {
         selectedNodeIndex={selectedNodeIndex}
         onSliderChange={handleSliderChange}
         onSliderChangeComplete={handleSliderChangeComplete}
-        onBoldPathsChange={setBoldPaths}
-        onTransparentPathsChange={setTransparentPaths}
-        onMinOpacityChange={setMinOpacity}
+        onBoldPathsChange={handleBoldPathsChange}
+        onTransparentPathsChange={handleTransparentPathsChange}
+        onMinOpacityChange={handleMinOpacityChange}
         onSliderHover={handleNodeHover}
         onSliderLeave={handleNodeLeave}
         onResetSliders={handleResetSliders}
