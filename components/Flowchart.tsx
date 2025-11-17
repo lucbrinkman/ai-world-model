@@ -25,6 +25,7 @@ interface FlowchartProps {
   newArrowPreview?: { nodeId: string; pos: { x: number; y: number } } | null;
   onZoomChange: (newZoom: number, cursorX?: number, cursorY?: number) => void;
   onNodeClick: (index: number) => void;
+  onSetProbabilityRoot?: (index: number) => void;
   onNodeHover: (index: number) => void;
   onNodeLeave: () => void;
   onNodeDragEnd: NodeDragEndHandler;
@@ -64,6 +65,7 @@ export default function Flowchart({
   newArrowPreview,
   onZoomChange,
   onNodeClick,
+  onSetProbabilityRoot,
   onNodeHover,
   onNodeLeave,
   onNodeDragEnd,
@@ -530,6 +532,7 @@ export default function Flowchart({
                 maxOutcomeProbability={maxOutcomeProbability}
                 zoom={zoom}
                 onClick={() => handleNodeClick(node.index)}
+                onSetProbabilityRoot={onSetProbabilityRoot ? () => onSetProbabilityRoot(node.index) : undefined}
                 onMouseEnter={() => onNodeHover(node.index)}
                 onMouseLeave={onNodeLeave}
                 onDragMove={updateBounds}
@@ -635,14 +638,14 @@ export default function Flowchart({
           })()}
 
           {/* Add arrow buttons (shown when intermediate node or outcome node is selected) */}
-          {selectedNodeIndex !== -1 && onAddArrow && (() => {
-            const node = nodes[selectedNodeIndex];
+          {selectedNodeId && onAddArrow && (() => {
+            const node = nodes.find(n => n.id === selectedNodeId);
             if (!node) return null;
 
             // Never show add arrow buttons for start node
             if (node.type === NT.START) return null;
 
-            const outgoingEdges = edges.filter(e => e.source === selectedNodeIndex);
+            const outgoingEdges = edges.filter(e => e.source === node.index);
 
             // Show add arrow buttons if:
             // 1. Node is intermediate (has 1 outgoing arrow), OR

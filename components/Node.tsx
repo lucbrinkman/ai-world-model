@@ -17,6 +17,7 @@ interface NodeProps {
   maxOutcomeProbability: number;
   zoom: number;
   onClick: () => void;
+  onSetProbabilityRoot?: () => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   onDragMove: (nodeIndex: number, deltaX: number, deltaY: number) => void;
@@ -42,6 +43,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   maxOutcomeProbability,
   zoom,
   onClick,
+  onSetProbabilityRoot,
   onMouseEnter,
   onMouseLeave,
   onDragMove,
@@ -161,49 +163,56 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   const borderWidth = calculateNodeBorderWidth(p, isSelected);
 
   // Get colors based on node type and state
+  // isSelected = probability root (should be orange)
+  // isNodeSelected = UI selection (should look hovered)
+  const ORANGE_COLOR = '#ff8c00'; // Orange for probability root
+
   const getBorderColor = () => {
-    if (isSelected) return NODE_COLORS.SELECTED;
+    // Probability root is orange
+    if (isSelected) return ORANGE_COLOR;
 
     switch (type) {
       case NT.QUESTION:
-        return isHovered ? NODE_COLORS.QUESTION.hover : NODE_COLORS.QUESTION.border;
+        return (isHovered || isNodeSelected) ? NODE_COLORS.QUESTION.hover : NODE_COLORS.QUESTION.border;
       case NT.START:
       case NT.INTERMEDIATE:
         return NODE_COLORS.START.border;
       case NT.GOOD:
-        return isHovered ? NODE_COLORS.GOOD.hover : NODE_COLORS.GOOD.border;
+        return (isHovered || isNodeSelected) ? NODE_COLORS.GOOD.hover : NODE_COLORS.GOOD.border;
       case NT.AMBIVALENT:
-        return isHovered ? NODE_COLORS.AMBIVALENT.hover : NODE_COLORS.AMBIVALENT.border;
+        return (isHovered || isNodeSelected) ? NODE_COLORS.AMBIVALENT.hover : NODE_COLORS.AMBIVALENT.border;
       case NT.EXISTENTIAL:
-        return isHovered ? NODE_COLORS.EXISTENTIAL.hover : NODE_COLORS.EXISTENTIAL.border;
+        return (isHovered || isNodeSelected) ? NODE_COLORS.EXISTENTIAL.hover : NODE_COLORS.EXISTENTIAL.border;
       default:
         return '#ffffff';
     }
   };
 
   const getBackgroundColor = () => {
-    if (isSelected) return NODE_COLORS.SELECTED + '26'; // 15% opacity
+    // Probability root is orange with transparency
+    if (isSelected) return ORANGE_COLOR + '33'; // 20% opacity
 
     switch (type) {
       case NT.QUESTION:
-        return isHovered ? NODE_COLORS.QUESTION.bg + '4d' : NODE_COLORS.QUESTION.bg;
+        return (isHovered || isNodeSelected) ? NODE_COLORS.QUESTION.bg + '4d' : NODE_COLORS.QUESTION.bg;
       case NT.START:
       case NT.INTERMEDIATE:
-        return isHovered ? NODE_COLORS.START.bg + '4d' : NODE_COLORS.START.bg;
+        return (isHovered || isNodeSelected) ? NODE_COLORS.START.bg + '4d' : NODE_COLORS.START.bg;
       case NT.GOOD:
-        return isHovered ? NODE_COLORS.GOOD.hover : NODE_COLORS.GOOD.bg;
+        return (isHovered || isNodeSelected) ? NODE_COLORS.GOOD.hover : NODE_COLORS.GOOD.bg;
       case NT.AMBIVALENT:
-        return isHovered ? NODE_COLORS.AMBIVALENT.hover : NODE_COLORS.AMBIVALENT.bg;
+        return (isHovered || isNodeSelected) ? NODE_COLORS.AMBIVALENT.hover : NODE_COLORS.AMBIVALENT.bg;
       case NT.EXISTENTIAL:
-        return isHovered ? NODE_COLORS.EXISTENTIAL.hover : NODE_COLORS.EXISTENTIAL.bg;
+        return (isHovered || isNodeSelected) ? NODE_COLORS.EXISTENTIAL.hover : NODE_COLORS.EXISTENTIAL.bg;
       default:
         return '#000000';
     }
   };
 
   const getTextColor = () => {
-    if (isSelected) return NODE_COLORS.SELECTED;
-    if (isHovered && type === NT.QUESTION) return NODE_COLORS.QUESTION.hover;
+    // Probability root is orange
+    if (isSelected) return ORANGE_COLOR;
+    if ((isHovered || isNodeSelected) && type === NT.QUESTION) return NODE_COLORS.QUESTION.hover;
     return '#ffffff';
   };
 
@@ -498,8 +507,27 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         </button>
       )}
 
-      {/* Pop-up slider - shown when hovering on question nodes */}
-      {(isHovered || isSliderHovered) && !isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange && (
+      {/* Set probability root button - shown when node is selected */}
+      {isNodeSelected && onSetProbabilityRoot && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onSetProbabilityRoot();
+          }}
+          className="absolute -top-5 -left-5 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg transition-colors z-10"
+          title="Set as probability root (100% probability)"
+          style={{
+            fontSize: '10px',
+            lineHeight: '1',
+            // fontWeight: 'bold',
+          }}
+        >
+          100
+        </button>
+      )}
+
+      {/* Pop-up slider - shown when hovering or selecting question nodes */}
+      {(isHovered || isNodeSelected || isSliderHovered) && !isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange && (
         <div
           className="absolute pointer-events-auto"
           style={{

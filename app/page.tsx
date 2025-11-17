@@ -176,29 +176,33 @@ export default function Home() {
     });
   }, []);
 
-  // Node click handler
+  // Node click handler - no longer changes probability root
   const handleNodeClick = useCallback((index: number) => {
+    // Track analytics
+    const nodeId = nodes[index]?.id || `node-${index}`;
+    const nodeType = nodes[index]?.type || 'unknown';
+    analytics.trackNodeClick(nodeId, nodeType);
+
+    // Deselect any selected edge when clicking a node
+    setSelectedEdgeIndex(-1);
+  }, [nodes]);
+
+  // Set probability root handler (for the "100" button)
+  const handleSetProbabilityRoot = useCallback((index: number) => {
     setSelectedNodeIndex(prev => {
       const newIndex = index === prev ? startNodeIndex : index;
-
-      // Track analytics (after calculating new index)
-      const nodeId = nodes[index]?.id || `node-${index}`;
-      const nodeType = nodes[index]?.type || 'unknown';
-      analytics.trackNodeClick(nodeId, nodeType);
 
       // Track probability root change
       const newNodeId = newIndex === startNodeIndex ? null : (nodes[newIndex]?.id || `node-${newIndex}`);
       analytics.trackProbabilityRootChange(newNodeId);
 
       if (index === prev) {
-        // Click same node again = reset to start
+        // Click same button again = reset to start
         return startNodeIndex;
       } else {
         return index;
       }
     });
-    // Deselect any selected edge when clicking a node
-    setSelectedEdgeIndex(-1);
   }, [nodes]);
 
   // Node hover handler
@@ -1049,6 +1053,7 @@ export default function Home() {
             resetTrigger={resetTrigger}
             onZoomChange={handleZoomChange}
             onNodeClick={handleNodeClick}
+            onSetProbabilityRoot={handleSetProbabilityRoot}
             onNodeHover={handleNodeHover}
             onNodeLeave={handleNodeLeave}
             onNodeDragEnd={handleNodeDragEnd}
