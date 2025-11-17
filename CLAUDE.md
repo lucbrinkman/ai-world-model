@@ -37,7 +37,9 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 - Direct push workflow: test locally → merge to main → push
 
 **Branch Merging Protocol:**
-When merging a feature branch to main, ALWAYS follow this sequence:
+**IMPORTANT:** Only merge to main when the user explicitly says it's time to merge. Do not automatically merge or test for merging during development - features may need multiple iterations before being ready.
+
+When the user says to merge a feature branch to main, ALWAYS follow this sequence:
 
 1. **First, update the feature branch with main:**
    ```bash
@@ -60,6 +62,7 @@ When merging a feature branch to main, ALWAYS follow this sequence:
    ```
 
 **Key Rules:**
+- NEVER merge to main unless the user explicitly says to merge
 - NEVER resolve merge conflicts while on `main` branch
 - ALWAYS use `--ff-only` when merging into main (ensures clean, conflict-free merge)
 - ALWAYS test the dev server after merging but before pushing
