@@ -530,27 +530,54 @@ export default function Edge({
       )}
 
       {/* Delete button - shown when edge is selected */}
-      {isSelected && onDelete && (
-        <foreignObject
-          x={labelText && labelDescription ? boxX + boxDimensions.width + 2 : labelX + 15}
-          y={labelText && labelDescription ? boxY - 12 : labelY - 20}
-          width="20"
-          height="20"
-          style={{ overflow: 'visible' }}
-        >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow-md transition-all duration-200 hover:scale-110"
-            title="Delete connection"
-            style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      {isSelected && onDelete && (() => {
+        let deleteButtonX: number;
+        let deleteButtonY: number;
+
+        if (labelText && labelDescription) {
+          // For labeled edges: position at top-right of label box
+          deleteButtonX = boxX + boxDimensions.width + 4;
+          deleteButtonY = boxY - 7;
+        } else {
+          // For unlabeled edges: position perpendicular to arrow direction
+          // Calculate perpendicular offset (rotate arrow direction by 90 degrees)
+          const perpOffset = 14; // Distance from arrow center
+          const perpX = -dy / dlen; // Perpendicular unit vector x
+          const perpY = dx / dlen;  // Perpendicular unit vector y
+
+          deleteButtonX = labelX + perpX * perpOffset;
+          deleteButtonY = labelY + perpY * perpOffset;
+        }
+
+        return (
+          <foreignObject
+            x={deleteButtonX}
+            y={deleteButtonY}
+            width="20"
+            height="20"
+            style={{ overflow: 'visible' }}
           >
-            <X size={9} />
-          </button>
-        </foreignObject>
-      )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow-md transition-all duration-200 hover:scale-110"
+              title="Delete connection"
+              style={{
+                width: '20px',
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: 'translate(-50%, -50%)'
+              }}
+            >
+              <X size={9} />
+            </button>
+          </foreignObject>
+        );
+      })()}
     </g>
   );
 }
