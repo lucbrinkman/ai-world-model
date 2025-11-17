@@ -27,6 +27,39 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 
 **Database:** Supabase with `documents` table storing unified user maps (graph structure + slider values + node positions).
 
+## Git Workflow
+
+**Important:** This repository uses **multiple worktrees** - the user may be working in different directories on different branches simultaneously.
+
+**Branch Merging Protocol:**
+When merging a feature branch to main, ALWAYS follow this sequence:
+
+1. **First, update the feature branch with main:**
+   ```bash
+   git checkout feature-branch
+   git merge main
+   # Resolve any conflicts HERE on the feature branch, never on main
+   ```
+
+2. **Test after merging:**
+   - Clear the Next.js cache: `rm -rf .next`
+   - Start dev server: `npm run dev`
+   - Verify it runs without errors before proceeding
+
+3. **Only then, merge to main using fast-forward only:**
+   ```bash
+   git checkout main
+   git merge --ff-only feature-branch
+   # If this fails, return to step 1 - there are unresolved issues
+   git push origin main
+   ```
+
+**Key Rules:**
+- NEVER resolve merge conflicts while on `main` branch
+- ALWAYS use `--ff-only` when merging into main (ensures clean, conflict-free merge)
+- ALWAYS test the dev server after merging but before pushing
+- If user says "merge to main", first update feature branch with main, then merge to main
+
 ## Architecture
 
 ### Core System
