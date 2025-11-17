@@ -364,7 +364,7 @@ export default function ConnectorDots({
           border: '2px solid white',
           cursor: draggingConnector === 'target' ? 'grabbing' : 'grab',
           pointerEvents: 'auto',
-          zIndex: 100,
+          zIndex: 1000,
         }}
         onMouseDown={(e) => handleConnectorMouseDown(e, 'target')}
         onMouseEnter={() => setHoveredConnector('target')}
@@ -383,7 +383,7 @@ export default function ConnectorDots({
           borderRadius: '50%',
           cursor: draggingConnector === 'target' ? 'grabbing' : 'grab',
           pointerEvents: 'auto',
-          zIndex: 99,
+          zIndex: 999,
         }}
         onMouseDown={(e) => handleConnectorMouseDown(e, 'target')}
         onMouseEnter={() => setHoveredConnector('target')}

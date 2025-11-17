@@ -318,19 +318,22 @@ export default function Flowchart({
 
   // Handle adding a node from context menu
   const handleAddNodeFromMenu = () => {
-    if (!contextMenu || !onAddNode || !containerRef.current || !scrollContainerRef.current) {
+    if (!contextMenu || !onAddNode || !containerRef.current) {
       setContextMenu(null);
       return;
     }
 
     // Convert screen coordinates to canvas coordinates
     const containerRect = containerRef.current.getBoundingClientRect();
-    const scrollContainer = scrollContainerRef.current;
     const zoomFactor = zoom / 100;
+    const CONTAINER_BORDER_WIDTH = 2;
 
-    // Calculate canvas position accounting for scroll, zoom, and padding
-    const canvasX = (scrollContainer.scrollLeft + contextMenu.x - containerRect.left - CANVAS_PADDING) / zoomFactor;
-    const canvasY = (scrollContainer.scrollTop + contextMenu.y - containerRect.top - CANVAS_PADDING) / zoomFactor;
+    // Calculate canvas position accounting for zoom and border
+    // contextMenu x,y are viewport coordinates
+    // containerRect gives us the scaled canvas position on screen
+    // We need to: get position within scaled canvas, account for border, then unscale
+    const canvasX = (contextMenu.x - containerRect.left - CONTAINER_BORDER_WIDTH) / zoomFactor;
+    const canvasY = (contextMenu.y - containerRect.top - CONTAINER_BORDER_WIDTH) / zoomFactor;
 
     onAddNode(canvasX, canvasY);
     setContextMenu(null);
@@ -585,16 +588,20 @@ export default function Flowchart({
             );
           })()}
 
-          {/* Delete edge button (shown when edge from question node is selected) */}
+          {/* Delete edge button (shown when edge is selected) */}
           {selectedEdgeIndex !== -1 && onDeleteEdge && (() => {
             const edge = edges[selectedEdgeIndex];
             if (!edge) return null;
 
             const sourceNode = nodes[edge.source];
 
-            // Only show delete button if source node is a question (has 2 outgoing arrows)
+            // Never allow deleting the start node's only connection
+            if (sourceNode.type === NT.START) return null;
+
+            // Show delete button if source node has 1 or 2 outgoing arrows
+            // (question nodes have 2, intermediate nodes have 1)
             const outgoingEdges = edges.filter(e => e.source === edge.source);
-            if (outgoingEdges.length !== 2) return null;
+            if (outgoingEdges.length !== 2 && outgoingEdges.length !== 1) return null;
 
             const sourceBounds = nodeBounds.get(sourceNode.id);
             const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
@@ -627,14 +634,25 @@ export default function Flowchart({
             );
           })()}
 
-          {/* Add arrow buttons (shown when intermediate node is selected) */}
+          {/* Add arrow buttons (shown when intermediate node or outcome node is selected) */}
           {selectedNodeIndex !== -1 && onAddArrow && (() => {
             const node = nodes[selectedNodeIndex];
             if (!node) return null;
 
-            // Only show add arrow buttons if node is intermediate (has 1 outgoing arrow)
+            // Never show add arrow buttons for start node
+            if (node.type === NT.START) return null;
+
             const outgoingEdges = edges.filter(e => e.source === selectedNodeIndex);
-            if (outgoingEdges.length !== 1) return null;
+
+            // Show add arrow buttons if:
+            // 1. Node is intermediate (has 1 outgoing arrow), OR
+            // 2. Node is an outcome type (good/ambivalent/existential) with 0 outgoing arrows
+            const isIntermediate = outgoingEdges.length === 1;
+            const isOutcomeWithNoArrows =
+              (node.type === 'g' || node.type === 'a' || node.type === 'e') &&
+              outgoingEdges.length === 0;
+
+            if (!isIntermediate && !isOutcomeWithNoArrows) return null;
 
             const bounds = nodeBounds.get(node.id);
             if (!bounds) return null;

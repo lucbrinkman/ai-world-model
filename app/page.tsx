@@ -239,10 +239,11 @@ export default function Home() {
         if (node.id === sourceNodeId) {
           // This is the source node, update its connection
           const updatedConnections = node.connections.map((conn) => {
-            // Find which connection corresponds to this edge (by targetId or by targetX/targetY)
+            // Find which connection corresponds to this edge (by targetId or by targetX/targetY AND edge type)
+            // We need to match by edge type (conn.type === edge.yn) to distinguish between stacked edges
             const isMatchingConnection = targetNodeId ?
-              conn.targetId === targetNodeId :
-              conn.targetX === edge.targetX && conn.targetY === edge.targetY;
+              conn.targetId === targetNodeId && conn.type === edge.yn :
+              conn.targetX === edge.targetX && conn.targetY === edge.targetY && conn.type === edge.yn;
 
             if (isMatchingConnection && end === 'target') {
               if (typeof newNodeIdOrCoords === 'string') {
@@ -279,7 +280,8 @@ export default function Home() {
       const updatedNodes = prev.nodes.map(node => {
         if (node.id === sourceNodeId) {
           const updatedConnections = node.connections.map((conn) => {
-            if (conn.targetId === targetNodeId) {
+            // Match by both targetId and edge type to distinguish between stacked edges
+            if (conn.targetId === targetNodeId && conn.type === edge.yn) {
               return { ...conn, label: newLabel };
             }
             return conn;
@@ -311,18 +313,23 @@ export default function Home() {
         if (node.id === sourceNode.id) {
           // Remove the connection
           const updatedConnections = node.connections.filter(conn => {
+            // Match by edge type to distinguish between stacked edges
             const isMatchingConnection = targetNodeId ?
-              conn.targetId === targetNodeId :
-              conn.targetX === edge.targetX && conn.targetY === edge.targetY;
+              conn.targetId === targetNodeId && conn.type === edge.yn :
+              conn.targetX === edge.targetX && conn.targetY === edge.targetY && conn.type === edge.yn;
             return !isMatchingConnection;
           });
 
-          // If node now has only 1 connection, convert from QUESTION to INTERMEDIATE
-          // Also convert the remaining connection from YES/NO to E100
+          // Handle node type conversion based on remaining connections
           let finalConnections = updatedConnections;
           let updatedType = node.type;
 
-          if (updatedConnections.length === 1) {
+          if (updatedConnections.length === 0) {
+            // No connections left: convert to AMBIVALENT outcome
+            updatedType = 'a';
+          } else if (updatedConnections.length === 1) {
+            // One connection left: convert from QUESTION to INTERMEDIATE
+            // Also convert the remaining connection from YES/NO to E100
             updatedType = 'i';
             finalConnections = updatedConnections.map(conn => ({
               ...conn,
@@ -353,6 +360,9 @@ export default function Home() {
 
   // Add arrow handler
   const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right') => {
+    // Track if we're converting to a question node (for slider management)
+    let willBecomeQuestion = false;
+
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
         if (node.id === nodeId) {
@@ -376,26 +386,43 @@ export default function Home() {
               break;
           }
 
-          // Convert existing connection from E100 to YES
-          const updatedExistingConnections = node.connections.map(conn => {
-            if (conn.type === '-') {
-              return { ...conn, type: 'y' as const, label: 'Yes' };
-            }
-            return conn;
-          });
+          const isOutcomeNode = node.type === 'g' || node.type === 'a' || node.type === 'e';
+          const isIntermediateNode = node.type === 'i';
 
-          // Add new connection with NO type
-          const newConnection = {
-            type: 'n' as const,
-            targetX,
-            targetY,
-            label: 'No',
-          };
+          if (isOutcomeNode && node.connections.length === 0) {
+            // Case: OUTCOME node with 0 connections -> add 1 E100 connection -> convert to INTERMEDIATE
+            const newConnection = {
+              type: '-' as const,
+              targetX,
+              targetY,
+              label: '',
+            };
 
-          const updatedConnections = [...updatedExistingConnections, newConnection];
+            return { ...node, connections: [newConnection], type: 'i' as const };
+          } else if (isIntermediateNode && node.connections.length === 1) {
+            // Case: INTERMEDIATE node with 1 connection -> add YES/NO connections -> convert to QUESTION
+            // Convert existing connection from E100 to YES
+            const updatedExistingConnections = node.connections.map(conn => {
+              if (conn.type === '-') {
+                return { ...conn, type: 'y' as const, label: 'Yes' };
+              }
+              return conn;
+            });
 
-          // Convert node from INTERMEDIATE to QUESTION
-          return { ...node, connections: updatedConnections, type: 'n' as const };
+            // Add new connection with NO type
+            const newConnection = {
+              type: 'n' as const,
+              targetX,
+              targetY,
+              label: 'No',
+            };
+
+            const updatedConnections = [...updatedExistingConnections, newConnection];
+            willBecomeQuestion = true;
+
+            // Convert node from INTERMEDIATE to QUESTION
+            return { ...node, connections: updatedConnections, type: 'n' as const };
+          }
         }
         return node;
       });
@@ -403,25 +430,28 @@ export default function Home() {
       return { ...prev, nodes: updatedNodes };
     });
 
-    // Add a slider value for the newly created question node
-    // Find the index this question will have among all questions
-    setSliderValues(prev => {
-      // After the graph update, recalculate which nodes are questions
-      const updatedGraphNodes = graphData.nodes.map(node => {
-        if (node.id === nodeId) {
-          return { ...node, type: 'n' as const };
-        }
-        return node;
+    // Only add a slider value if we converted to a question node
+    if (willBecomeQuestion) {
+      // Add a slider value for the newly created question node
+      // Find the index this question will have among all questions
+      setSliderValues(prev => {
+        // After the graph update, recalculate which nodes are questions
+        const updatedGraphNodes = graphData.nodes.map(node => {
+          if (node.id === nodeId) {
+            return { ...node, type: 'n' as const };
+          }
+          return node;
+        });
+
+        const questionNodes = updatedGraphNodes.filter(n => n.type === 'n');
+        const newQuestionIndex = questionNodes.findIndex(n => n.id === nodeId);
+
+        // Insert default value at the appropriate index
+        const newValues = [...prev];
+        newValues.splice(newQuestionIndex, 0, SLIDER_DEFAULT_VALUE);
+        return newValues;
       });
-
-      const questionNodes = updatedGraphNodes.filter(n => n.type === 'n');
-      const newQuestionIndex = questionNodes.findIndex(n => n.id === nodeId);
-
-      // Insert default value at the appropriate index
-      const newValues = [...prev];
-      newValues.splice(newQuestionIndex, 0, SLIDER_DEFAULT_VALUE);
-      return newValues;
-    });
+    }
   }, [graphData.nodes]);
 
   // Reset sliders to 50%
