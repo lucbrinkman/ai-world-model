@@ -89,15 +89,15 @@ export default function Sidebar({
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm">Make less likely paths transparent</span>
             <span className="text-sm text-gray-400 font-mono">
-              {minOpacity === 0 ? 'Off' : `${minOpacity}%`}
+              {minOpacity === 100 ? 'Off' : `${100 - minOpacity}%`}
             </span>
           </div>
           <input
             type="range"
             min="0"
             max="100"
-            value={minOpacity}
-            onChange={(e) => onMinOpacityChange(parseInt(e.target.value))}
+            value={100 - minOpacity}
+            onChange={(e) => onMinOpacityChange(100 - parseInt(e.target.value))}
             className="w-full h-2 rounded-full cursor-pointer appearance-none"
             style={{ accentColor: '#1E90FF' }}
           />

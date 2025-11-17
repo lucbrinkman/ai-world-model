@@ -39,7 +39,7 @@ export default function Home() {
   const [nodeToDelete, setNodeToDelete] = useState<{ id: string; title: string } | null>(null);
   const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
   const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
-  const [minOpacity, setMinOpacity] = useState(0);
+  const [minOpacity, setMinOpacity] = useState(100);
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showCookieSettings, setShowCookieSettings] = useState(false);
@@ -1012,7 +1012,7 @@ export default function Home() {
             selectedEdgeIndex={selectedEdgeIndex}
             selectedNodeId={selectedNodeId}
             boldPaths={true}
-            transparentPaths={minOpacity > 0}
+            transparentPaths={minOpacity < 100}
             minOpacity={minOpacity}
             maxOutcomeProbability={maxOutcomeProbability}
             zoom={zoom}
