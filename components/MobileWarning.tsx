@@ -5,12 +5,9 @@ export default function MobileWarning() {
         <h1 className="text-2xl font-bold text-white mb-4">
           Desktop Only
         </h1>
-        <p className="text-gray-300 mb-6">
+        <p className="text-gray-300">
           Map of AI Futures is currently only available on desktop devices.
           Please visit this site on a desktop or laptop computer for the full experience.
-        </p>
-        <p className="text-sm text-gray-500">
-          Mobile support is coming soon.
         </p>
       </div>
     </div>
