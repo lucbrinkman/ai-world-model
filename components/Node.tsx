@@ -1,6 +1,7 @@
 import { Node as NodeType, NodeType as NT, NODE_COLORS, NodeDragEndHandler, NodeDragStateHandler, GRID_SIZE_X, GRID_SIZE_Y } from '@/lib/types';
 import { toPercentString, calculateAlpha, calculateNodeBorderWidth } from '@/lib/probability';
 import { forwardRef, useState, useRef, useEffect, useCallback } from 'react';
+import OutcomeTypeSwitcher from './OutcomeTypeSwitcher';
 
 // Helper function to snap coordinate to grid
 const snapToGrid = (value: number, gridSize: number): number => {
@@ -496,6 +497,15 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         >
           ×
         </button>
+      )}
+
+      {/* Outcome type switcher - shown for outcome nodes */}
+      {onChangeType && (node.type === 'g' || node.type === 'a' || node.type === 'e') && (
+        <OutcomeTypeSwitcher
+          nodeId={node.id}
+          currentType={node.type}
+          onChangeType={onChangeType}
+        />
       )}
 
       {/* Pop-up slider - shown when hovering on question nodes */}
