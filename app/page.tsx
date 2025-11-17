@@ -11,6 +11,7 @@ import { WelcomeModal } from '@/components/WelcomeModal';
 import { CookieSettings } from '@/components/CookieSettings';
 import DeleteNodeDialog from '@/components/DeleteNodeDialog';
 import DeleteEdgeDialog from '@/components/DeleteEdgeDialog';
+import MobileWarning from '@/components/MobileWarning';
 import { useAuth } from '@/hooks/useAuth';
 import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData, type DocumentData } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from '@/lib/graphData';
@@ -961,9 +962,13 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex h-screen">
-      {/* Sidebar */}
-      <Sidebar
+    <>
+      {/* Mobile Warning - only shows on mobile devices */}
+      <MobileWarning />
+
+      <div className="flex h-screen">
+        {/* Sidebar */}
+        <Sidebar
         sliderValues={sliderValues}
         minOpacity={minOpacity}
         hoveredNodeIndex={hoveredNodeIndex}
@@ -1163,6 +1168,7 @@ export default function Home() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
