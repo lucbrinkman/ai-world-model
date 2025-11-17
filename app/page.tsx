@@ -360,6 +360,17 @@ export default function Home() {
 
   // Add arrow handler
   const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right') => {
+    // Calculate the slider insertion index BEFORE state updates
+    // Find which nodes are currently questions and where the new question will be inserted
+    const nodeIndex = graphData.nodes.findIndex(n => n.id === nodeId);
+    const currentQuestionIndices = graphData.nodes
+      .map((n, i) => n.type === 'n' ? i : -1)
+      .filter(i => i !== -1);
+
+    // The new question node will be inserted at the position where it appears
+    // in the sorted list of question node indices
+    const sliderInsertIndex = currentQuestionIndices.filter(i => i < nodeIndex).length;
+
     // Track if we're converting to a question node (for slider management)
     let willBecomeQuestion = false;
 
@@ -432,23 +443,9 @@ export default function Home() {
 
     // Only add a slider value if we converted to a question node
     if (willBecomeQuestion) {
-      // Add a slider value for the newly created question node
-      // Find the index this question will have among all questions
       setSliderValues(prev => {
-        // After the graph update, recalculate which nodes are questions
-        const updatedGraphNodes = graphData.nodes.map(node => {
-          if (node.id === nodeId) {
-            return { ...node, type: 'n' as const };
-          }
-          return node;
-        });
-
-        const questionNodes = updatedGraphNodes.filter(n => n.type === 'n');
-        const newQuestionIndex = questionNodes.findIndex(n => n.id === nodeId);
-
-        // Insert default value at the appropriate index
         const newValues = [...prev];
-        newValues.splice(newQuestionIndex, 0, SLIDER_DEFAULT_VALUE);
+        newValues.splice(sliderInsertIndex, 0, SLIDER_DEFAULT_VALUE);
         return newValues;
       });
     }
