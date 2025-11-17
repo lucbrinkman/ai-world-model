@@ -39,8 +39,7 @@ export default function Home() {
   const [nodeToDelete, setNodeToDelete] = useState<{ id: string; title: string } | null>(null);
   const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
   const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
-  const [transparentPaths, setTransparentPaths] = useState(false);
-  const [minOpacity, setMinOpacity] = useState(20);
+  const [minOpacity, setMinOpacity] = useState(0);
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showCookieSettings, setShowCookieSettings] = useState(false);
@@ -922,11 +921,6 @@ export default function Home() {
   }, [selectedNodeId, handleInitiateDelete]);
 
   // Settings change handlers with analytics
-  const handleTransparentPathsChange = useCallback((value: boolean) => {
-    setTransparentPaths(value);
-    analytics.trackSettingChange('transparent_paths', value);
-  }, []);
-
   const handleMinOpacityChange = useCallback((value: number) => {
     setMinOpacity(value);
     analytics.trackSettingChange('min_opacity', value);
@@ -937,7 +931,6 @@ export default function Home() {
       {/* Sidebar */}
       <Sidebar
         sliderValues={sliderValues}
-        transparentPaths={transparentPaths}
         minOpacity={minOpacity}
         hoveredNodeIndex={hoveredNodeIndex}
         selectedNodeIndex={selectedNodeIndex}
@@ -946,7 +939,6 @@ export default function Home() {
         onAuthModalOpenChange={setAuthModalOpen}
         onSliderChange={handleSliderChange}
         onSliderChangeComplete={handleSliderChangeComplete}
-        onTransparentPathsChange={handleTransparentPathsChange}
         onMinOpacityChange={handleMinOpacityChange}
         onSliderHover={handleNodeHover}
         onSliderLeave={handleNodeLeave}
@@ -1020,7 +1012,7 @@ export default function Home() {
             selectedEdgeIndex={selectedEdgeIndex}
             selectedNodeId={selectedNodeId}
             boldPaths={true}
-            transparentPaths={transparentPaths}
+            transparentPaths={minOpacity > 0}
             minOpacity={minOpacity}
             maxOutcomeProbability={maxOutcomeProbability}
             zoom={zoom}

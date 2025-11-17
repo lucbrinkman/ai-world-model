@@ -8,7 +8,6 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface SidebarProps {
   sliderValues: number[];
-  transparentPaths: boolean;
   minOpacity: number;
   hoveredNodeIndex: number;
   selectedNodeIndex: number;
@@ -17,7 +16,6 @@ interface SidebarProps {
   onAuthModalOpenChange: (open: boolean) => void;
   onSliderChange: (index: number, value: number) => void;
   onSliderChangeComplete: (index: number) => void;
-  onTransparentPathsChange: (value: boolean) => void;
   onMinOpacityChange: (value: number) => void;
   onSliderHover: (nodeIndex: number) => void;
   onSliderLeave: () => void;
@@ -28,7 +26,6 @@ interface SidebarProps {
 
 export default function Sidebar({
   sliderValues,
-  transparentPaths,
   minOpacity,
   hoveredNodeIndex,
   selectedNodeIndex,
@@ -37,7 +34,6 @@ export default function Sidebar({
   onAuthModalOpenChange,
   onSliderChange,
   onSliderChangeComplete,
-  onTransparentPathsChange,
   onMinOpacityChange,
   onSliderHover,
   onSliderLeave,
@@ -88,35 +84,24 @@ export default function Sidebar({
       <div className="mb-6">
         <h2 className="text-lg font-bold mb-4">Options</h2>
 
-        {/* Transparent paths toggle */}
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm">Make less likely paths transparent?</span>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={transparentPaths}
-              onChange={(e) => onTransparentPathsChange(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-          </label>
-        </div>
-
-        {/* Min opacity slider - only show when transparency is enabled */}
-        {transparentPaths && (
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm">Minimum opacity?</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={minOpacity}
-              onChange={(e) => onMinOpacityChange(parseInt(e.target.value))}
-              className="w-32 h-2 rounded-full cursor-pointer appearance-none"
-              style={{ accentColor: '#1E90FF' }}
-            />
+        {/* Transparent paths slider */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm">Make less likely paths transparent</span>
+            <span className="text-sm text-gray-400 font-mono">
+              {minOpacity === 0 ? 'Off' : `${minOpacity}%`}
+            </span>
           </div>
-        )}
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={minOpacity}
+            onChange={(e) => onMinOpacityChange(parseInt(e.target.value))}
+            className="w-full h-2 rounded-full cursor-pointer appearance-none"
+            style={{ accentColor: '#1E90FF' }}
+          />
+        </div>
 
         {/* Reset node positions button */}
         <div className="mt-4">
