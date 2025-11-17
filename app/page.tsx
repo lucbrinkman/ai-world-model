@@ -380,6 +380,14 @@ export default function Home() {
 
   // Add arrow handler
   const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right') => {
+    // Find the node we're adding an arrow to
+    const targetNode = graphData.nodes.find(n => n.id === nodeId);
+    if (!targetNode) return;
+
+    // Determine if this will convert to a question node
+    const isIntermediateNode = targetNode.type === 'i';
+    const willBecomeQuestion = isIntermediateNode && targetNode.connections.length === 1;
+
     // Calculate the next sliderIndex BEFORE state updates (for new question nodes)
     const existingQuestions = graphData.nodes.filter(n => n.type === 'n');
     const maxSliderIndex = existingQuestions.reduce(
@@ -387,9 +395,6 @@ export default function Home() {
       -1
     );
     const newSliderIndex = maxSliderIndex + 1;
-
-    // Track if we're converting to a question node (for slider management)
-    let willBecomeQuestion = false;
 
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
@@ -446,7 +451,6 @@ export default function Home() {
             };
 
             const updatedConnections = [...updatedExistingConnections, newConnection];
-            willBecomeQuestion = true;
 
             // Convert node from INTERMEDIATE to QUESTION
             // CRITICAL: Assign sliderIndex to maintain synchronization
