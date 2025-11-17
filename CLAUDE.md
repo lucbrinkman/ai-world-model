@@ -31,6 +31,11 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 
 **Important:** This repository uses **multiple worktrees** - the user may be working in different directories on different branches simultaneously.
 
+**Development Model:**
+- Solo developer project - no GitHub PRs or code review process
+- Merge feature branches to main locally, then push to GitHub
+- Direct push workflow: test locally → merge to main → push
+
 **Branch Merging Protocol:**
 When merging a feature branch to main, ALWAYS follow this sequence:
 
