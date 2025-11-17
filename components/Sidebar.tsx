@@ -45,11 +45,14 @@ export default function Sidebar({
 }: SidebarProps) {
   const { user, loading } = useAuth();
 
-  // Dynamically compute question node indices from current graph data
+  // Dynamically compute question node indices from current graph data, sorted by sliderIndex
   // This ensures the sidebar stays in sync when nodes are converted (e.g., question -> intermediate)
+  // and that sliders appear in the correct order based on their sliderIndex property
   const questionNodeIndices = graphData.nodes
-    .map((node, index) => node.type === NodeType.QUESTION ? index : -1)
-    .filter(index => index !== -1);
+    .map((node, index) => ({ node, index }))
+    .filter(({ node }) => node.type === NodeType.QUESTION)
+    .sort((a, b) => (a.node.sliderIndex || 0) - (b.node.sliderIndex || 0))
+    .map(({ index }) => index);
 
   return (
     <div className="w-96 h-screen overflow-y-auto bg-background border-r border-gray-800 p-6 flex-shrink-0">

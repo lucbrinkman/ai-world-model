@@ -302,14 +302,14 @@ export default function Home() {
     if (!edge || edge.source === undefined) return;
 
     const sourceNode = nodes[edge.source];
+    const sourceGraphNode = graphData.nodes.find(n => n.id === sourceNode.id);
     const targetNodeId = edge.target !== undefined ? nodes[edge.target].id : undefined;
 
-    // Find the slider index for this question node before deletion
-    const questionNodeIndices = nodes.filter(n => n.type === 'n').map(n => n.index);
-    const sliderIndex = questionNodeIndices.indexOf(edge.source);
+    // Get the sliderIndex from the GraphNode (if it's a question node)
+    const sliderIndexToRemove = sourceGraphNode?.sliderIndex;
 
     setGraphData(prev => {
-      const updatedNodes = prev.nodes.map(node => {
+      let updatedNodes = prev.nodes.map(node => {
         if (node.id === sourceNode.id) {
           // Remove the connection
           const updatedConnections = node.connections.filter(conn => {
@@ -323,14 +323,17 @@ export default function Home() {
           // Handle node type conversion based on remaining connections
           let finalConnections = updatedConnections;
           let updatedType = node.type;
+          let updatedSliderIndex = node.sliderIndex;
 
           if (updatedConnections.length === 0) {
             // No connections left: convert to AMBIVALENT outcome
             updatedType = 'a';
+            updatedSliderIndex = null; // Clear sliderIndex
           } else if (updatedConnections.length === 1) {
             // One connection left: convert from QUESTION to INTERMEDIATE
             // Also convert the remaining connection from YES/NO to E100
             updatedType = 'i';
+            updatedSliderIndex = null; // Clear sliderIndex
             finalConnections = updatedConnections.map(conn => ({
               ...conn,
               type: '-' as const,
@@ -338,38 +341,45 @@ export default function Home() {
             }));
           }
 
-          return { ...node, connections: finalConnections, type: updatedType };
+          return { ...node, connections: finalConnections, type: updatedType, sliderIndex: updatedSliderIndex };
         }
         return node;
       });
 
+      // Re-index remaining question nodes if we removed a question
+      if (sliderIndexToRemove !== null && sliderIndexToRemove !== undefined) {
+        updatedNodes = updatedNodes.map(n => {
+          if (n.type === 'n' && n.sliderIndex !== null && n.sliderIndex > sliderIndexToRemove) {
+            return { ...n, sliderIndex: n.sliderIndex - 1 };
+          }
+          return n;
+        });
+      }
+
       return { ...prev, nodes: updatedNodes };
     });
 
-    // Remove the slider value for the deleted question
-    if (sliderIndex !== -1) {
+    // Remove the slider value if we converted a question node
+    if (sliderIndexToRemove !== null && sliderIndexToRemove !== undefined) {
       setSliderValues(prev => {
         const newValues = [...prev];
-        newValues.splice(sliderIndex, 1);
+        newValues.splice(sliderIndexToRemove, 1);
         return newValues;
       });
     }
 
     setSelectedEdgeIndex(-1);
-  }, [edges, nodes]);
+  }, [edges, nodes, graphData.nodes]);
 
   // Add arrow handler
   const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right') => {
-    // Calculate the slider insertion index BEFORE state updates
-    // Find which nodes are currently questions and where the new question will be inserted
-    const nodeIndex = graphData.nodes.findIndex(n => n.id === nodeId);
-    const currentQuestionIndices = graphData.nodes
-      .map((n, i) => n.type === 'n' ? i : -1)
-      .filter(i => i !== -1);
-
-    // The new question node will be inserted at the position where it appears
-    // in the sorted list of question node indices
-    const sliderInsertIndex = currentQuestionIndices.filter(i => i < nodeIndex).length;
+    // Calculate the next sliderIndex BEFORE state updates (for new question nodes)
+    const existingQuestions = graphData.nodes.filter(n => n.type === 'n');
+    const maxSliderIndex = existingQuestions.reduce(
+      (max, n) => n.sliderIndex !== null && n.sliderIndex > max ? n.sliderIndex : max,
+      -1
+    );
+    const newSliderIndex = maxSliderIndex + 1;
 
     // Track if we're converting to a question node (for slider management)
     let willBecomeQuestion = false;
@@ -432,7 +442,8 @@ export default function Home() {
             willBecomeQuestion = true;
 
             // Convert node from INTERMEDIATE to QUESTION
-            return { ...node, connections: updatedConnections, type: 'n' as const };
+            // CRITICAL: Assign sliderIndex to maintain synchronization
+            return { ...node, connections: updatedConnections, type: 'n' as const, sliderIndex: newSliderIndex };
           }
         }
         return node;
@@ -444,9 +455,8 @@ export default function Home() {
     // Only add a slider value if we converted to a question node
     if (willBecomeQuestion) {
       setSliderValues(prev => {
-        const newValues = [...prev];
-        newValues.splice(sliderInsertIndex, 0, SLIDER_DEFAULT_VALUE);
-        return newValues;
+        // Append slider value at the END (corresponds to highest sliderIndex)
+        return [...prev, SLIDER_DEFAULT_VALUE];
       });
     }
   }, [graphData.nodes]);
@@ -797,7 +807,15 @@ export default function Home() {
         };
       });
 
-      });
+      // Remove the slider value if deleting a question node
+      if (nodeToDelete.sliderIndex !== null && nodeToDelete.sliderIndex !== undefined) {
+        setSliderValues(prev => {
+          const newValues = [...prev];
+          newValues.splice(nodeToDelete.sliderIndex!, 1);
+          return newValues;
+        });
+      }
+    });
   }, [graphData, nodes, selectedNodeIndex]);
 
   const handleCancelDelete = useCallback(() => {
