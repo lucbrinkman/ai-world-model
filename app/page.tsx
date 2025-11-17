@@ -42,6 +42,8 @@ export default function Home() {
   const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
   const [minOpacity, setMinOpacity] = useState(100);
   const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [showMobileWarning, setShowMobileWarning] = useState(true);
+  const [isMobileView, setIsMobileView] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showCookieSettings, setShowCookieSettings] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -961,14 +963,22 @@ export default function Home() {
     analytics.trackSettingChange('min_opacity', value);
   }, []);
 
+  const handleContinueAnyway = useCallback(() => {
+    setShowMobileWarning(false);
+    setIsMobileView(true);
+  }, []);
+
   return (
     <>
       {/* Mobile Warning - only shows on mobile devices */}
-      <MobileWarning />
+      {showMobileWarning && (
+        <MobileWarning onContinue={handleContinueAnyway} />
+      )}
 
       <div className="flex h-screen">
-        {/* Sidebar */}
-        <Sidebar
+        {/* Sidebar - hide on mobile view */}
+        {!isMobileView && (
+          <Sidebar
         sliderValues={sliderValues}
         minOpacity={minOpacity}
         hoveredNodeIndex={hoveredNodeIndex}
@@ -985,6 +995,7 @@ export default function Home() {
         onLoadAuthorsEstimates={handleLoadAuthorsEstimates}
         onResetNodePositions={handleResetNodePositions}
       />
+        )}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 h-screen">
