@@ -595,6 +595,9 @@ export default function Flowchart({
 
             const sourceNode = nodes[edge.source];
 
+            // Never allow deleting the start node's only connection
+            if (sourceNode.type === NT.START) return null;
+
             // Show delete button if source node has 1 or 2 outgoing arrows
             // (question nodes have 2, intermediate nodes have 1)
             const outgoingEdges = edges.filter(e => e.source === edge.source);
@@ -635,6 +638,9 @@ export default function Flowchart({
           {selectedNodeIndex !== -1 && onAddArrow && (() => {
             const node = nodes[selectedNodeIndex];
             if (!node) return null;
+
+            // Never show add arrow buttons for start node
+            if (node.type === NT.START) return null;
 
             const outgoingEdges = edges.filter(e => e.source === selectedNodeIndex);
 
