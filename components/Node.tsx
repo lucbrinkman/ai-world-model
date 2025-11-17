@@ -504,6 +504,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         <OutcomeTypeSwitcher
           nodeId={node.id}
           currentType={node.type}
+          isSelected={isSelected}
           onChangeType={onChangeType}
         />
       )}

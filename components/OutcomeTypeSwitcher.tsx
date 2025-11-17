@@ -6,15 +6,20 @@ import { NODE_COLORS, type NodeType } from '@/lib/types';
 interface OutcomeTypeSwitcherProps {
   nodeId: string;
   currentType: NodeType;
+  isSelected: boolean;
   onChangeType: (nodeId: string, newType: 'n' | 'g' | 'a' | 'e' | 'i') => void;
 }
 
 export default function OutcomeTypeSwitcher({
   nodeId,
   currentType,
+  isSelected,
   onChangeType,
 }: OutcomeTypeSwitcherProps) {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Only show when node is selected
+  if (!isSelected) return null;
 
   const outcomeTypes = [
     { type: 'g' as const, label: 'Good', color: NODE_COLORS.GOOD.border },
@@ -26,10 +31,12 @@ export default function OutcomeTypeSwitcher({
     <div
       className="absolute flex flex-col gap-2"
       style={{
-        left: '-16px',
+        right: 'calc(100% + 10px)', // Anchor right edge 10px to the left of the node
         top: '50%',
         transform: 'translateY(-50%)',
+        width: isHovered ? '70px' : '11px', // Parent expands leftward
         zIndex: 20,
+        transition: 'width 200ms ease-in-out', // Only transition width
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -42,24 +49,26 @@ export default function OutcomeTypeSwitcher({
             e.stopPropagation();
             onChangeType(nodeId, type);
           }}
-          className="relative flex items-center justify-end transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-end cursor-pointer"
           style={{
-            width: isHovered ? '100px' : '10px',
-            height: '10px',
+            width: '100%', // Fill parent
+            height: '11px',
             backgroundColor: color,
             borderRadius: isHovered ? '4px' : '50%',
-            border: currentType === type ? '2px solid white' : '1px solid rgba(255, 255, 255, 0.3)',
+            border: currentType === type ? `2px solid ${color}` : '1px solid rgba(255, 255, 255, 0.3)',
             opacity: currentType === type ? 1 : (isHovered ? 0.9 : 0.6),
             padding: isHovered ? '0 8px' : '0',
+            transition: 'border-radius 200ms ease-in-out, opacity 200ms ease-in-out, padding 200ms ease-in-out',
           }}
           title={label}
         >
           {isHovered && (
             <span
-              className="text-xs font-medium whitespace-nowrap"
+              className="font-medium whitespace-nowrap"
               style={{
-                color: 'white',
-                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)',
+                fontSize: '10px',
+                color: type === 'e' ? 'white' : 'black', // Black for Good/Ambivalent, white for Bad
+                textShadow: type === 'e' ? '0 1px 2px rgba(0, 0, 0, 0.8)' : 'none',
               }}
             >
               {label}
