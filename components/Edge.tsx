@@ -1,6 +1,7 @@
 import { Edge as EdgeType, EdgeType as ET, Node } from '@/lib/types';
 import { calculateAlpha, calculateArrowWidth, calculateArrowHeadLength } from '@/lib/probability';
 import { useRef, useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 
 interface EdgeProps {
   edge: EdgeType;
@@ -16,6 +17,7 @@ interface EdgeProps {
   targetBounds?: DOMRect;
   isSelected: boolean;
   onClick?: () => void;
+  onDelete?: () => void;
   onLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
   onEditorClose?: () => void;
   previewTargetNode?: Node | null;
@@ -37,6 +39,7 @@ export default function Edge({
   targetBounds,
   isSelected,
   onClick,
+  onDelete,
   onLabelUpdate,
   onEditorClose,
   previewTargetNode,
@@ -524,6 +527,29 @@ export default function Edge({
         >
           {labelText}
         </text>
+      )}
+
+      {/* Delete button - shown when edge is selected */}
+      {isSelected && onDelete && (
+        <foreignObject
+          x={labelText && labelDescription ? boxX + boxDimensions.width - 8 : labelX + 15}
+          y={labelText && labelDescription ? boxY - 8 : labelY - 20}
+          width="20"
+          height="20"
+          style={{ overflow: 'visible' }}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow-md transition-all duration-200 hover:scale-110"
+            title="Delete connection"
+            style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <X size={9} />
+          </button>
+        </foreignObject>
       )}
     </g>
   );

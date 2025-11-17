@@ -3,7 +3,6 @@ import NodeComponent from './Node';
 import EdgeComponent from './Edge';
 import ConnectorDots from './ConnectorDots';
 import ContextMenu from './ContextMenu';
-import DeleteEdgeButton from './DeleteEdgeButton';
 import AddArrowButtons from './AddArrowButtons';
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
@@ -484,6 +483,11 @@ export default function Flowchart({
                 ? `${sourceNode.id}-${targetNode.id}-${edge.yn}`
                 : `${sourceNode.id}-floating-${edge.targetX}-${edge.targetY}-${edge.yn}`;
 
+              // Check if this edge can be deleted
+              const canDelete = index === selectedEdgeIndex && onDeleteEdge && sourceNode.type !== NT.START;
+              const outgoingEdges = edges.filter(e => e.source === edge.source);
+              const shouldShowDelete = canDelete && (outgoingEdges.length === 1 || outgoingEdges.length === 2);
+
               return (
                 <EdgeComponent
                   key={edgeKey}
@@ -500,6 +504,7 @@ export default function Flowchart({
                   targetBounds={targetBounds}
                   isSelected={index === selectedEdgeIndex}
                   onClick={onEdgeClick ? () => handleEdgeClick(index) : undefined}
+                  onDelete={shouldShowDelete ? () => onDeleteEdge(index) : undefined}
                   onLabelUpdate={onEdgeLabelUpdate}
                   onEditorClose={handleEditorClose}
                   previewTargetNode={index === selectedEdgeIndex ? edgePreview.node : null}
@@ -591,51 +596,6 @@ export default function Flowchart({
             );
           })()}
 
-          {/* Delete edge button (shown when edge is selected) */}
-          {selectedEdgeIndex !== -1 && onDeleteEdge && (() => {
-            const edge = edges[selectedEdgeIndex];
-            if (!edge) return null;
-
-            const sourceNode = nodes[edge.source];
-
-            // Never allow deleting the start node's only connection
-            if (sourceNode.type === NT.START) return null;
-
-            // Show delete button if source node has 1 or 2 outgoing arrows
-            // (question nodes have 2, intermediate nodes have 1)
-            const outgoingEdges = edges.filter(e => e.source === edge.source);
-            if (outgoingEdges.length !== 2 && outgoingEdges.length !== 1) return null;
-
-            const sourceBounds = nodeBounds.get(sourceNode.id);
-            const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
-            const targetBounds = targetNode ? nodeBounds.get(targetNode.id) : undefined;
-
-            // Calculate label position at center of arrow (matching Edge.tsx)
-            const x1 = sourceBounds ? sourceBounds.x + sourceBounds.width / 2 : sourceNode.x;
-            const y1 = sourceBounds ? sourceBounds.y + sourceBounds.height / 2 : sourceNode.y;
-            const x2 = targetBounds ? targetBounds.x + targetBounds.width / 2 :
-                       (targetNode ? targetNode.x : (edge.targetX ?? 0));
-            const y2 = targetBounds ? targetBounds.y + targetBounds.height / 2 :
-                       (targetNode ? targetNode.y : (edge.targetY ?? 0));
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const labelX = x1 + dx * 0.5; // Center of arrow
-            const labelY = y1 + dy * 0.5;
-
-            // Position button at top-right of label (offset by ~25px right, ~12px up from label center)
-            const buttonX = labelX + 25;
-            const buttonY = labelY - 12;
-
-            return (
-              <DeleteEdgeButton
-                key={`delete-edge-${selectedEdgeIndex}`}
-                edgeIndex={selectedEdgeIndex}
-                sourceNodeTitle={sourceNode.text}
-                position={{ x: buttonX, y: buttonY }}
-                onDelete={() => onDeleteEdge(selectedEdgeIndex)}
-              />
-            );
-          })()}
 
           {/* Add arrow buttons (shown when intermediate node or outcome node is selected) */}
           {selectedNodeId && onAddArrow && (() => {
