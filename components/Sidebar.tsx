@@ -4,7 +4,6 @@ import { SLIDER_DEFAULT_VALUE, type GraphData, type GraphNode } from '@/lib/type
 import { decodeSliderValues } from '@/lib/urlState';
 import Slider from './Slider';
 import { AuthModal } from './auth/AuthModal';
-import ConnectionEditor from './ConnectionEditor';
 import { useAuth } from '@/hooks/useAuth';
 
 interface SidebarProps {
@@ -28,8 +27,6 @@ interface SidebarProps {
   onLoadAuthorsEstimates: () => void;
   onUndo: () => void;
   onResetNodePositions: () => void;
-  onUpdateConnectionLabel: (nodeId: string, connectionIndex: number, newLabel: string) => void;
-  onUpdateConnectionTarget: (nodeId: string, connectionIndex: number, newTargetId: string) => void;
 }
 
 export default function Sidebar({
@@ -53,8 +50,6 @@ export default function Sidebar({
   onLoadAuthorsEstimates,
   onUndo,
   onResetNodePositions,
-  onUpdateConnectionLabel,
-  onUpdateConnectionTarget,
 }: SidebarProps) {
   const { user, loading } = useAuth();
 
@@ -94,22 +89,6 @@ export default function Sidebar({
         onClose={() => onAuthModalOpenChange(false)}
         isAuthenticated={!!user}
       />
-
-      {/* Graph Editing Section */}
-      <div className="mb-6 pb-6 border-b border-gray-800">
-        <h2 className="text-lg font-bold mb-4">Graph Editing</h2>
-
-        {/* Connection Editor */}
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-300 mb-2">Connections</h3>
-          <ConnectionEditor
-            selectedNode={graphData.nodes.find((_, index) => index === selectedNodeIndex) || null}
-            allNodes={graphData.nodes}
-            onUpdateConnectionLabel={onUpdateConnectionLabel}
-            onUpdateConnectionTarget={onUpdateConnectionTarget}
-          />
-        </div>
-      </div>
 
       {/* Settings Section */}
       <div className="mb-6">

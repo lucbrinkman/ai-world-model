@@ -653,52 +653,6 @@ export default function Home() {
     });
   }, []);
 
-  const handleUpdateConnectionLabel = useCallback((nodeId: string, connectionIndex: number, newLabel: string) => {
-    setGraphData(prev => {
-      const updatedNodes = prev.nodes.map(node => {
-        if (node.id === nodeId) {
-          const updatedConnections = [...node.connections];
-          updatedConnections[connectionIndex] = {
-            ...updatedConnections[connectionIndex],
-            label: newLabel,
-          };
-          return {
-            ...node,
-            connections: updatedConnections,
-          };
-        }
-        return node;
-      });
-      return {
-        ...prev,
-        nodes: updatedNodes,
-      };
-    });
-  }, []);
-
-  const handleUpdateConnectionTarget = useCallback((nodeId: string, connectionIndex: number, newTargetId: string) => {
-    setGraphData(prev => {
-      const updatedNodes = prev.nodes.map(node => {
-        if (node.id === nodeId) {
-          const updatedConnections = [...node.connections];
-          updatedConnections[connectionIndex] = {
-            ...updatedConnections[connectionIndex],
-            targetId: newTargetId,
-          };
-          return {
-            ...node,
-            connections: updatedConnections,
-          };
-        }
-        return node;
-      });
-      return {
-        ...prev,
-        nodes: updatedNodes,
-      };
-    });
-  }, []);
-
 
   const handleAddNode = useCallback((x: number, y: number) => {
     // Generate a unique ID for the new node
@@ -1008,8 +962,6 @@ export default function Home() {
         onLoadAuthorsEstimates={handleLoadAuthorsEstimates}
         onUndo={handleUndo}
         onResetNodePositions={handleResetNodePositions}
-        onUpdateConnectionLabel={handleUpdateConnectionLabel}
-        onUpdateConnectionTarget={handleUpdateConnectionTarget}
       />
 
       {/* Main content */}
