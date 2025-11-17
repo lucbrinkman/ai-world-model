@@ -98,7 +98,7 @@ export default function Sidebar({
             max="100"
             value={100 - minOpacity}
             onChange={(e) => onMinOpacityChange(100 - parseInt(e.target.value))}
-            className="w-full h-2 rounded-full cursor-pointer appearance-none"
+            className="w-48 h-2 rounded-full cursor-pointer appearance-none"
             style={{ accentColor: '#1E90FF' }}
           />
         </div>
