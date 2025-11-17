@@ -1,6 +1,6 @@
 'use client'
-import { nodes, questionNodeIndices, AUTHORS_ESTIMATES } from '@/lib/graphData';
-import { SLIDER_DEFAULT_VALUE, type GraphData, type GraphNode } from '@/lib/types';
+import { AUTHORS_ESTIMATES } from '@/lib/graphData';
+import { SLIDER_DEFAULT_VALUE, type GraphData, type GraphNode, type Node, NodeType } from '@/lib/types';
 import { decodeSliderValues } from '@/lib/urlState';
 import Slider from './Slider';
 import { AuthModal } from './auth/AuthModal';
@@ -12,6 +12,7 @@ interface SidebarProps {
   hoveredNodeIndex: number;
   selectedNodeIndex: number;
   graphData: GraphData;
+  nodes: Node[];
   authModalOpen: boolean;
   onAuthModalOpenChange: (open: boolean) => void;
   onSliderChange: (index: number, value: number) => void;
@@ -30,6 +31,7 @@ export default function Sidebar({
   hoveredNodeIndex,
   selectedNodeIndex,
   graphData,
+  nodes,
   authModalOpen,
   onAuthModalOpenChange,
   onSliderChange,
@@ -42,6 +44,12 @@ export default function Sidebar({
   onResetNodePositions,
 }: SidebarProps) {
   const { user, loading } = useAuth();
+
+  // Dynamically compute question node indices from current graph data
+  // This ensures the sidebar stays in sync when nodes are converted (e.g., question -> intermediate)
+  const questionNodeIndices = graphData.nodes
+    .map((node, index) => node.type === NodeType.QUESTION ? index : -1)
+    .filter(index => index !== -1);
 
   return (
     <div className="w-96 h-screen overflow-y-auto bg-background border-r border-gray-800 p-6 flex-shrink-0">

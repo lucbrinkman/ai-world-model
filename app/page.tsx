@@ -965,6 +965,7 @@ export default function Home() {
         hoveredNodeIndex={hoveredNodeIndex}
         selectedNodeIndex={selectedNodeIndex}
         graphData={graphData}
+        nodes={nodes}
         authModalOpen={authModalOpen}
         onAuthModalOpenChange={setAuthModalOpen}
         onSliderChange={handleSliderChange}
