@@ -532,8 +532,8 @@ export default function Edge({
       {/* Delete button - shown when edge is selected */}
       {isSelected && onDelete && (
         <foreignObject
-          x={labelText && labelDescription ? boxX + boxDimensions.width - 8 : labelX + 15}
-          y={labelText && labelDescription ? boxY - 8 : labelY - 20}
+          x={labelText && labelDescription ? boxX + boxDimensions.width + 2 : labelX + 15}
+          y={labelText && labelDescription ? boxY - 12 : labelY - 20}
           width="20"
           height="20"
           style={{ overflow: 'visible' }}
