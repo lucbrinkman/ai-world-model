@@ -39,7 +39,6 @@ export default function Home() {
   const [nodeToDelete, setNodeToDelete] = useState<{ id: string; title: string } | null>(null);
   const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
   const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
-  const [boldPaths, setBoldPaths] = useState(true);
   const [transparentPaths, setTransparentPaths] = useState(false);
   const [minOpacity, setMinOpacity] = useState(20);
   const [undoStack, setUndoStack] = useState<string[]>([]);
@@ -923,11 +922,6 @@ export default function Home() {
   }, [selectedNodeId, handleInitiateDelete]);
 
   // Settings change handlers with analytics
-  const handleBoldPathsChange = useCallback((value: boolean) => {
-    setBoldPaths(value);
-    analytics.trackSettingChange('bold_paths', value);
-  }, []);
-
   const handleTransparentPathsChange = useCallback((value: boolean) => {
     setTransparentPaths(value);
     analytics.trackSettingChange('transparent_paths', value);
@@ -943,7 +937,6 @@ export default function Home() {
       {/* Sidebar */}
       <Sidebar
         sliderValues={sliderValues}
-        boldPaths={boldPaths}
         transparentPaths={transparentPaths}
         minOpacity={minOpacity}
         hoveredNodeIndex={hoveredNodeIndex}
@@ -953,14 +946,12 @@ export default function Home() {
         onAuthModalOpenChange={setAuthModalOpen}
         onSliderChange={handleSliderChange}
         onSliderChangeComplete={handleSliderChangeComplete}
-        onBoldPathsChange={handleBoldPathsChange}
         onTransparentPathsChange={handleTransparentPathsChange}
         onMinOpacityChange={handleMinOpacityChange}
         onSliderHover={handleNodeHover}
         onSliderLeave={handleNodeLeave}
         onResetSliders={handleResetSliders}
         onLoadAuthorsEstimates={handleLoadAuthorsEstimates}
-        onUndo={handleUndo}
         onResetNodePositions={handleResetNodePositions}
       />
 
@@ -1028,7 +1019,7 @@ export default function Home() {
             hoveredNodeIndex={hoveredNodeIndex}
             selectedEdgeIndex={selectedEdgeIndex}
             selectedNodeId={selectedNodeId}
-            boldPaths={boldPaths}
+            boldPaths={true}
             transparentPaths={transparentPaths}
             minOpacity={minOpacity}
             maxOutcomeProbability={maxOutcomeProbability}

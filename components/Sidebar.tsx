@@ -8,7 +8,6 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface SidebarProps {
   sliderValues: number[];
-  boldPaths: boolean;
   transparentPaths: boolean;
   minOpacity: number;
   hoveredNodeIndex: number;
@@ -18,20 +17,17 @@ interface SidebarProps {
   onAuthModalOpenChange: (open: boolean) => void;
   onSliderChange: (index: number, value: number) => void;
   onSliderChangeComplete: (index: number) => void;
-  onBoldPathsChange: (value: boolean) => void;
   onTransparentPathsChange: (value: boolean) => void;
   onMinOpacityChange: (value: number) => void;
   onSliderHover: (nodeIndex: number) => void;
   onSliderLeave: () => void;
   onResetSliders: () => void;
   onLoadAuthorsEstimates: () => void;
-  onUndo: () => void;
   onResetNodePositions: () => void;
 }
 
 export default function Sidebar({
   sliderValues,
-  boldPaths,
   transparentPaths,
   minOpacity,
   hoveredNodeIndex,
@@ -41,14 +37,12 @@ export default function Sidebar({
   onAuthModalOpenChange,
   onSliderChange,
   onSliderChangeComplete,
-  onBoldPathsChange,
   onTransparentPathsChange,
   onMinOpacityChange,
   onSliderHover,
   onSliderLeave,
   onResetSliders,
   onLoadAuthorsEstimates,
-  onUndo,
   onResetNodePositions,
 }: SidebarProps) {
   const { user, loading } = useAuth();
@@ -93,20 +87,6 @@ export default function Sidebar({
       {/* Settings Section */}
       <div className="mb-6">
         <h2 className="text-lg font-bold mb-4">Settings</h2>
-
-        {/* Bold paths toggle */}
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm">Make more likely paths bolder?</span>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={boldPaths}
-              onChange={(e) => onBoldPathsChange(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-          </label>
-        </div>
 
         {/* Transparent paths toggle */}
         <div className="flex items-center justify-between mb-3">
@@ -167,12 +147,6 @@ export default function Sidebar({
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-m text-sm transition-colors"
           >
             Author's estimates
-          </button>
-          <button
-            onClick={onUndo}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-m text-sm transition-colors"
-          >
-            Undo
           </button>
         </div>
 
