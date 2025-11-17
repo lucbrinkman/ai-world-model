@@ -31,7 +31,7 @@ export default function Home() {
     Array(SLIDER_COUNT).fill(SLIDER_DEFAULT_VALUE)
   );
 
-  const [selectedNodeIndex, setSelectedNodeIndex] = useState(startNodeIndex);
+  const [probabilityRootIndex, setProbabilityRootIndex] = useState(startNodeIndex);
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(-1);
   const [selectedEdgeIndex, setSelectedEdgeIndex] = useState(-1);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -120,7 +120,7 @@ export default function Home() {
 
   // Calculate probabilities using useMemo (only recalculate when dependencies change)
   const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
-    const result = calculateProbabilities(sliderValues, selectedNodeIndex, graphData);
+    const result = calculateProbabilities(sliderValues, probabilityRootIndex, graphData);
 
     // Find max probability among outcome nodes (good, ambivalent, existential)
     const outcomeNodes = result.nodes.filter(
@@ -132,7 +132,7 @@ export default function Home() {
     );
 
     return { nodes: result.nodes, edges: result.edges, maxOutcomeProbability };
-  }, [sliderValues, selectedNodeIndex, graphData]);
+  }, [sliderValues, probabilityRootIndex, graphData]);
 
   // Create document data for auto-save
   const documentData: DocumentData = useMemo(() => ({
@@ -189,7 +189,7 @@ export default function Home() {
 
   // Set probability root handler (for the "100" button)
   const handleSetProbabilityRoot = useCallback((index: number) => {
-    setSelectedNodeIndex(prev => {
+    setProbabilityRootIndex(prev => {
       const newIndex = index === prev ? startNodeIndex : index;
 
       // Track probability root change
@@ -225,7 +225,7 @@ export default function Home() {
   const handleEdgeClick = useCallback((edgeIndex: number) => {
     setSelectedEdgeIndex(prev => prev === edgeIndex ? -1 : edgeIndex);
     // Deselect node when selecting an edge
-    setSelectedNodeIndex(startNodeIndex);
+    setProbabilityRootIndex(startNodeIndex);
     setSelectedNodeId(null);
   }, []);
 
@@ -621,7 +621,7 @@ export default function Home() {
       setDocumentName(data.name);
       setGraphData({ metadata: data.data.metadata, nodes: data.data.nodes });
       setSliderValues(data.data.sliderValues);
-      setSelectedNodeIndex(startNodeIndex); // Reset to start
+      setProbabilityRootIndex(startNodeIndex); // Reset to start
     }
   }, []);
 
@@ -630,7 +630,7 @@ export default function Home() {
     setDocumentName('Untitled Document');
     setGraphData(defaultGraphData);
     setSliderValues(Array(SLIDER_COUNT).fill(SLIDER_DEFAULT_VALUE));
-    setSelectedNodeIndex(startNodeIndex);
+    setProbabilityRootIndex(startNodeIndex);
   }, []);
 
   const handleRenameDocument = useCallback((newName: string) => {
@@ -740,9 +740,9 @@ export default function Home() {
     // Get the node's position for converting incoming edges to free-floating
     const nodePosition = nodeToDelete.position;
 
-    // Check if we need to reset selectedNodeIndex
+    // Check if we need to reset probabilityRootIndex
     const deletedNodeIndex = nodes.findIndex(n => n.id === nodeId);
-    const shouldResetSelection = deletedNodeIndex === selectedNodeIndex;
+    const shouldResetSelection = deletedNodeIndex === probabilityRootIndex;
 
     // Use flushSync to ensure all state updates happen synchronously
     // This prevents intermediate renders with mismatched indices
@@ -754,7 +754,7 @@ export default function Home() {
 
       // Reset selection if needed
       if (shouldResetSelection) {
-        setSelectedNodeIndex(startNodeIndex);
+        setProbabilityRootIndex(startNodeIndex);
         setSelectedNodeId(null);
       }
 
@@ -805,7 +805,7 @@ export default function Home() {
       });
 
       });
-  }, [graphData, nodes, selectedNodeIndex]);
+  }, [graphData, nodes, probabilityRootIndex]);
 
   const handleCancelDelete = useCallback(() => {
     setDeleteDialogOpen(false);
@@ -967,7 +967,7 @@ export default function Home() {
         sliderValues={sliderValues}
         minOpacity={minOpacity}
         hoveredNodeIndex={hoveredNodeIndex}
-        selectedNodeIndex={selectedNodeIndex}
+        probabilityRootIndex={probabilityRootIndex}
         graphData={graphData}
         authModalOpen={authModalOpen}
         onAuthModalOpenChange={setAuthModalOpen}
@@ -1041,7 +1041,7 @@ export default function Home() {
             nodes={nodes}
             edges={edges}
             sliderValues={sliderValues}
-            selectedNodeIndex={selectedNodeIndex}
+            probabilityRootIndex={probabilityRootIndex}
             hoveredNodeIndex={hoveredNodeIndex}
             selectedEdgeIndex={selectedEdgeIndex}
             selectedNodeId={selectedNodeId}

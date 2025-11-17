@@ -10,7 +10,7 @@ interface SidebarProps {
   sliderValues: number[];
   minOpacity: number;
   hoveredNodeIndex: number;
-  selectedNodeIndex: number;
+  probabilityRootIndex: number;
   graphData: GraphData;
   authModalOpen: boolean;
   onAuthModalOpenChange: (open: boolean) => void;
@@ -28,7 +28,7 @@ export default function Sidebar({
   sliderValues,
   minOpacity,
   hoveredNodeIndex,
-  selectedNodeIndex,
+  probabilityRootIndex,
   graphData,
   authModalOpen,
   onAuthModalOpenChange,
@@ -146,7 +146,7 @@ export default function Sidebar({
             // Skip if slider value doesn't exist yet (during state updates)
             if (sliderValue === undefined) return null;
 
-            const isHighlighted = nodeIndex === hoveredNodeIndex || nodeIndex === selectedNodeIndex;
+            const isHighlighted = nodeIndex === hoveredNodeIndex || nodeIndex === probabilityRootIndex;
 
             return (
               <Slider

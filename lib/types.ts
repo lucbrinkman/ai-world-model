@@ -44,7 +44,7 @@ export interface Edge {
 // Application state
 export interface AppState {
   sliderValues: number[]; // Array of slider values (0-100)
-  selectedNodeIndex: number; // Currently selected node (probability root)
+  probabilityRootIndex: number; // Currently selected node (probability root)
   hoveredNodeIndex: number; // Currently hovered node (-1 if none)
   boldPaths: boolean; // Setting: make more likely paths bolder
   transparentPaths: boolean; // Setting: make less likely paths transparent

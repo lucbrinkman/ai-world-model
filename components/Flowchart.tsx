@@ -12,7 +12,7 @@ interface FlowchartProps {
   nodes: NodeType[];
   edges: EdgeType[];
   sliderValues: number[];
-  selectedNodeIndex: number;
+  probabilityRootIndex: number;
   hoveredNodeIndex: number;
   selectedEdgeIndex: number;
   selectedNodeId: string | null;
@@ -52,7 +52,7 @@ export default function Flowchart({
   nodes,
   edges,
   sliderValues,
-  selectedNodeIndex,
+  probabilityRootIndex,
   hoveredNodeIndex,
   selectedEdgeIndex,
   selectedNodeId,
@@ -524,7 +524,7 @@ export default function Flowchart({
                 key={node.id}
                 ref={(el) => { nodeRefs.current.set(node.id, el) }}
                 node={node}
-                isSelected={node.index === selectedNodeIndex}
+                isSelected={node.index === probabilityRootIndex}
                 isHovered={node.index === hoveredNodeIndex}
                 isNodeSelected={node.id === selectedNodeId}
                 transparentPaths={transparentPaths}
