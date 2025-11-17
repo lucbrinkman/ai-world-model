@@ -84,9 +84,9 @@ export default function Sidebar({
         isAuthenticated={!!user}
       />
 
-      {/* Settings Section */}
+      {/* Options Section */}
       <div className="mb-6">
-        <h2 className="text-lg font-bold mb-4">Settings</h2>
+        <h2 className="text-lg font-bold mb-4">Options</h2>
 
         {/* Transparent paths toggle */}
         <div className="flex items-center justify-between mb-3">
