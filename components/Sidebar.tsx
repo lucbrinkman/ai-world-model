@@ -2,8 +2,6 @@
 import { AUTHORS_ESTIMATES } from '@/lib/graphData';
 import { type GraphData, type GraphNode, type Node, NodeType } from '@/lib/types';
 import Slider from './Slider';
-import { AuthModal } from './auth/AuthModal';
-import { useAuth } from '@/hooks/useAuth';
 
 interface SidebarProps {
   minOpacity: number;
@@ -11,8 +9,8 @@ interface SidebarProps {
   probabilityRootIndex: number;
   graphData: GraphData;
   nodes: Node[];
-  authModalOpen: boolean;
-  onAuthModalOpenChange: (open: boolean) => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
   onSliderChange: (nodeId: string, value: number) => void;
   onSliderChangeComplete: (nodeId: string) => void;
   onMinOpacityChange: (value: number) => void;
@@ -29,8 +27,8 @@ export default function Sidebar({
   probabilityRootIndex,
   graphData,
   nodes,
-  authModalOpen,
-  onAuthModalOpenChange,
+  isCollapsed,
+  onToggleCollapse,
   onSliderChange,
   onSliderChangeComplete,
   onMinOpacityChange,
@@ -40,7 +38,6 @@ export default function Sidebar({
   onLoadAuthorsEstimates,
   onResetNodePositions,
 }: SidebarProps) {
-  const { user, loading } = useAuth();
 
   // Dynamically compute question node indices from current graph data, sorted by sliderIndex
   // This ensures the sidebar stays in sync when nodes are converted (e.g., question -> intermediate)
@@ -51,42 +48,36 @@ export default function Sidebar({
     .sort((a, b) => (a.node.sliderIndex || 0) - (b.node.sliderIndex || 0))
     .map(({ index }) => index);
 
-  return (
-    <div className="w-96 h-screen overflow-y-auto bg-background border-r border-gray-800 p-6 flex-shrink-0">
-      {/* Auth Section */}
-      <div className="mb-6 pb-6 border-b border-gray-800">
-        {loading ? (
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
-          </div>
-        ) : user ? (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-400">Signed in as:</span>
-              <button
-                onClick={() => onAuthModalOpenChange(true)}
-                className="text-sm text-purple-500 hover:text-purple-400"
-              >
-                Profile
-              </button>
-            </div>
-            <div className="text-sm truncate">{user.email}</div>
-          </div>
-        ) : (
-          <button
-            onClick={() => onAuthModalOpenChange(true)}
-            className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-m text-sm transition-colors"
-          >
-            Sign In / Sign Up
-          </button>
-        )}
+  if (isCollapsed) {
+    return (
+      <div className="fixed left-0 top-[125px] h-screen z-10">
+        <button
+          onClick={onToggleCollapse}
+          className="bg-gray-800 hover:bg-gray-700 p-2 rounded-r-md border-r border-t border-b border-gray-700 transition-colors"
+          aria-label="Expand sidebar"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
       </div>
+    );
+  }
 
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => onAuthModalOpenChange(false)}
-        isAuthenticated={!!user}
-      />
+  return (
+    <div className="w-96 h-screen overflow-y-auto bg-background border-r border-gray-800 p-6 flex-shrink-0 transition-all duration-300">
+      {/* Collapse Button */}
+      <div className="mb-6 flex justify-end">
+        <button
+          onClick={onToggleCollapse}
+          className="text-gray-400 hover:text-gray-300 transition-colors"
+          aria-label="Collapse sidebar"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      </div>
 
       {/* Options Section */}
       <div className="mb-6">

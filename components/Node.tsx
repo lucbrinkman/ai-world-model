@@ -19,6 +19,8 @@ interface NodeProps {
   zoom: number;
   onClick: () => void;
   onSetProbabilityRoot?: () => void;
+  onSetProbabilityRootHoverStart?: () => void;
+  onSetProbabilityRootHoverEnd?: () => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   onDragMove: (nodeIndex: number, deltaX: number, deltaY: number) => void;
@@ -45,6 +47,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   zoom,
   onClick,
   onSetProbabilityRoot,
+  onSetProbabilityRootHoverStart,
+  onSetProbabilityRootHoverEnd,
   onMouseEnter,
   onMouseLeave,
   onDragMove,
@@ -515,15 +519,22 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
             e.stopPropagation();
             onSetProbabilityRoot();
           }}
+          onMouseEnter={(e) => {
+            e.stopPropagation();
+            onSetProbabilityRootHoverStart?.();
+          }}
+          onMouseLeave={(e) => {
+            e.stopPropagation();
+            onSetProbabilityRootHoverEnd?.();
+          }}
           className="absolute -top-5 -left-5 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg transition-colors z-10"
-          title="Set as probability root (100% probability)"
+          title="Set as start (100% probability)"
           style={{
-            fontSize: '10px',
+            fontSize: '14px',
             lineHeight: '1',
-            // fontWeight: 'bold',
           }}
         >
-          100
+          ⊙
         </button>
       )}
 

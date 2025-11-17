@@ -2,12 +2,14 @@ import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface AddArrowButtonsProps {
   nodeId: string;
+  nodeType: string;
   nodeBounds: DOMRect;
   onAddArrow: (direction: 'top' | 'bottom' | 'left' | 'right') => void;
 }
 
 export default function AddArrowButtons({
   nodeId,
+  nodeType,
   nodeBounds,
   onAddArrow,
 }: AddArrowButtonsProps) {
@@ -15,7 +17,10 @@ export default function AddArrowButtons({
   const centerY = nodeBounds.y + nodeBounds.height / 2;
   const offset = 15; // Distance from node edge
 
-  const buttons = [
+  // Determine if this is an outcome node (has colored bubbles on the left)
+  const isOutcomeNode = nodeType === 'g' || nodeType === 'a' || nodeType === 'e';
+
+  const allButtons = [
     {
       direction: 'top' as const,
       icon: ArrowUp,
@@ -41,6 +46,11 @@ export default function AddArrowButtons({
       y: centerY,
     },
   ];
+
+  // Filter out left arrow for outcome nodes to avoid overlap with outcome type bubbles
+  const buttons = isOutcomeNode
+    ? allButtons.filter(btn => btn.direction !== 'left')
+    : allButtons;
 
   const handleClick = (e: React.MouseEvent, direction: 'top' | 'bottom' | 'left' | 'right') => {
     e.stopPropagation();

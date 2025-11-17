@@ -25,6 +25,8 @@ interface FlowchartProps {
   onZoomChange: (newZoom: number, cursorX?: number, cursorY?: number) => void;
   onNodeClick: (index: number) => void;
   onSetProbabilityRoot?: (index: number) => void;
+  onSetProbabilityRootHoverStart?: (index: number) => void;
+  onSetProbabilityRootHoverEnd?: () => void;
   onNodeHover: (index: number) => void;
   onNodeLeave: () => void;
   onNodeDragEnd: NodeDragEndHandler;
@@ -65,6 +67,8 @@ export default function Flowchart({
   onZoomChange,
   onNodeClick,
   onSetProbabilityRoot,
+  onSetProbabilityRootHoverStart,
+  onSetProbabilityRootHoverEnd,
   onNodeHover,
   onNodeLeave,
   onNodeDragEnd,
@@ -539,6 +543,8 @@ export default function Flowchart({
                 zoom={zoom}
                 onClick={() => handleNodeClick(node.index)}
                 onSetProbabilityRoot={onSetProbabilityRoot ? () => onSetProbabilityRoot(node.index) : undefined}
+                onSetProbabilityRootHoverStart={onSetProbabilityRootHoverStart ? () => onSetProbabilityRootHoverStart(node.index) : undefined}
+                onSetProbabilityRootHoverEnd={onSetProbabilityRootHoverEnd}
                 onMouseEnter={() => onNodeHover(node.index)}
                 onMouseLeave={onNodeLeave}
                 onDragMove={updateBounds}
@@ -625,6 +631,7 @@ export default function Flowchart({
               <AddArrowButtons
                 key={`add-arrows-${node.id}`}
                 nodeId={node.id}
+                nodeType={node.type}
                 nodeBounds={bounds}
                 onAddArrow={(direction) => onAddArrow(node.id, direction)}
               />

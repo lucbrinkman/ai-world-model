@@ -4,11 +4,11 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
+import SettingsMenu from '@/components/SettingsMenu';
 import Flowchart from '@/components/Flowchart';
 import ZoomControls from '@/components/ZoomControls';
 import DragHint from '@/components/DragHint';
 import { WelcomeModal } from '@/components/WelcomeModal';
-import { CookieSettings } from '@/components/CookieSettings';
 import DeleteNodeDialog from '@/components/DeleteNodeDialog';
 import DeleteEdgeDialog from '@/components/DeleteEdgeDialog';
 import MobileWarning from '@/components/MobileWarning';
@@ -27,6 +27,7 @@ export default function Home() {
   const { user, loading: authLoading } = useAuth();
 
   const [probabilityRootIndex, setProbabilityRootIndex] = useState(startNodeIndex);
+  const [previewProbabilityRootIndex, setPreviewProbabilityRootIndex] = useState<number | null>(null);
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(-1);
   const [selectedEdgeIndex, setSelectedEdgeIndex] = useState(-1);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -39,8 +40,7 @@ export default function Home() {
   const [showMobileWarning, setShowMobileWarning] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
-  const [showCookieSettings, setShowCookieSettings] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Zoom state (pan is now handled by native scrolling)
   const [zoom, setZoom] = useState(100);
@@ -58,6 +58,23 @@ export default function Home() {
 
   // Track if we've done the initial document load
   const hasLoadedInitialDocument = useRef(false);
+
+  // Load sidebar collapse state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('sidebarCollapsed');
+    if (savedState !== null) {
+      setIsSidebarCollapsed(savedState === 'true');
+    }
+  }, []);
+
+  // Save sidebar collapse state to localStorage when it changes
+  const handleToggleSidebar = useCallback(() => {
+    setIsSidebarCollapsed(prev => {
+      const newState = !prev;
+      localStorage.setItem('sidebarCollapsed', String(newState));
+      return newState;
+    });
+  }, []);
 
   // Load document on mount (only once)
   useEffect(() => {
@@ -127,7 +144,9 @@ export default function Home() {
 
   // Calculate probabilities using useMemo (only recalculate when dependencies change)
   const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
-    const result = calculateProbabilities(probabilityRootIndex, graphData);
+    // Use preview index if hovering, otherwise use actual root index
+    const effectiveRootIndex = previewProbabilityRootIndex ?? probabilityRootIndex;
+    const result = calculateProbabilities(effectiveRootIndex, graphData);
 
     // Find max probability among outcome nodes (good, ambivalent, existential)
     const outcomeNodes = result.nodes.filter(
@@ -139,7 +158,7 @@ export default function Home() {
     );
 
     return { nodes: result.nodes, edges: result.edges, maxOutcomeProbability };
-  }, [probabilityRootIndex, graphData]);
+  }, [probabilityRootIndex, previewProbabilityRootIndex, graphData]);
 
   // Create document data for auto-save
   const documentData: DocumentData = useMemo(() => ({
@@ -212,6 +231,15 @@ export default function Home() {
       }
     });
   }, [nodes]);
+
+  // Preview hover handlers for probability root button
+  const handleSetProbabilityRootHoverStart = useCallback((index: number) => {
+    setPreviewProbabilityRootIndex(index);
+  }, []);
+
+  const handleSetProbabilityRootHoverEnd = useCallback(() => {
+    setPreviewProbabilityRootIndex(null);
+  }, []);
 
   // Node hover handler
   const handleNodeHover = useCallback((index: number) => {
@@ -1003,8 +1031,8 @@ export default function Home() {
         probabilityRootIndex={probabilityRootIndex}
         graphData={graphData}
         nodes={nodes}
-        authModalOpen={authModalOpen}
-        onAuthModalOpenChange={setAuthModalOpen}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={handleToggleSidebar}
         onSliderChange={handleSliderChange}
         onSliderChangeComplete={handleSliderChangeComplete}
         onMinOpacityChange={handleMinOpacityChange}
@@ -1038,7 +1066,6 @@ export default function Home() {
                 isAuthenticated={!!user}
                 error={saveError}
                 lastSavedAt={lastSavedAt}
-                onSignInClick={() => setAuthModalOpen(true)}
               />
             </div>
             <div className="flex items-center gap-3">
@@ -1048,24 +1075,7 @@ export default function Home() {
               >
                 About
               </Link>
-              <button
-                onClick={() => setShowCookieSettings(true)}
-                className="p-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-                title="Cookie Settings"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
+              <SettingsMenu />
             </div>
           </div>
         </header>
@@ -1089,6 +1099,8 @@ export default function Home() {
             onZoomChange={handleZoomChange}
             onNodeClick={handleNodeClick}
             onSetProbabilityRoot={handleSetProbabilityRoot}
+            onSetProbabilityRootHoverStart={handleSetProbabilityRootHoverStart}
+            onSetProbabilityRootHoverEnd={handleSetProbabilityRootHoverEnd}
             onNodeHover={handleNodeHover}
             onNodeLeave={handleNodeLeave}
             onNodeDragEnd={handleNodeDragEnd}
@@ -1122,12 +1134,6 @@ export default function Home() {
         isOpen={showWelcomeModal}
         onClose={() => setShowWelcomeModal(false)}
         userEmail={user?.email || ''}
-      />
-
-      {/* Cookie Settings Modal */}
-      <CookieSettings
-        isOpen={showCookieSettings}
-        onClose={() => setShowCookieSettings(false)}
       />
 
       {/* Delete Node Dialog */}
