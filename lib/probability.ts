@@ -84,11 +84,10 @@ function buildNodesAndEdges(graphData: GraphData): {
 }
 
 /**
- * Calculate probabilities for all nodes and edges based on slider values
+ * Calculate probabilities for all nodes and edges based on node probability values
  * Port of updateProbabilities() from v4.html (lines 647-686)
  */
 export function calculateProbabilities(
-  sliderValues: number[],
   probabilityRootIndex: number,
   graphData: GraphData = defaultGraphData
 ): { nodes: Node[]; edges: Edge[] } {
@@ -99,8 +98,14 @@ export function calculateProbabilities(
   const nodes = initialNodes.map(n => ({ ...n }));
   const edges = initialEdges.map(e => ({ ...e }));
 
-  // Convert slider values from 0-100 to 0.0-1.0
-  const sliderProbs = sliderValues.map(v => v / 100.0);
+  // Extract slider probabilities from question nodes (0-100 to 0.0-1.0)
+  // Build array indexed by sliderIndex
+  const sliderProbs: number[] = [];
+  graphData.nodes.forEach(node => {
+    if (node.type === NodeType.QUESTION && node.sliderIndex !== null) {
+      sliderProbs[node.sliderIndex] = (node.probability || 50) / 100.0;
+    }
+  });
 
   // Memoization maps
   const nodeProbMap = new Map<number, number>();

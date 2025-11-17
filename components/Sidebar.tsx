@@ -1,13 +1,11 @@
 'use client'
 import { AUTHORS_ESTIMATES } from '@/lib/graphData';
-import { SLIDER_DEFAULT_VALUE, type GraphData, type GraphNode, type Node, NodeType } from '@/lib/types';
-import { decodeSliderValues } from '@/lib/urlState';
+import { type GraphData, type GraphNode, type Node, NodeType } from '@/lib/types';
 import Slider from './Slider';
 import { AuthModal } from './auth/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 
 interface SidebarProps {
-  sliderValues: number[];
   minOpacity: number;
   hoveredNodeIndex: number;
   probabilityRootIndex: number;
@@ -15,8 +13,8 @@ interface SidebarProps {
   nodes: Node[];
   authModalOpen: boolean;
   onAuthModalOpenChange: (open: boolean) => void;
-  onSliderChange: (index: number, value: number) => void;
-  onSliderChangeComplete: (index: number) => void;
+  onSliderChange: (nodeId: string, value: number) => void;
+  onSliderChangeComplete: (nodeId: string) => void;
   onMinOpacityChange: (value: number) => void;
   onSliderHover: (nodeIndex: number) => void;
   onSliderLeave: () => void;
@@ -26,7 +24,6 @@ interface SidebarProps {
 }
 
 export default function Sidebar({
-  sliderValues,
   minOpacity,
   hoveredNodeIndex,
   probabilityRootIndex,
@@ -150,12 +147,12 @@ export default function Sidebar({
 
         {/* Sliders */}
         <div>
-          {questionNodeIndices.map((nodeIndex, sliderIndex) => {
+          {questionNodeIndices.map((nodeIndex) => {
             const node = nodes[nodeIndex];
-            const sliderValue = sliderValues[sliderIndex];
+            const graphNode = graphData.nodes.find(n => n.id === node.id);
 
-            // Skip if slider value doesn't exist yet (during state updates)
-            if (sliderValue === undefined) return null;
+            // Skip if no probability value exists yet
+            if (!graphNode || graphNode.probability === null || graphNode.probability === undefined) return null;
 
             const isHighlighted = nodeIndex === hoveredNodeIndex || nodeIndex === probabilityRootIndex;
 
@@ -163,10 +160,10 @@ export default function Sidebar({
               <Slider
                 key={nodeIndex}
                 node={node}
-                value={sliderValue}
+                value={graphNode.probability}
                 isHighlighted={isHighlighted}
-                onChange={(value) => onSliderChange(sliderIndex, value)}
-                onChangeComplete={() => onSliderChangeComplete(sliderIndex)}
+                onChange={(value) => onSliderChange(graphNode.id, value)}
+                onChangeComplete={() => onSliderChangeComplete(graphNode.id)}
                 onMouseEnter={() => onSliderHover(nodeIndex)}
                 onMouseLeave={onSliderLeave}
               />

@@ -9,7 +9,7 @@ const graphData = graphDataJson as GraphData;
 export const AUTHORS_ESTIMATES = graphData.nodes
   .filter(n => n.type === 'n' && n.sliderIndex !== null)
   .sort((a, b) => (a.sliderIndex || 0) - (b.sliderIndex || 0))
-  .map(n => n.authorEstimate || 50)
+  .map(n => n.probability || 50)
   .join('i');
 
 // Transform GraphNode[] to Node[] (add index and probability field)

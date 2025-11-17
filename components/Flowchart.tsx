@@ -1,4 +1,4 @@
-import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, NodeDragStateHandler, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING, NodeType as NT } from '@/lib/types';
+import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, NodeDragStateHandler, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING, NodeType as NT, type GraphData } from '@/lib/types';
 import NodeComponent from './Node';
 import EdgeComponent from './Edge';
 import ConnectorDots from './ConnectorDots';
@@ -10,7 +10,7 @@ import { flushSync } from 'react-dom';
 interface FlowchartProps {
   nodes: NodeType[];
   edges: EdgeType[];
-  sliderValues: number[];
+  graphData: GraphData;
   probabilityRootIndex: number;
   hoveredNodeIndex: number;
   selectedEdgeIndex: number;
@@ -43,14 +43,14 @@ interface FlowchartProps {
   onCancelNewArrow?: (nodeId: string) => void;
   onConfirmNewArrow?: (nodeId: string, targetX: number, targetY: number) => void;
   onBackgroundClick?: () => void;
-  onSliderChange?: (sliderIndex: number, value: number) => void;
-  onSliderChangeComplete?: (sliderIndex: number) => void;
+  onSliderChange?: (nodeId: string, value: number) => void;
+  onSliderChangeComplete?: (nodeId: string) => void;
 }
 
 export default function Flowchart({
   nodes,
   edges,
-  sliderValues,
+  graphData,
   probabilityRootIndex,
   hoveredNodeIndex,
   selectedEdgeIndex,
@@ -439,11 +439,12 @@ export default function Flowchart({
               const questionNodeIndices = nodes
                 .filter(n => n.type === NT.QUESTION)
                 .map(n => n.index);
-              const sliderIndex = questionNodeIndices.indexOf(edge.source);
-              const sliderValue = sliderIndex >= 0 ? sliderValues[sliderIndex] : null;
+              const edgeSourceNode = nodes[edge.source];
+              const edgeGraphNode = graphData.nodes.find(n => n.id === edgeSourceNode?.id);
+              const sliderValue = edgeGraphNode?.probability ?? null;
 
               // Get bounding boxes for source and target using node IDs
-              const sourceBounds = nodeBounds.get(sourceNode.id);
+              const sourceBounds = nodeBounds.get(edgeSourceNode.id);
               const targetBounds = targetNode ? nodeBounds.get(targetNode.id) : undefined;
 
               // Coordinate conversion function for floating endpoints
@@ -521,8 +522,8 @@ export default function Flowchart({
             const questionNodeIndices = nodes
               .filter(n => n.type === NT.QUESTION)
               .map(n => n.index);
-            const sliderIndex = questionNodeIndices.indexOf(node.index);
-            const nodeSliderValue = sliderIndex >= 0 ? sliderValues[sliderIndex] : undefined;
+            const graphNode = graphData.nodes.find(n => n.id === node.id);
+            const nodeSliderValue = graphNode?.probability !== null && graphNode?.probability !== undefined ? graphNode.probability : undefined;
 
             return (
               <NodeComponent
@@ -549,8 +550,8 @@ export default function Flowchart({
                 onDelete={onDeleteNode}
                 onChangeType={onChangeNodeType}
                 sliderValue={nodeSliderValue}
-                onSliderChange={nodeSliderValue !== undefined && onSliderChange ? (value) => onSliderChange(sliderIndex, value) : undefined}
-                onSliderChangeComplete={nodeSliderValue !== undefined && onSliderChangeComplete ? () => onSliderChangeComplete(sliderIndex) : undefined}
+                onSliderChange={nodeSliderValue !== undefined && onSliderChange ? (value) => onSliderChange(node.id, value) : undefined}
+                onSliderChangeComplete={nodeSliderValue !== undefined && onSliderChangeComplete ? () => onSliderChangeComplete(node.id) : undefined}
               />
             );
           })}

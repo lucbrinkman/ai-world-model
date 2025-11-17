@@ -43,7 +43,6 @@ export interface Edge {
 
 // Application state
 export interface AppState {
-  sliderValues: number[]; // Array of slider values (0-100)
   probabilityRootIndex: number; // Currently selected node (probability root)
   hoveredNodeIndex: number; // Currently hovered node (-1 if none)
   boldPaths: boolean; // Setting: make more likely paths bolder
@@ -80,7 +79,7 @@ export interface GraphNode {
     y: number;
   };
   sliderIndex: number | null; // Index of associated slider (null for non-question nodes)
-  authorEstimate?: number; // Author's probability estimate for this question (0-100, only for question nodes)
+  probability: number | null; // Probability value for question nodes (0-100), null for non-question nodes
   connections: NodeConnection[]; // Outgoing connections from this node
 }
 
@@ -103,7 +102,6 @@ export interface GraphData {
 // Document data structure (stored in documents.data JSONB column)
 export interface DocumentData {
   nodes: GraphNode[];
-  sliderValues: number[];
   metadata: GraphMetadata;
 }
 

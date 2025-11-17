@@ -17,6 +17,7 @@ export function saveToLocalStorage(data: DocumentData): void {
 
 /**
  * Load document data from localStorage (for anonymous users)
+ * Migrates old data format to ensure all nodes have the probability field
  */
 export function loadFromLocalStorage(): DocumentData | null {
   if (typeof window === 'undefined') return null;
@@ -25,7 +26,24 @@ export function loadFromLocalStorage(): DocumentData | null {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return null;
 
-    return JSON.parse(stored) as DocumentData;
+    const data = JSON.parse(stored) as DocumentData;
+
+    // Migrate old data: ensure all nodes have probability field
+    const migratedNodes = data.nodes.map(node => {
+      // If node doesn't have probability field, add it
+      if (node.probability === undefined) {
+        return {
+          ...node,
+          probability: node.type === 'n' ? 50 : null // Default to 50 for question nodes, null for others
+        };
+      }
+      return node;
+    });
+
+    return {
+      ...data,
+      nodes: migratedNodes
+    };
   } catch (error) {
     console.error('Failed to load from localStorage:', error);
     return null;
@@ -59,12 +77,10 @@ export function clearLocalStorage(): void {
  */
 export function createDefaultDocumentData(
   nodes: GraphNode[],
-  sliderValues: number[],
   metadata: GraphMetadata
 ): DocumentData {
   return {
     nodes,
-    sliderValues,
     metadata,
   };
 }

@@ -13,10 +13,9 @@ import DeleteNodeDialog from '@/components/DeleteNodeDialog';
 import DeleteEdgeDialog from '@/components/DeleteEdgeDialog';
 import MobileWarning from '@/components/MobileWarning';
 import { useAuth } from '@/hooks/useAuth';
-import { SLIDER_COUNT, SLIDER_DEFAULT_VALUE, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData, type DocumentData } from '@/lib/types';
+import { MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData, type DocumentData, type GraphNode } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
-import { decodeSliderValues } from '@/lib/urlState';
 import { loadFromLocalStorage, saveToLocalStorage, createDefaultDocumentData, clearLocalStorage } from '@/lib/documentState';
 import { getLastOpenedDocument, loadDocument } from '@/lib/actions/documents';
 import { useAutoSave } from '@/lib/autoSave';
@@ -27,11 +26,6 @@ import { analytics } from '@/lib/analytics';
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
 
-  // Initialize with default values to avoid hydration mismatch
-  const [sliderValues, setSliderValues] = useState<number[]>(
-    Array(SLIDER_COUNT).fill(SLIDER_DEFAULT_VALUE)
-  );
-
   const [probabilityRootIndex, setProbabilityRootIndex] = useState(startNodeIndex);
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(-1);
   const [selectedEdgeIndex, setSelectedEdgeIndex] = useState(-1);
@@ -41,7 +35,7 @@ export default function Home() {
   const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
   const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
   const [minOpacity, setMinOpacity] = useState(100);
-  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [undoStack, setUndoStack] = useState<GraphNode[][]>([]);
   const [showMobileWarning, setShowMobileWarning] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -75,10 +69,20 @@ export default function Home() {
       // Authenticated user: load last opened document from cloud
       getLastOpenedDocument().then(({ data, error }) => {
         if (!error && data) {
+          // Migrate old data: ensure all nodes have probability field
+          const migratedNodes = data.data.nodes.map(node => {
+            if (node.probability === undefined) {
+              return {
+                ...node,
+                probability: node.type === 'n' ? 50 : null
+              };
+            }
+            return node;
+          });
+
           setCurrentDocumentId(data.id);
           setDocumentName(data.name);
-          setGraphData({ metadata: data.data.metadata, nodes: data.data.nodes });
-          setSliderValues(data.data.sliderValues);
+          setGraphData({ metadata: data.data.metadata, nodes: migratedNodes });
           // Clear localStorage since we're now using cloud storage
           clearLocalStorage();
         }
@@ -87,8 +91,8 @@ export default function Home() {
       // Anonymous user: load from localStorage
       const draft = loadFromLocalStorage();
       if (draft) {
+        // Migration is already done in loadFromLocalStorage()
         setGraphData({ metadata: draft.metadata, nodes: draft.nodes });
-        setSliderValues(draft.sliderValues);
         setDocumentName('My Draft');
       }
     }
@@ -123,7 +127,7 @@ export default function Home() {
 
   // Calculate probabilities using useMemo (only recalculate when dependencies change)
   const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
-    const result = calculateProbabilities(sliderValues, probabilityRootIndex, graphData);
+    const result = calculateProbabilities(probabilityRootIndex, graphData);
 
     // Find max probability among outcome nodes (good, ambivalent, existential)
     const outcomeNodes = result.nodes.filter(
@@ -135,14 +139,13 @@ export default function Home() {
     );
 
     return { nodes: result.nodes, edges: result.edges, maxOutcomeProbability };
-  }, [sliderValues, probabilityRootIndex, graphData]);
+  }, [probabilityRootIndex, graphData]);
 
   // Create document data for auto-save
   const documentData: DocumentData = useMemo(() => ({
     nodes: graphData.nodes,
-    sliderValues,
     metadata: graphData.metadata,
-  }), [graphData, sliderValues]);
+  }), [graphData]);
 
   // Auto-save hook
   const { saveStatus, error: saveError, lastSavedAt } = useAutoSave({
@@ -154,30 +157,32 @@ export default function Home() {
   });
 
   // Slider change handler
-  const handleSliderChange = useCallback((index: number, value: number) => {
-    setSliderValues(prev => {
-      const newValues = [...prev];
-      newValues[index] = value;
-      return newValues;
+  const handleSliderChange = useCallback((nodeId: string, value: number) => {
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node =>
+        node.id === nodeId ? { ...node, probability: value } : node
+      );
+      return { ...prev, nodes: updatedNodes };
     });
   }, []);
 
   // Slider change complete handler (for undo)
-  const handleSliderChangeComplete = useCallback((index: number) => {
-    setSliderValues(current => {
-      // Track analytics
-      analytics.trackSliderChange(index, current[index]);
+  const handleSliderChangeComplete = useCallback((nodeId: string) => {
+    // Track analytics
+    const node = graphData.nodes.find(n => n.id === nodeId);
+    if (node && node.probability !== null) {
+      analytics.trackSliderChange(nodeId, node.probability);
+    }
 
-      const currentState = current.join('i');
-      setUndoStack(prev => {
-        if (prev.length === 0 || prev[prev.length - 1] !== currentState) {
-          return [...prev, currentState];
-        }
-        return prev;
-      });
-      return current;
+    // Save to undo stack
+    setUndoStack(prev => {
+      const currentState = graphData.nodes;
+      if (prev.length === 0 || JSON.stringify(prev[prev.length - 1]) !== JSON.stringify(currentState)) {
+        return [...prev, currentState];
+      }
+      return prev;
     });
-  }, []);
+  }, [graphData.nodes]);
 
   // Node click handler - no longer changes probability root
   const handleNodeClick = useCallback((index: number) => {
@@ -348,7 +353,7 @@ export default function Home() {
             }));
           }
 
-          return { ...node, connections: finalConnections, type: updatedType, sliderIndex: updatedSliderIndex };
+          return { ...node, connections: finalConnections, type: updatedType, sliderIndex: updatedSliderIndex, probability: updatedSliderIndex === null ? null : node.probability };
         }
         return node;
       });
@@ -365,15 +370,6 @@ export default function Home() {
 
       return { ...prev, nodes: updatedNodes };
     });
-
-    // Remove the slider value if we converted a question node
-    if (sliderIndexToRemove !== null && sliderIndexToRemove !== undefined) {
-      setSliderValues(prev => {
-        const newValues = [...prev];
-        newValues.splice(sliderIndexToRemove, 1);
-        return newValues;
-      });
-    }
 
     setSelectedEdgeIndex(-1);
   }, [edges, nodes, graphData.nodes]);
@@ -453,8 +449,8 @@ export default function Home() {
             const updatedConnections = [...updatedExistingConnections, newConnection];
 
             // Convert node from INTERMEDIATE to QUESTION
-            // CRITICAL: Assign sliderIndex to maintain synchronization
-            return { ...node, connections: updatedConnections, type: 'n' as const, sliderIndex: newSliderIndex };
+            // CRITICAL: Assign sliderIndex and initialize probability
+            return { ...node, connections: updatedConnections, type: 'n' as const, sliderIndex: newSliderIndex, probability: 50 };
           }
         }
         return node;
@@ -462,35 +458,47 @@ export default function Home() {
 
       return { ...prev, nodes: updatedNodes };
     });
-
-    // Only add a slider value if we converted to a question node
-    if (willBecomeQuestion) {
-      setSliderValues(prev => {
-        // Append slider value at the END (corresponds to highest sliderIndex)
-        return [...prev, SLIDER_DEFAULT_VALUE];
-      });
-    }
   }, [graphData.nodes]);
 
   // Reset sliders to 50%
   const handleResetSliders = useCallback(() => {
-    const newValues = Array(SLIDER_COUNT).fill(SLIDER_DEFAULT_VALUE);
-    setSliderValues(newValues);
-    setUndoStack(prev => [...prev, newValues.join('i')]);
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        if (node.type === 'n' && node.sliderIndex !== null) {
+          return { ...node, probability: 50 };
+        }
+        return node;
+      });
+      return { ...prev, nodes: updatedNodes };
+    });
+
+    // Save to undo stack
+    setUndoStack(prev => [...prev, graphData.nodes]);
 
     // Track analytics
     analytics.trackAction('reset');
-  }, []);
+  }, [graphData.nodes]);
 
   // Load author's estimates
   const handleLoadAuthorsEstimates = useCallback(() => {
-    const authorValues = decodeSliderValues(AUTHORS_ESTIMATES);
-    setSliderValues(authorValues);
-    setUndoStack(prev => [...prev, authorValues.join('i')]);
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        // Find this node in defaultGraphData to get its original probability
+        const defaultNode = defaultGraphData.nodes.find(n => n.id === node.id);
+        if (node.type === 'n' && node.sliderIndex !== null && defaultNode) {
+          return { ...node, probability: defaultNode.probability };
+        }
+        return node;
+      });
+      return { ...prev, nodes: updatedNodes };
+    });
+
+    // Save to undo stack
+    setUndoStack(prev => [...prev, graphData.nodes]);
 
     // Track analytics
     analytics.trackAction('load_authors_estimates');
-  }, []);
+  }, [graphData.nodes]);
 
   // Undo handler
   const handleUndo = useCallback(() => {
@@ -499,8 +507,11 @@ export default function Home() {
         const newStack = [...prev];
         newStack.pop();
         const previousState = newStack[newStack.length - 1];
-        const previousValues = decodeSliderValues(previousState);
-        setSliderValues(previousValues);
+
+        setGraphData(current => ({
+          ...current,
+          nodes: previousState,
+        }));
 
         // Track analytics
         analytics.trackAction('undo');
@@ -631,10 +642,20 @@ export default function Home() {
   const handleDocumentSelect = useCallback(async (documentId: string) => {
     const { data, error } = await loadDocument(documentId);
     if (!error && data) {
+      // Migrate old data: ensure all nodes have probability field
+      const migratedNodes = data.data.nodes.map(node => {
+        if (node.probability === undefined) {
+          return {
+            ...node,
+            probability: node.type === 'n' ? 50 : null
+          };
+        }
+        return node;
+      });
+
       setCurrentDocumentId(data.id);
       setDocumentName(data.name);
-      setGraphData({ metadata: data.data.metadata, nodes: data.data.nodes });
-      setSliderValues(data.data.sliderValues);
+      setGraphData({ metadata: data.data.metadata, nodes: migratedNodes });
       setProbabilityRootIndex(startNodeIndex); // Reset to start
     }
   }, []);
@@ -643,7 +664,6 @@ export default function Home() {
     setCurrentDocumentId(null);
     setDocumentName('Untitled Document');
     setGraphData(defaultGraphData);
-    setSliderValues(Array(SLIDER_COUNT).fill(SLIDER_DEFAULT_VALUE));
     setProbabilityRootIndex(startNodeIndex);
   }, []);
 
@@ -721,6 +741,7 @@ export default function Home() {
       ],
       position: { x, y },
       sliderIndex: null, // Intermediate nodes don't have sliders
+      probability: null, // Intermediate nodes don't have probability values
     };
 
     setGraphData(prev => ({
@@ -817,15 +838,6 @@ export default function Home() {
           nodes: finalNodes,
         };
       });
-
-      // Remove the slider value if deleting a question node
-      if (nodeToDelete.sliderIndex !== null && nodeToDelete.sliderIndex !== undefined) {
-        setSliderValues(prev => {
-          const newValues = [...prev];
-          newValues.splice(nodeToDelete.sliderIndex!, 1);
-          return newValues;
-        });
-      }
     });
   }, [graphData, nodes, probabilityRootIndex]);
 
@@ -936,20 +948,8 @@ export default function Home() {
               return n;
             });
 
-            // Update sliderValues array (remove the slider at oldSliderIndex)
-            setSliderValues(prev => {
-              const newValues = [...prev];
-              newValues.splice(oldSliderIndex, 1);
-              return newValues;
-            });
-
             return { ...prev, nodes: finalNodes };
           }
-        }
-
-        // If changing TO question, add a new slider value (default 50)
-        if (newType === 'n') {
-          setSliderValues(prev => [...prev, 50]);
         }
 
         return { ...prev, nodes: updatedNodes };
@@ -998,7 +998,6 @@ export default function Home() {
         {/* Sidebar - hide on mobile view */}
         {!isMobileView && (
           <Sidebar
-        sliderValues={sliderValues}
         minOpacity={minOpacity}
         hoveredNodeIndex={hoveredNodeIndex}
         probabilityRootIndex={probabilityRootIndex}
@@ -1076,7 +1075,7 @@ export default function Home() {
           <Flowchart
             nodes={nodes}
             edges={edges}
-            sliderValues={sliderValues}
+            graphData={graphData}
             probabilityRootIndex={probabilityRootIndex}
             hoveredNodeIndex={hoveredNodeIndex}
             selectedEdgeIndex={selectedEdgeIndex}

@@ -5,9 +5,9 @@ export { posthog }
 // Event tracking helpers
 export const analytics = {
   // Track slider changes
-  trackSliderChange: (sliderIndex: number, value: number) => {
+  trackSliderChange: (nodeId: string, value: number) => {
     posthog.capture('slider_changed', {
-      slider_index: sliderIndex,
+      node_id: nodeId,
       value: value,
     })
   },
