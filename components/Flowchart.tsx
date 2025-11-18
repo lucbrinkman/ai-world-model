@@ -14,6 +14,7 @@ interface FlowchartProps {
   hoveredNodeIndex: number;
   selectedEdgeIndex: number;
   selectedNodeId: string | null;
+  autoEditNodeId: string | null;
   hoveredDestinationDotIndex: number;
   draggingEdgeIndex: number;
   boldPaths: boolean;
@@ -53,6 +54,7 @@ interface FlowchartProps {
   onDestinationDotDragStart?: (edgeIndex: number) => void;
   onDestinationDotDragEnd?: () => void;
   onCreateNodeFromFloatingArrow?: (edgeIndex: number, position: { x: number; y: number }) => void;
+  onAutoEditComplete?: () => void;
   editorCloseTimestampRef?: React.MutableRefObject<number>;
 }
 
@@ -64,6 +66,7 @@ export default function Flowchart({
   hoveredNodeIndex,
   selectedEdgeIndex,
   selectedNodeId,
+  autoEditNodeId,
   hoveredDestinationDotIndex,
   draggingEdgeIndex,
   boldPaths,
@@ -103,6 +106,7 @@ export default function Flowchart({
   onDestinationDotDragStart,
   onDestinationDotDragEnd,
   onCreateNodeFromFloatingArrow,
+  onAutoEditComplete,
   editorCloseTimestampRef,
 }: FlowchartProps) {
   // Create refs for all nodes, indexed by node ID (not array index!)
@@ -606,6 +610,7 @@ export default function Flowchart({
                 isSelected={node.index === probabilityRootIndex}
                 isHovered={node.index === hoveredNodeIndex}
                 isNodeSelected={node.id === selectedNodeId}
+                shouldStartEditing={node.id === autoEditNodeId}
                 transparentPaths={transparentPaths}
                 minOpacity={minOpacity}
                 maxOutcomeProbability={maxOutcomeProbability}
@@ -621,6 +626,7 @@ export default function Flowchart({
                 onDragStateChange={handleNodeDragStateChangeWrapper}
                 onUpdateText={onUpdateNodeText}
                 onEditorClose={handleEditorClose}
+                onEditingStarted={onAutoEditComplete}
                 onSelect={onNodeSelect}
                 onDelete={onDeleteNode}
                 onChangeType={onChangeNodeType}

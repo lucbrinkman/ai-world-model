@@ -14,6 +14,7 @@ interface NodeProps {
   isSelected: boolean;
   isHovered: boolean;
   isNodeSelected: boolean;
+  shouldStartEditing?: boolean;
   transparentPaths: boolean;
   minOpacity: number;
   maxOutcomeProbability: number;
@@ -29,6 +30,7 @@ interface NodeProps {
   onDragStateChange: NodeDragStateHandler;
   onUpdateText?: (nodeId: string, newText: string) => void;
   onEditorClose?: () => void;
+  onEditingStarted?: () => void;
   onSelect?: (nodeId: string | null) => void;
   onDelete?: (nodeId: string) => void;
   onChangeType?: (nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => void;
@@ -109,6 +111,14 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
       editInputRef.current.select();
     }
   }, [isEditing]);
+
+  // Auto-start editing when requested
+  useEffect(() => {
+    if (shouldStartEditing && onUpdateText && !isDragging) {
+      setIsEditing(true);
+      onEditingStarted?.();
+    }
+  }, [shouldStartEditing, onUpdateText, isDragging, onEditingStarted]);
 
   //  saveEdit function defined below
 

@@ -35,6 +35,7 @@ function HomeContent() {
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(-1);
   const [selectedEdgeIndex, setSelectedEdgeIndex] = useState(-1);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [autoEditNodeId, setAutoEditNodeId] = useState<string | null>(null);
   const [hoveredDestinationDotIndex, setHoveredDestinationDotIndex] = useState(-1);
   const [draggingEdgeIndex, setDraggingEdgeIndex] = useState(-1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -943,6 +944,9 @@ function HomeContent() {
       nodes: [...prev.nodes, newNode],
     }));
 
+    // Trigger auto-edit for the newly created node
+    setAutoEditNodeId(newNodeId);
+
   }, [graphData]);
 
   const handleCreateNodeFromFloatingArrow = useCallback((edgeIndex: number, position: { x: number; y: number }) => {
@@ -996,6 +1000,9 @@ function HomeContent() {
         nodes: [...updatedNodes, newNode],
       };
     });
+
+    // Trigger auto-edit for the newly created node
+    setAutoEditNodeId(newNodeId);
   }, [edges, nodes]);
 
   const handleInitiateDelete = useCallback((nodeId: string) => {
@@ -1344,6 +1351,7 @@ function HomeContent() {
             hoveredNodeIndex={hoveredNodeIndex}
             selectedEdgeIndex={selectedEdgeIndex}
             selectedNodeId={selectedNodeId}
+            autoEditNodeId={autoEditNodeId}
             hoveredDestinationDotIndex={hoveredDestinationDotIndex}
             draggingEdgeIndex={draggingEdgeIndex}
             boldPaths={true}
@@ -1379,6 +1387,7 @@ function HomeContent() {
             onDestinationDotDragStart={handleDestinationDotDragStart}
             onDestinationDotDragEnd={handleDestinationDotDragEnd}
             onCreateNodeFromFloatingArrow={handleCreateNodeFromFloatingArrow}
+            onAutoEditComplete={() => setAutoEditNodeId(null)}
             editorCloseTimestampRef={editorCloseTimestampRef}
           />
           <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />
