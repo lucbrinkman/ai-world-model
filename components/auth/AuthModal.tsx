@@ -47,7 +47,7 @@ export function AuthModal({ isOpen, onClose, initialView = 'magic', isAuthentica
       onMouseUp={handleBackdropMouseUp}
     >
       <div
-        className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto"
+        className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto border border-gray-700"
         onMouseDown={(e) => e.stopPropagation()}
         onMouseUp={(e) => e.stopPropagation()}
       >

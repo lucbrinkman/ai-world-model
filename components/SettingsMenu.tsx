@@ -33,7 +33,6 @@ export default function SettingsMenu() {
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-          title="Settings"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -67,7 +66,7 @@ export default function SettingsMenu() {
                       setIsOpen(false);
                       setAuthModalOpen(true);
                     }}
-                    className="w-full px-3 py-1.5 text-sm text-purple-400 hover:text-purple-300 hover:bg-gray-700 rounded transition-colors text-left"
+                    className="w-full px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                   >
                     Manage Profile
                   </button>

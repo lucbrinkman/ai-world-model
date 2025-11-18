@@ -89,7 +89,7 @@ export default function DocumentPicker({
     setIsHovering(true);
     hoverTimeoutRef.current = setTimeout(() => {
       setShowTooltip(true);
-    }, 500); // Show tooltip after 0.5 seconds
+    }, 350); // Show tooltip after 0.35 seconds
   };
 
   const handleMouseLeave = () => {

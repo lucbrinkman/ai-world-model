@@ -47,6 +47,7 @@ function HomeContent() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [showShareTooltip, setShowShareTooltip] = useState(false);
 
   // Zoom state (pan is now handled by native scrolling)
   const [zoom, setZoom] = useState(100);
@@ -68,8 +69,35 @@ function HomeContent() {
   // Track editor close events to prevent context menu from opening
   const editorCloseTimestampRef = useRef(0);
 
+  // Share button tooltip timeout
+  const shareTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleEditorClose = useCallback(() => {
     editorCloseTimestampRef.current = Date.now();
+  }, []);
+
+  // Share button tooltip handlers
+  const handleShareMouseEnter = useCallback(() => {
+    shareTooltipTimeoutRef.current = setTimeout(() => {
+      setShowShareTooltip(true);
+    }, 350); // Show tooltip after 0.35 seconds
+  }, []);
+
+  const handleShareMouseLeave = useCallback(() => {
+    setShowShareTooltip(false);
+    if (shareTooltipTimeoutRef.current) {
+      clearTimeout(shareTooltipTimeoutRef.current);
+      shareTooltipTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Cleanup share tooltip timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (shareTooltipTimeoutRef.current) {
+        clearTimeout(shareTooltipTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Load sidebar collapse state from localStorage on mount
@@ -1150,13 +1178,28 @@ function HomeContent() {
               />
             </div>
             <div className="flex items-center gap-3">
-              {user && currentDocumentId && (
+              {user && currentDocumentId ? (
                 <button
                   onClick={() => setIsShareModalOpen(true)}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-sm transition-colors text-white font-medium"
                 >
                   Share
                 </button>
+              ) : (
+                <div className="relative">
+                  <button
+                    onMouseEnter={handleShareMouseEnter}
+                    onMouseLeave={handleShareMouseLeave}
+                    className="px-4 py-2 bg-gray-700 text-gray-400 rounded-md text-sm font-medium cursor-default"
+                  >
+                    Share
+                  </button>
+                  {showShareTooltip && (
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap z-50">
+                      Sign in to share your scenarios
+                    </div>
+                  )}
+                </div>
               )}
               <Link
                 href="/about"
