@@ -16,6 +16,7 @@ interface FlowchartProps {
   selectedEdgeIndex: number;
   selectedNodeId: string | null;
   hoveredDestinationDotIndex: number;
+  draggingEdgeIndex: number;
   boldPaths: boolean;
   transparentPaths: boolean;
   minOpacity: number;
@@ -50,6 +51,8 @@ interface FlowchartProps {
   onSliderChangeComplete?: (nodeId: string) => void;
   onDestinationDotHover?: (edgeIndex: number) => void;
   onDestinationDotLeave?: () => void;
+  onDestinationDotDragStart?: (edgeIndex: number) => void;
+  onDestinationDotDragEnd?: () => void;
   editorCloseTimestampRef?: React.MutableRefObject<number>;
 }
 
@@ -62,6 +65,7 @@ export default function Flowchart({
   selectedEdgeIndex,
   selectedNodeId,
   hoveredDestinationDotIndex,
+  draggingEdgeIndex,
   boldPaths,
   transparentPaths,
   minOpacity,
@@ -96,6 +100,8 @@ export default function Flowchart({
   onSliderChangeComplete,
   onDestinationDotHover,
   onDestinationDotLeave,
+  onDestinationDotDragStart,
+  onDestinationDotDragEnd,
   editorCloseTimestampRef,
 }: FlowchartProps) {
   // Create refs for all nodes, indexed by node ID (not array index!)
@@ -627,8 +633,8 @@ export default function Flowchart({
             } else if (selectedNodeId === sourceNode.id) {
               // Source node is selected, show destination dot only
               visibilityMode = 'destination-only';
-            } else if (hoveredDestinationDotIndex === edgeIndex) {
-              // Destination dot is being hovered
+            } else if (hoveredDestinationDotIndex === edgeIndex || draggingEdgeIndex === edgeIndex) {
+              // Destination dot is being hovered or dragged
               visibilityMode = 'destination-only';
             } else {
               // Default: hidden
@@ -664,6 +670,8 @@ export default function Flowchart({
                 onEdgeSelect={onEdgeClick}
                 onDestinationDotHover={onDestinationDotHover ? () => onDestinationDotHover(edgeIndex) : undefined}
                 onDestinationDotLeave={onDestinationDotLeave}
+                onDestinationDotDragStart={onDestinationDotDragStart ? () => onDestinationDotDragStart(edgeIndex) : undefined}
+                onDestinationDotDragEnd={onDestinationDotDragEnd}
                 screenToCanvasCoords={screenToCanvasCoords}
                 onPreviewChange={(node, pos) => handlePreviewChange(edgeIndex, node, pos)}
               />

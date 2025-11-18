@@ -17,6 +17,8 @@ interface ConnectorDotsProps {
   onEdgeSelect?: (edgeIndex: number) => void;
   onDestinationDotHover?: () => void;
   onDestinationDotLeave?: () => void;
+  onDestinationDotDragStart?: () => void;
+  onDestinationDotDragEnd?: () => void;
   screenToCanvasCoords?: (screenX: number, screenY: number) => { x: number; y: number };
   onPreviewChange?: (previewNode: Node | null, previewPos: { x: number; y: number } | null) => void;
 }
@@ -36,6 +38,8 @@ export default function ConnectorDots({
   onEdgeSelect,
   onDestinationDotHover,
   onDestinationDotLeave,
+  onDestinationDotDragStart,
+  onDestinationDotDragEnd,
   screenToCanvasCoords,
   onPreviewChange,
 }: ConnectorDotsProps) {
@@ -203,7 +207,11 @@ export default function ConnectorDots({
     setMouseDownPos({ x: e.clientX, y: e.clientY });
     setHasMoved(false);
     setDraggingConnector(end);
-  }, []);
+    // Notify parent that dragging started
+    if (end === 'target') {
+      onDestinationDotDragStart?.();
+    }
+  }, [onDestinationDotDragStart]);
 
   // Clear tooltip when dragging stops
   useEffect(() => {
@@ -231,6 +239,7 @@ export default function ConnectorDots({
         setPreviewFloatingPos(null);
         setMouseDownPos(null);
         setHasMoved(false);
+        onDestinationDotDragEnd?.();
         return;
       }
 
@@ -241,6 +250,7 @@ export default function ConnectorDots({
         setPreviewFloatingPos(null);
         setMouseDownPos(null);
         setHasMoved(false);
+        onDestinationDotDragEnd?.();
         return;
       }
 
@@ -296,6 +306,7 @@ export default function ConnectorDots({
       setPreviewFloatingPos(null);
       setMouseDownPos(null);
       setHasMoved(false);
+      onDestinationDotDragEnd?.();
     };
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -373,7 +384,7 @@ export default function ConnectorDots({
       window.removeEventListener('mouseup', handleGlobalMouseUp);
       window.removeEventListener('mousemove', handleGlobalMouseMove);
     };
-  }, [draggingConnector, onReconnect, onEdgeSelect, edgeIndex, allNodes, allEdges, nodeBounds, sourceNode, screenToCanvasCoords, hasMoved, mouseDownPos, visibilityMode]);
+  }, [draggingConnector, onReconnect, onEdgeSelect, onDestinationDotDragEnd, edgeIndex, allNodes, allEdges, nodeBounds, sourceNode, screenToCanvasCoords, hasMoved, mouseDownPos, visibilityMode]);
 
   // Don't render anything if hidden
   if (visibilityMode === 'hidden') {
