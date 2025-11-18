@@ -13,6 +13,7 @@ interface ConnectorDotsProps {
   sourceBounds?: DOMRect;
   targetBounds?: DOMRect;
   visibilityMode: 'full' | 'destination-only' | 'hidden';
+  targetNodeIsSelected?: boolean;
   onReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
   onEdgeSelect?: (edgeIndex: number) => void;
   onDestinationDotHover?: () => void;
@@ -34,6 +35,7 @@ export default function ConnectorDots({
   sourceBounds,
   targetBounds,
   visibilityMode,
+  targetNodeIsSelected,
   onReconnect,
   onEdgeSelect,
   onDestinationDotHover,
@@ -426,7 +428,7 @@ export default function ConnectorDots({
           border: '2px solid white',
           cursor: draggingConnector === 'target' ? 'grabbing' : 'grab',
           pointerEvents: 'auto',
-          zIndex: 1000,
+          zIndex: targetNodeIsSelected ? 500 : 1000,
         }}
         onMouseDown={(e) => handleConnectorMouseDown(e, 'target')}
         onMouseEnter={() => {
@@ -451,7 +453,7 @@ export default function ConnectorDots({
           borderRadius: '50%',
           cursor: draggingConnector === 'target' ? 'grabbing' : 'grab',
           pointerEvents: 'auto',
-          zIndex: 999,
+          zIndex: targetNodeIsSelected ? 499 : 999,
         }}
         onMouseDown={(e) => handleConnectorMouseDown(e, 'target')}
         onMouseEnter={() => {

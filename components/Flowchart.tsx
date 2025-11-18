@@ -666,6 +666,7 @@ export default function Flowchart({
                 sourceBounds={sourceBounds}
                 targetBounds={targetBounds}
                 visibilityMode={visibilityMode}
+                targetNodeIsSelected={targetNode?.id === selectedNodeId}
                 onReconnect={onEdgeReconnect}
                 onEdgeSelect={onEdgeClick}
                 onDestinationDotHover={onDestinationDotHover ? () => onDestinationDotHover(edgeIndex) : undefined}
