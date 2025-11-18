@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import SettingsMenu from '@/components/SettingsMenu';
 import Flowchart from '@/components/Flowchart';
@@ -21,10 +22,12 @@ import { getLastOpenedDocument, loadDocument } from '@/lib/actions/documents';
 import { useAutoSave } from '@/lib/autoSave';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
 import DocumentPicker from '@/components/DocumentPicker';
+import { ShareModal } from '@/components/ShareModal';
 import { analytics } from '@/lib/analytics';
 
-export default function Home() {
+function HomeContent() {
   const { user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
 
   const [probabilityRootIndex, setProbabilityRootIndex] = useState(startNodeIndex);
   const [previewProbabilityRootIndex, setPreviewProbabilityRootIndex] = useState<number | null>(null);
@@ -43,6 +46,7 @@ export default function Home() {
   const [isMobileView, setIsMobileView] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Zoom state (pan is now handled by native scrolling)
   const [zoom, setZoom] = useState(100);
@@ -85,14 +89,63 @@ export default function Home() {
     });
   }, []);
 
-  // Load document on mount (only once)
+  // Load specific document from URL parameter (e.g., from shared links)
+  useEffect(() => {
+    console.log('[Page] URL param effect - authLoading:', authLoading, 'user:', !!user)
+    if (authLoading) return; // Only wait for auth loading, not user
+
+    const docId = searchParams.get('doc');
+    console.log('[Page] URL param docId:', docId, 'currentDocumentId:', currentDocumentId)
+    if (!docId) return;
+
+    // Don't reload if we're already viewing this document
+    if (currentDocumentId === docId) {
+      console.log('[Page] Already viewing this document, skipping load')
+      return;
+    }
+
+    // Only authenticated users can load documents from URL
+    if (!user) {
+      console.log('[Page] No user, cannot load document from URL')
+      return;
+    }
+
+    console.log('[Page] Loading document from URL:', docId)
+    loadDocument(docId).then(({ data, error }) => {
+      console.log('[Page] Load result - error:', error, 'data:', !!data)
+      if (!error && data) {
+        // Migrate old data: ensure all nodes have probability field
+        const migratedNodes = data.data.nodes.map(node => {
+          if (node.probability === undefined) {
+            return {
+              ...node,
+              probability: node.type === 'n' ? 50 : null
+            };
+          }
+          return node;
+        });
+
+        console.log('[Page] Setting document state:', data.id, data.name, migratedNodes.length, 'nodes')
+        setCurrentDocumentId(data.id);
+        setDocumentName(data.name);
+        setGraphData({ metadata: data.data.metadata, nodes: migratedNodes });
+        clearLocalStorage();
+        hasLoadedInitialDocument.current = true;
+      }
+    });
+  }, [user, authLoading, searchParams, currentDocumentId]);
+
+  // Load document on mount (only once, when no specific doc requested)
   useEffect(() => {
     if (authLoading || hasLoadedInitialDocument.current) return;
+
+    const docId = searchParams.get('doc');
+    if (docId) return; // Will be handled by the effect above
 
     hasLoadedInitialDocument.current = true;
 
     if (user) {
-      // Authenticated user: load last opened document from cloud
+      // Load last opened document from cloud
       getLastOpenedDocument().then(({ data, error }) => {
         if (!error && data) {
           // Migrate old data: ensure all nodes have probability field
@@ -115,14 +168,14 @@ export default function Home() {
       });
     } else {
       // Anonymous user: load from localStorage
-      const draft = loadFromLocalStorage();
-      if (draft) {
+      const result = loadFromLocalStorage();
+      if (result) {
         // Migration is already done in loadFromLocalStorage()
-        setGraphData({ metadata: draft.metadata, nodes: draft.nodes });
-        setDocumentName('My Draft');
+        setGraphData({ metadata: result.data.metadata, nodes: result.data.nodes });
+        setDocumentName(result.name || 'My Draft');
       }
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, searchParams]);
 
   // Check if user is new and show welcome modal
   useEffect(() => {
@@ -1097,6 +1150,14 @@ export default function Home() {
               />
             </div>
             <div className="flex items-center gap-3">
+              {user && currentDocumentId && (
+                <button
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-sm transition-colors text-white font-medium"
+                >
+                  Share
+                </button>
+              )}
               <Link
                 href="/about"
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition-colors"
@@ -1193,6 +1254,14 @@ export default function Home() {
         onCancel={handleCancelDeleteEdge}
       />
 
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        documentId={currentDocumentId}
+        initialIsPublic={false}
+      />
+
       {/* Dev-only buttons */}
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed bottom-4 right-4 flex gap-2 z-50">
@@ -1241,5 +1310,13 @@ export default function Home() {
       )}
       </div>
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

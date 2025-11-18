@@ -366,3 +366,141 @@ export async function getLastOpenedDocument(): Promise<{
 
   return { data: data as Document, error: null }
 }
+
+/**
+ * Toggle document sharing on/off
+ * Returns the share_token when sharing is enabled
+ */
+export async function toggleDocumentSharing(documentId: string): Promise<{
+  data: { is_public: boolean; share_token: string | null } | null
+  error: string | null
+}> {
+  const supabase = await createClient()
+
+  // Check if user is authenticated
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { data: null, error: 'You must be logged in to share documents' }
+  }
+
+  // First, get the current document to check ownership and current state
+  const { data: currentDoc, error: fetchError } = await supabase
+    .from('documents')
+    .select('is_public, share_token, user_id')
+    .eq('id', documentId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (fetchError) {
+    console.error('Error fetching document:', fetchError)
+    return { data: null, error: 'Failed to fetch document' }
+  }
+
+  // Toggle the is_public state
+  const newIsPublic = !currentDoc.is_public
+
+  const { data, error } = await supabase
+    .from('documents')
+    .update({
+      is_public: newIsPublic,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', documentId)
+    .eq('user_id', user.id)
+    .select('is_public, share_token')
+    .single()
+
+  if (error) {
+    console.error('Error toggling document sharing:', error)
+    return { data: null, error: 'Failed to toggle sharing' }
+  }
+
+  revalidatePath('/')
+  return {
+    data: {
+      is_public: data.is_public,
+      share_token: data.is_public ? data.share_token : null,
+    },
+    error: null,
+  }
+}
+
+/**
+ * Fork (copy) a document by its share token
+ * Creates a new document for the current user (or returns null for anonymous users to save to localStorage)
+ */
+export async function forkDocument(shareToken: string): Promise<{
+  data: { document: Document; isOwner: boolean } | null
+  error: string | null
+}> {
+  const supabase = await createClient()
+
+  // Get the shared document (this works even if user is not authenticated due to RLS policy)
+  const { data: sharedDoc, error: fetchError } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('share_token', shareToken)
+    .eq('is_public', true)
+    .single()
+
+  if (fetchError || !sharedDoc) {
+    console.error('Error fetching shared document:', fetchError)
+    return { data: null, error: 'Shared document not found' }
+  }
+
+  // Check if user is authenticated
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // If user is the owner, return the original document
+  if (user && user.id === sharedDoc.user_id) {
+    return {
+      data: {
+        document: sharedDoc as Document,
+        isOwner: true,
+      },
+      error: null,
+    }
+  }
+
+  // If user is not authenticated, return the document data for localStorage handling
+  if (!user) {
+    return {
+      data: {
+        document: sharedDoc as Document,
+        isOwner: false,
+      },
+      error: null,
+    }
+  }
+
+  // Create a copy for the authenticated user
+  const { data: forkedDoc, error: createError } = await supabase
+    .from('documents')
+    .insert({
+      user_id: user.id,
+      name: `${sharedDoc.name} (Copy)`,
+      data: sharedDoc.data,
+      is_public: false,
+    })
+    .select()
+    .single()
+
+  if (createError) {
+    console.error('Error forking document:', createError)
+    return { data: null, error: 'Failed to create copy' }
+  }
+
+  revalidatePath('/')
+  return {
+    data: {
+      document: forkedDoc as Document,
+      isOwner: false,
+    },
+    error: null,
+  }
+}

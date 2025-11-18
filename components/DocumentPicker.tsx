@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Document } from '@/lib/types';
 import { getUserDocuments, deleteDocument, renameDocument } from '@/lib/actions/documents';
+import { ShareModal } from './ShareModal';
 
 interface DocumentPickerProps {
   currentDocumentId: string | null;
@@ -31,6 +32,7 @@ export default function DocumentPicker({
   const [isHovering, setIsHovering] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -365,6 +367,25 @@ export default function DocumentPicker({
             Rename Current
           </button>
 
+          {/* Share Current button */}
+          <button
+            onClick={() => {
+              if (currentDocumentId) {
+                setIsShareModalOpen(true);
+                setIsOpen(false);
+              }
+            }}
+            disabled={!currentDocumentId}
+            className={`w-full px-4 py-2 text-left text-sm border-b border-gray-600 ${
+              currentDocumentId
+                ? 'text-white hover:bg-gray-700 cursor-pointer'
+                : 'text-gray-500 cursor-not-allowed'
+            }`}
+            title={!currentDocumentId ? 'Save document first to enable sharing' : ''}
+          >
+            Share Current
+          </button>
+
           {/* Documents list */}
           {loading ? (
             <div className="px-4 py-2 text-sm text-gray-400">Loading...</div>
@@ -402,6 +423,13 @@ export default function DocumentPicker({
           )}
         </div>
       )}
+
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        documentId={currentDocumentId}
+        initialIsPublic={false}
+      />
     </div>
   );
 }
