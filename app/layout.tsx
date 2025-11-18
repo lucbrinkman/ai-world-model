@@ -4,8 +4,9 @@ import { PostHogProvider } from "@/providers/posthog";
 import { CookieBanner } from "@/components/CookieBanner";
 
 export const metadata: Metadata = {
-  title: "AI World Model",
+  title: "Map of AI Futures",
   description: "Interactive probability map exploring potential AI futures",
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({
