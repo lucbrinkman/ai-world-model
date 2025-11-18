@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData, type DocumentData, type GraphNode } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
-import { loadFromLocalStorage, saveToLocalStorage, createDefaultDocumentData, clearLocalStorage } from '@/lib/documentState';
+import { loadFromLocalStorage, saveToLocalStorage, createDefaultDocumentData, clearLocalStorage, createEmptyDocumentData } from '@/lib/documentState';
 import { getLastOpenedDocument, loadDocument } from '@/lib/actions/documents';
 import { useAutoSave } from '@/lib/autoSave';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
@@ -715,10 +715,22 @@ export default function Home() {
     }
   }, []);
 
-  const handleCreateNewDocument = useCallback(() => {
+  const handleCreateNewDocument = useCallback((useTemplate: boolean) => {
     setCurrentDocumentId(null);
     setDocumentName('Untitled Document');
-    setGraphData(defaultGraphData);
+
+    if (useTemplate) {
+      // Load the full template with all question nodes and outcomes
+      setGraphData(defaultGraphData);
+    } else {
+      // Create an empty document with just a start node
+      const emptyData = createEmptyDocumentData();
+      setGraphData({
+        metadata: emptyData.metadata,
+        nodes: emptyData.nodes,
+      });
+    }
+
     setProbabilityRootIndex(startNodeIndex);
   }, []);
 

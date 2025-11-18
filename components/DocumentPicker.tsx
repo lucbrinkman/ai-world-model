@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Document } from '@/lib/types';
 import { getUserDocuments, deleteDocument, renameDocument } from '@/lib/actions/documents';
+import TemplateChoiceDialog from './TemplateChoiceDialog';
 
 interface DocumentPickerProps {
   currentDocumentId: string | null;
   currentDocumentName: string;
   isAuthenticated: boolean;
   onDocumentSelect: (documentId: string) => void;
-  onCreateNew: () => void;
+  onCreateNew: (useTemplate: boolean) => void;
   onRename: (newName: string) => void;
   onEditorClose?: () => void;
 }
@@ -31,6 +32,7 @@ export default function DocumentPicker({
   const [isHovering, setIsHovering] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -346,7 +348,7 @@ export default function DocumentPicker({
           {/* Create New button */}
           <button
             onClick={() => {
-              onCreateNew();
+              setShowTemplateDialog(true);
               setIsOpen(false);
             }}
             className="w-full px-4 py-2 text-left text-sm text-white hover:bg-gray-700 border-b border-gray-600 font-medium"
@@ -402,6 +404,20 @@ export default function DocumentPicker({
           )}
         </div>
       )}
+
+      {/* Template Choice Dialog */}
+      <TemplateChoiceDialog
+        isOpen={showTemplateDialog}
+        onChooseTemplate={() => {
+          onCreateNew(true);
+          setShowTemplateDialog(false);
+        }}
+        onChooseEmpty={() => {
+          onCreateNew(false);
+          setShowTemplateDialog(false);
+        }}
+        onCancel={() => setShowTemplateDialog(false)}
+      />
     </div>
   );
 }

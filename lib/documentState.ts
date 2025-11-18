@@ -84,3 +84,43 @@ export function createDefaultDocumentData(
     metadata,
   };
 }
+
+/**
+ * Create an empty document with just a start node
+ */
+export function createEmptyDocumentData(): DocumentData {
+  const startNode: GraphNode = {
+    id: 'sstart',
+    type: 's',
+    title: 'START',
+    description: '',
+    position: {
+      x: 150,
+      y: 120,
+    },
+    sliderIndex: null,
+    probability: null,
+    connections: [
+      {
+        targetX: 250, // Free-floating connection pointing to the right
+        targetY: 120,
+        type: '-',
+        label: '',
+      },
+    ],
+  };
+
+  const metadata: GraphMetadata = {
+    version: '1.0',
+    title: 'Map of AI Futures',
+    canvas: {
+      width: 1400,
+      height: 1800,
+    },
+  };
+
+  return {
+    nodes: [startNode],
+    metadata,
+  };
+}
