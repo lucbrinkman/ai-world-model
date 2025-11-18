@@ -52,6 +52,7 @@ interface FlowchartProps {
   onDestinationDotLeave?: () => void;
   onDestinationDotDragStart?: (edgeIndex: number) => void;
   onDestinationDotDragEnd?: () => void;
+  onCreateNodeFromFloatingArrow?: (edgeIndex: number, position: { x: number; y: number }) => void;
   editorCloseTimestampRef?: React.MutableRefObject<number>;
 }
 
@@ -101,6 +102,7 @@ export default function Flowchart({
   onDestinationDotLeave,
   onDestinationDotDragStart,
   onDestinationDotDragEnd,
+  onCreateNodeFromFloatingArrow,
   editorCloseTimestampRef,
 }: FlowchartProps) {
   // Create refs for all nodes, indexed by node ID (not array index!)
@@ -687,6 +689,7 @@ export default function Flowchart({
                 onDestinationDotDragEnd={onDestinationDotDragEnd}
                 screenToCanvasCoords={screenToCanvasCoords}
                 onPreviewChange={(node, pos) => handlePreviewChange(edgeIndex, node, pos)}
+                onCreateNodeFromFloatingArrow={onCreateNodeFromFloatingArrow}
               />
             );
           })}

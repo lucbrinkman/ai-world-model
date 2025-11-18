@@ -1,6 +1,7 @@
 import { Edge as EdgeType, Node, SNAP_DISTANCE } from '@/lib/types';
 import { isAncestorOf } from '@/lib/probability';
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { Plus } from 'lucide-react';
 
 interface ConnectorDotsProps {
   edge: EdgeType;
@@ -22,6 +23,7 @@ interface ConnectorDotsProps {
   onDestinationDotDragEnd?: () => void;
   screenToCanvasCoords?: (screenX: number, screenY: number) => { x: number; y: number };
   onPreviewChange?: (previewNode: Node | null, previewPos: { x: number; y: number } | null) => void;
+  onCreateNodeFromFloatingArrow?: (edgeIndex: number, position: { x: number; y: number }) => void;
 }
 
 export default function ConnectorDots({
@@ -44,9 +46,11 @@ export default function ConnectorDots({
   onDestinationDotDragEnd,
   screenToCanvasCoords,
   onPreviewChange,
+  onCreateNodeFromFloatingArrow,
 }: ConnectorDotsProps) {
   const [draggingConnector, setDraggingConnector] = useState<'source' | 'target' | null>(null);
   const [hoveredConnector, setHoveredConnector] = useState<'source' | 'target' | null>(null);
+  const [hoveredPlusButton, setHoveredPlusButton] = useState(false);
   const [previewTargetNode, setPreviewTargetNode] = useState<Node | null>(null);
   const [previewFloatingPos, setPreviewFloatingPos] = useState<{ x: number; y: number } | null>(null);
   const [blockedNodeTooltip, setBlockedNodeTooltip] = useState<{ x: number; y: number } | null>(null);
@@ -388,10 +392,74 @@ export default function ConnectorDots({
     };
   }, [draggingConnector, onReconnect, onEdgeSelect, onDestinationDotDragEnd, edgeIndex, allNodes, allEdges, nodeBounds, sourceNode, screenToCanvasCoords, hasMoved, mouseDownPos, visibilityMode]);
 
+  // Calculate new node position based on arrow direction
+  const calculateNewNodePosition = useCallback(() => {
+    // Get arrow direction vector (from source to target endpoint)
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    // Avoid division by zero for very short arrows
+    if (length < 1) {
+      return { x: x2 + 50, y: y2 };
+    }
+
+    // Normalize and extend beyond floating endpoint
+    const offsetDistance = 50;
+    const newX = x2 + (dx / length) * offsetDistance;
+    const newY = y2 + (dy / length) * offsetDistance;
+
+    return { x: newX, y: newY };
+  }, [x1, y1, x2, y2]);
+
+  // Handle plus button click
+  const handlePlusButtonClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (!onCreateNodeFromFloatingArrow) return;
+
+    const newNodePos = calculateNewNodePosition();
+    onCreateNodeFromFloatingArrow(edgeIndex, newNodePos);
+  }, [onCreateNodeFromFloatingArrow, edgeIndex, calculateNewNodePosition]);
+
+  // Calculate plus button position (diagonal: top-right relative to arrow direction)
+  const getPlusButtonPosition = useCallback(() => {
+    // Get arrow direction vector
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    // Avoid division by zero for very short arrows
+    if (length < 1) {
+      return { x: x2 + 20, y: y2 - 20 };
+    }
+
+    // Normalize the direction
+    const dirX = dx / length;
+    const dirY = dy / length;
+
+    // Get perpendicular to the right (rotate 90 degrees counter-clockwise in screen coords)
+    const perpRightX = -dirY;
+    const perpRightY = dirX;
+
+    // Position diagonally: forward along arrow + perpendicular to the right
+    const forwardOffset = 18; // Offset along the arrow direction
+    const rightOffset = 18; // Offset perpendicular to the right
+
+    const plusX = x2 + (dirX * forwardOffset) + (perpRightX * rightOffset);
+    const plusY = y2 + (dirY * forwardOffset) + (perpRightY * rightOffset);
+
+    return { x: plusX, y: plusY };
+  }, [x1, y1, x2, y2]);
+
   // Don't render anything if hidden
   if (visibilityMode === 'hidden') {
     return null;
   }
+
+  // Check if this is a floating arrow (only show plus button for floating arrows)
+  const isFloatingArrow = edge.target === undefined;
 
   return (
     <>
@@ -465,6 +533,74 @@ export default function ConnectorDots({
           onDestinationDotLeave?.();
         }}
       />
+
+      {/* Plus button for creating nodes (only for floating arrows, hide when dragging) */}
+      {isFloatingArrow && onCreateNodeFromFloatingArrow && !draggingConnector && (() => {
+        const plusPos = getPlusButtonPosition();
+        const buttonSize = hoveredPlusButton ? 16 : 12;
+
+        return (
+          <>
+            {/* Visible plus button */}
+            <div
+              style={{
+                position: 'absolute',
+                left: `${plusPos.x}px`,
+                top: `${plusPos.y}px`,
+                transform: `translate(-50%, -50%) ${hoveredPlusButton ? 'scale(1.1)' : 'scale(1)'}`,
+                width: `${buttonSize}px`,
+                height: `${buttonSize}px`,
+                borderRadius: '50%',
+                backgroundColor: hoveredPlusButton ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.3)', // blue-500/60 and blue-500/30
+                cursor: 'pointer',
+                pointerEvents: 'auto',
+                zIndex: targetNodeIsSelected ? 500 : 1000,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+              }}
+              onClick={handlePlusButtonClick}
+              onMouseEnter={() => {
+                setHoveredPlusButton(true);
+                onDestinationDotHover?.();
+              }}
+              onMouseLeave={() => {
+                setHoveredPlusButton(false);
+                onDestinationDotLeave?.();
+              }}
+            >
+              {/* Lucide Plus icon */}
+              <Plus size={buttonSize - 4} color="white" strokeWidth={2.5} />
+            </div>
+
+            {/* Invisible larger hitbox for easier clicking */}
+            <div
+              style={{
+                position: 'absolute',
+                left: `${plusPos.x}px`,
+                top: `${plusPos.y}px`,
+                transform: 'translate(-50%, -50%)',
+                width: '30px',
+                height: '30px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                pointerEvents: 'auto',
+                zIndex: targetNodeIsSelected ? 499 : 999,
+              }}
+              onClick={handlePlusButtonClick}
+              onMouseEnter={() => {
+                setHoveredPlusButton(true);
+                onDestinationDotHover?.();
+              }}
+              onMouseLeave={() => {
+                setHoveredPlusButton(false);
+                onDestinationDotLeave?.();
+              }}
+            />
+          </>
+        );
+      })()}
 
       {/* Blocked node tooltip */}
       {blockedNodeTooltip && (

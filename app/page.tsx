@@ -860,6 +860,59 @@ export default function Home() {
 
   }, [graphData]);
 
+  const handleCreateNodeFromFloatingArrow = useCallback((edgeIndex: number, position: { x: number; y: number }) => {
+    const edge = edges[edgeIndex];
+    if (!edge || edge.target !== undefined) return; // Only handle floating arrows
+
+    // Generate a unique ID for the new node
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(2, 9);
+    const newNodeId = `node_${timestamp}_${randomSuffix}`;
+
+    // Create a new ambivalent outcome node at the specified position
+    const newNode = {
+      id: newNodeId,
+      type: 'a' as const, // Ambivalent outcome node type
+      title: '',
+      connections: [], // Outcome nodes have no outgoing connections
+      position: { x: position.x, y: position.y },
+      sliderIndex: null,
+      probability: null,
+    };
+
+    // Get the source node ID
+    const sourceNodeId = nodes[edge.source].id;
+
+    // Update graph: add new node and reconnect the floating arrow to it
+    setGraphData(prev => {
+      const updatedNodes = prev.nodes.map(node => {
+        if (node.id === sourceNodeId) {
+          // Update the connection to point to the new node
+          const updatedConnections = node.connections.map((conn) => {
+            // Find the floating connection that matches this edge
+            const isMatchingConnection =
+              conn.targetX === edge.targetX &&
+              conn.targetY === edge.targetY &&
+              conn.type === edge.yn;
+
+            if (isMatchingConnection) {
+              // Connect to the new node
+              return { ...conn, targetId: newNodeId, targetX: undefined, targetY: undefined };
+            }
+            return conn;
+          });
+          return { ...node, connections: updatedConnections };
+        }
+        return node;
+      });
+
+      return {
+        ...prev,
+        nodes: [...updatedNodes, newNode],
+      };
+    });
+  }, [edges, nodes]);
+
   const handleInitiateDelete = useCallback((nodeId: string) => {
     // Find the node to delete
     const node = graphData.nodes.find(n => n.id === nodeId);
@@ -1216,6 +1269,7 @@ export default function Home() {
             onDestinationDotLeave={handleDestinationDotLeave}
             onDestinationDotDragStart={handleDestinationDotDragStart}
             onDestinationDotDragEnd={handleDestinationDotDragEnd}
+            onCreateNodeFromFloatingArrow={handleCreateNodeFromFloatingArrow}
             editorCloseTimestampRef={editorCloseTimestampRef}
           />
           <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />
