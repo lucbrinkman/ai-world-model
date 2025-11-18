@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Document } from '@/lib/types';
 import { getUserDocuments, deleteDocument, renameDocument } from '@/lib/actions/documents';
 import TemplateChoiceDialog from './TemplateChoiceDialog';
+import NewDocumentWarningDialog from './NewDocumentWarningDialog';
 
 interface DocumentPickerProps {
   currentDocumentId: string | null;
@@ -33,6 +34,7 @@ export default function DocumentPicker({
   const [showTooltip, setShowTooltip] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -247,7 +249,7 @@ export default function DocumentPicker({
     }
   };
 
-  // For anonymous users, show non-interactive name with option to rename
+  // For anonymous users, show dropdown with create new option
   if (!isAuthenticated) {
     if (isRenaming) {
       return (
@@ -266,23 +268,92 @@ export default function DocumentPicker({
     }
 
     return (
-      <div className="relative inline-block">
-        <span
-          className={`text-white font-medium text-sm cursor-text px-2 py-1 rounded transition-all ${
-            isHovering ? 'border border-gray-500' : 'border border-transparent'
-          }`}
-          onClick={() => setIsRenaming(true)}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          {renameValue}
-        </span>
-        {showTooltip && (
-          <div className="absolute top-full left-0 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap">
-            Rename
+      <>
+        <div className="relative" ref={dropdownRef}>
+          <div className="flex items-center gap-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm">
+            <div className="relative inline-block">
+              <span
+                className={`font-medium cursor-text px-1 py-0.5 rounded transition-all ${
+                  isHovering ? 'border border-gray-500' : 'border border-transparent'
+                }`}
+                onClick={() => setIsRenaming(true)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+              >
+                {renameValue}
+              </span>
+              {showTooltip && (
+                <div className="absolute top-full left-0 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap z-50">
+                  Rename
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="hover:bg-gray-700 p-1 rounded"
+            >
+              <svg
+                className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
           </div>
-        )}
-      </div>
+
+          {isOpen && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-gray-800 border border-gray-600 rounded shadow-lg z-50">
+              {/* Create New button */}
+              <button
+                onClick={() => {
+                  setShowWarningDialog(true);
+                  setIsOpen(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-white hover:bg-gray-700 border-b border-gray-600 font-medium"
+              >
+                + Create New Document
+              </button>
+
+              {/* Rename Current button */}
+              <button
+                onClick={() => {
+                  setIsRenaming(true);
+                  setIsOpen(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-white hover:bg-gray-700"
+              >
+                Rename Current
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Warning Dialog */}
+        <NewDocumentWarningDialog
+          isOpen={showWarningDialog}
+          onConfirm={() => {
+            setShowWarningDialog(false);
+            setShowTemplateDialog(true);
+          }}
+          onCancel={() => setShowWarningDialog(false)}
+        />
+
+        {/* Template Choice Dialog */}
+        <TemplateChoiceDialog
+          isOpen={showTemplateDialog}
+          onChooseTemplate={() => {
+            onCreateNew(true);
+            setShowTemplateDialog(false);
+          }}
+          onChooseEmpty={() => {
+            onCreateNew(false);
+            setShowTemplateDialog(false);
+          }}
+          onCancel={() => setShowTemplateDialog(false)}
+        />
+      </>
     );
   }
 
