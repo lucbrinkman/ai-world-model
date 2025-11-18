@@ -33,7 +33,7 @@ export default function TemplateChoiceDialog({
             onClick={onChooseTemplate}
             className="w-full px-6 py-4 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors text-left"
           >
-            <div className="font-semibold mb-1">Start with Template</div>
+            <div className="font-semibold mb-1">Start from Template</div>
             <div className="text-sm text-blue-100">
               Load the full AI futures map with 21 questions and outcomes
             </div>
