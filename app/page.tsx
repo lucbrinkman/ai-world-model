@@ -921,22 +921,15 @@ function HomeContent() {
     const randomSuffix = Math.random().toString(36).substring(2, 9);
     const newNodeId = `node_${timestamp}_${randomSuffix}`;
 
-    // Create a new intermediate node at the clicked position
+    // Create a new ambivalent outcome node at the clicked position
     const newNode = {
       id: newNodeId,
-      type: 'i' as const, // Intermediate node type
-      title: 'New Node',
-      connections: [
-        {
-          type: '-' as const, // Always connection
-          targetX: x + 75, // Free-floating edge pointing to the right
-          targetY: y,
-          label: 'Always',
-        },
-      ],
+      type: 'a' as const, // Ambivalent outcome node type
+      title: '',
+      connections: [], // Outcome nodes have no outgoing connections
       position: { x, y },
-      sliderIndex: null, // Intermediate nodes don't have sliders
-      probability: null, // Intermediate nodes don't have probability values
+      sliderIndex: null,
+      probability: null,
     };
 
     setGraphData(prev => ({
