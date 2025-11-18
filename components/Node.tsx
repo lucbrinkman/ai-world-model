@@ -403,6 +403,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         borderBottomRightRadius: '12px',
         cursor: isDragging ? 'grabbing' : 'pointer',
         userSelect: isDragging ? 'none' : 'auto',
+        zIndex: isNodeSelected ? 1000 : 'auto',
       }}
       onClick={() => {
         // Only trigger onClick if we didn't drag
