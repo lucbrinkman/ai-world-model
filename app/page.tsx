@@ -1108,6 +1108,7 @@ export default function Home() {
                 isAuthenticated={!!user}
                 error={saveError}
                 lastSavedAt={lastSavedAt}
+                onSignInClick={() => setAuthModalOpen(true)}
               />
             </div>
             <div className="flex items-center gap-3">
