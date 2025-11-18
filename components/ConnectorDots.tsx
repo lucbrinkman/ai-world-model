@@ -421,7 +421,11 @@ export default function ConnectorDots({
 
     const newNodePos = calculateNewNodePosition();
     onCreateNodeFromFloatingArrow(edgeIndex, newNodePos);
-  }, [onCreateNodeFromFloatingArrow, edgeIndex, calculateNewNodePosition]);
+
+    // Clear hover state since the plus button will disappear after creating the node
+    setHoveredPlusButton(false);
+    onDestinationDotLeave?.();
+  }, [onCreateNodeFromFloatingArrow, edgeIndex, calculateNewNodePosition, onDestinationDotLeave]);
 
   // Calculate plus button position (diagonal: top-right relative to arrow direction)
   const getPlusButtonPosition = useCallback(() => {
