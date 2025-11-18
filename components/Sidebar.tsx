@@ -50,34 +50,50 @@ export default function Sidebar({
 
   return (
     <div
-      className={`h-screen bg-background border-r border-gray-800 flex-shrink-0 transition-all duration-300 ease-in-out relative overflow-hidden ${
+      className={`h-screen bg-background border-r border-gray-800 flex-shrink-0 transition-all duration-300 ease-in-out relative ${
         isCollapsed ? 'w-0' : 'w-96'
       }`}
     >
-      {/* Expand/Collapse Button - always visible */}
-      <button
-        onClick={onToggleCollapse}
-        className={`absolute top-[125px] bg-gray-800 hover:bg-gray-700 p-2 rounded-r-md border-r border-t border-b border-gray-700 transition-all duration-300 z-10 ${
-          isCollapsed ? 'left-0' : 'right-0 border-l'
-        }`}
-        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d={isCollapsed ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"}
-          />
-        </svg>
-      </button>
+      {/* Expand Button - only visible when collapsed */}
+      {isCollapsed && (
+        <button
+          onClick={onToggleCollapse}
+          className="absolute left-0 top-[125px] bg-gray-800 hover:bg-gray-700 p-2 rounded-r-md border-r border-t border-b border-gray-700 z-10"
+          aria-label="Expand sidebar"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
+      )}
 
       {/* Sidebar Content */}
-      <div className={`h-screen overflow-y-auto p-6 ${isCollapsed ? 'invisible' : 'visible'}`}>
+      <div className={`h-screen overflow-y-auto overflow-x-hidden p-6 ${isCollapsed ? 'invisible' : 'visible'}`}>
 
-      {/* Options Section */}
+      {/* Options Section with collapse button */}
       <div className="mb-6">
-        <h2 className="text-lg font-bold mb-4">Options</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">Options</h2>
+          <button
+            onClick={onToggleCollapse}
+            className="p-1.5 hover:bg-gray-700 rounded transition-colors"
+            aria-label="Collapse sidebar"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+        </div>
 
         {/* Transparent paths slider */}
         <div className="mb-3">
