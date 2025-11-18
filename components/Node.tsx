@@ -80,8 +80,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   const [editText, setEditText] = useState(text);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Slider popup hover state
-  const [isSliderHovered, setIsSliderHovered] = useState(false);
+  // Slider dragging state - only needed to keep slider visible while dragging
+  const [isSliderDragging, setIsSliderDragging] = useState(false);
 
   // Combined ref callback to set both internal ref and forwarded ref
   const setRefs = useCallback((node: HTMLDivElement | null) => {
@@ -375,11 +375,14 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   // Corner radius for top-left (shared between node and badge)
   const topLeftRadius = '8px';
 
+  // For question nodes with sliders, extend the hover area to include the slider
+  const showSlider = !isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange;
+
   return (
-    <div  // Node container
+    <div  // Node container (also group for hover)
         ref={setRefs}
         data-node="true"
-        className={`absolute border-solid px-1.5 py-0.5 ${isDragging ? '' : 'transition-all duration-200'}`}
+        className={`group absolute border-solid px-1.5 py-0.5 ${isDragging ? '' : 'transition-all duration-200'}`}
       style={{
         left: `${x}px`,
         top: `${y}px`,
@@ -552,26 +555,12 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         />
       )}
 
-      {/* Invisible hover target for slider - positioned where slider would appear */}
-      {!isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange && !(isHovered || isSliderHovered || isNodeSelected) && (
+      {/* Pop-up slider - uses CSS group-hover, always rendered for question nodes */}
+      {showSlider && (
         <div
-          className="absolute pointer-events-auto"
-          style={{
-            top: '100%',
-            left: '-12px',
-            right: '-12px',
-            height: '40px',
-            zIndex: 999,
-          }}
-          onMouseEnter={() => setIsSliderHovered(true)}
-          onMouseLeave={() => setIsSliderHovered(false)}
-        />
-      )}
-
-      {/* Pop-up slider - shown when hovering or selecting question nodes */}
-      {(isHovered || isSliderHovered || isNodeSelected) && !isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange && (
-        <div
-          className="absolute pointer-events-auto"
+          className={`absolute pointer-events-auto transition-opacity duration-200 ${
+            isNodeSelected || isSliderDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          }`}
           style={{
             top: '100%',
             left: '-12px',
@@ -584,8 +573,6 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
           }}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
-          onMouseEnter={() => setIsSliderHovered(true)}
-          onMouseLeave={() => setIsSliderHovered(false)}
         >
           <div
             className="bg-gray-900 rounded-lg shadow-xl px-2 flex items-center"
@@ -603,12 +590,18 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
                 e.stopPropagation();
                 onSliderChange(Number(e.target.value));
               }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                setIsSliderDragging(true);
+              }}
               onMouseUp={(e) => {
                 e.stopPropagation();
+                setIsSliderDragging(false);
                 onSliderChangeComplete?.();
               }}
               onTouchEnd={(e) => {
                 e.stopPropagation();
+                setIsSliderDragging(false);
                 onSliderChangeComplete?.();
               }}
               className="w-full h-1 rounded-lg appearance-none cursor-pointer block"
