@@ -666,8 +666,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
           },
         ];
 
-        // Filter out left arrow for outcome nodes to avoid overlap with outcome type bubbles
-        const buttons = isOutcomeNode
+        // Filter out left arrow for SELECTED outcome nodes to avoid overlap with outcome type bubbles
+        const buttons = (isOutcomeNode && isNodeSelected)
           ? allButtons.filter(btn => btn.direction !== 'left')
           : allButtons;
 
