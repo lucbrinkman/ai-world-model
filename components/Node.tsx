@@ -552,6 +552,22 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         />
       )}
 
+      {/* Invisible hover target for slider - positioned where slider would appear */}
+      {!isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange && !(isHovered || isSliderHovered || isNodeSelected) && (
+        <div
+          className="absolute pointer-events-auto"
+          style={{
+            top: '100%',
+            left: '-12px',
+            right: '-12px',
+            height: '40px',
+            zIndex: 999,
+          }}
+          onMouseEnter={() => setIsSliderHovered(true)}
+          onMouseLeave={() => setIsSliderHovered(false)}
+        />
+      )}
+
       {/* Pop-up slider - shown when hovering or selecting question nodes */}
       {(isHovered || isSliderHovered || isNodeSelected) && !isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange && (
         <div
