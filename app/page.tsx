@@ -593,7 +593,7 @@ export default function Home() {
         return node;
       });
 
-      // Push away any floating arrow endpoints that are underneath this node
+      // Connect any floating arrow endpoints to this node if dropped on them
       const nodeWidth = 145;
       const nodeHeight = 55;
       const padding = 10; // Small padding around the node
@@ -616,41 +616,12 @@ export default function Home() {
               connection.targetY >= nodeBounds.top &&
               connection.targetY <= nodeBounds.bottom
             ) {
-              // Calculate direction from node center to endpoint
-              const dx = connection.targetX - newX;
-              const dy = connection.targetY - newY;
-              const distance = Math.sqrt(dx * dx + dy * dy);
-
-              // If endpoint is at the exact center, push it to the right
-              if (distance === 0) {
-                return {
-                  ...connection,
-                  targetX: nodeBounds.right + 5,
-                  targetY: newY,
-                };
-              }
-
-              // Normalize direction
-              const normalizedDx = dx / distance;
-              const normalizedDy = dy / distance;
-
-              // Calculate which edge of the rectangle we'll exit from
-              // and the distance to that edge plus padding
-              const halfWidth = nodeWidth / 2;
-              const halfHeight = nodeHeight / 2;
-
-              // Find which edge we hit first by comparing ratios
-              const tX = normalizedDx !== 0 ? halfWidth / Math.abs(normalizedDx) : Infinity;
-              const tY = normalizedDy !== 0 ? halfHeight / Math.abs(normalizedDy) : Infinity;
-              const t = Math.min(tX, tY);
-
-              // Push distance is to the edge plus padding plus extra space (doubled)
-              const pushDistance = t + (padding + 5) * 2;
-
+              // Connect the arrow to the dropped node
               return {
                 ...connection,
-                targetX: newX + normalizedDx * pushDistance,
-                targetY: newY + normalizedDy * pushDistance,
+                targetId: nodeId,
+                targetX: undefined,
+                targetY: undefined,
               };
             }
           }
