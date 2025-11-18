@@ -500,7 +500,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         <div
           className="absolute flex flex-row gap-1 z-10"
           style={{
-            top: `${-32 - borderWidth}px`,
+            top: `${-26 - borderWidth}px`,
             right: `${-borderWidth}px`,
           }}
         >
@@ -519,7 +519,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
                 e.stopPropagation();
                 onSetProbabilityRootHoverEnd?.();
               }}
-              className={`${isSelected ? 'bg-blue-600' : 'bg-gray-400'} hover:bg-blue-600 text-white rounded w-7 h-7 flex items-center justify-center shadow-lg transition-colors`}
+              className={`${isSelected ? 'bg-blue-600' : 'bg-gray-400'} hover:bg-blue-600 text-white rounded w-6 h-6 flex items-center justify-center shadow-lg transition-colors`}
               title="Set as start (100% probability)"
             >
               <Pin size={14} />
@@ -533,7 +533,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
                 e.stopPropagation();
                 onDelete(node.id);
               }}
-              className="bg-gray-400 hover:bg-red-600 text-white rounded w-7 h-7 flex items-center justify-center shadow-lg transition-colors"
+              className="bg-gray-400 hover:bg-red-600 text-white rounded w-6 h-6 flex items-center justify-center shadow-lg transition-colors"
               title="Delete node (Delete/Backspace)"
             >
               <Trash2 size={14} />
@@ -552,8 +552,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         />
       )}
 
-      {/* Pop-up slider - shown when hovering on question nodes */}
-      {(isHovered || isSliderHovered) && !isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange && (
+      {/* Pop-up slider - shown when hovering or selecting question nodes */}
+      {(isHovered || isSliderHovered || isNodeSelected) && !isDragging && type === NT.QUESTION && sliderValue !== undefined && onSliderChange && (
         <div
           className="absolute pointer-events-auto"
           style={{

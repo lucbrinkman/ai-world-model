@@ -432,27 +432,13 @@ export default function Edge({
             y={boxY}
             width={boxDimensions.width}
             height={boxDimensions.height}
-            fill={isSelected ? "#1E90FF" : "#0C0A16"}
-            opacity={isSelected ? 0.3 : 0.95}
+            fill="#0C0A16"
+            opacity={0.95}
             rx={3}
             style={{ cursor: 'pointer', pointerEvents: 'all' }}
             onClick={handleLabelClick}
             onDoubleClick={handleLabelDoubleClick}
           />
-          {/* Selection border */}
-          {isSelected && (
-            <rect
-              x={boxX}
-              y={boxY}
-              width={boxDimensions.width}
-              height={boxDimensions.height}
-              fill="none"
-              stroke="#1E90FF"
-              strokeWidth="2"
-              rx={3}
-              style={{ pointerEvents: 'none' }}
-            />
-          )}
           {!isEditingLabel ? (
             <>
               {/* Description text */}
