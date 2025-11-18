@@ -426,7 +426,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
     >
       {/* Probability badge at top-left - absolutely positioned */}
       <div
-        className="text-xs font-mono px-1.5 py-0.5"
+        className="text-xs font-mono px-1.5 py-0.5 transition-all duration-200"
         style={{
           position: 'absolute',
           top: 0,
@@ -508,7 +508,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         <div
           className="absolute flex flex-row gap-1 z-10"
           style={{
-            top: `${-26 - borderWidth}px`,
+            top: `${-23 - borderWidth}px`,
             right: `${-borderWidth}px`,
           }}
         >
@@ -527,7 +527,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
                 e.stopPropagation();
                 onSetProbabilityRootHoverEnd?.();
               }}
-              className={`${isSelected ? 'bg-blue-600' : 'bg-gray-400'} hover:bg-blue-600 text-white rounded w-6 h-6 flex items-center justify-center shadow-lg transition-colors`}
+              className={`${isSelected ? 'bg-blue-600' : 'bg-gray-400'} hover:bg-blue-600 text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors`}
               title="Set as start (100% probability)"
             >
               <Pin size={14} />
@@ -541,7 +541,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
                 e.stopPropagation();
                 onDelete(node.id);
               }}
-              className="bg-gray-400 hover:bg-red-600 text-white rounded w-6 h-6 flex items-center justify-center shadow-lg transition-colors"
+              className="bg-gray-400 hover:bg-red-600 text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
               title="Delete node (Delete/Backspace)"
             >
               <Trash2 size={14} />
@@ -625,43 +625,52 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
       {showAddArrows && onAddArrow && (() => {
         // Determine if this is an outcome node (has colored bubbles on the left)
         const isOutcomeNode = type === 'g' || type === 'a' || type === 'e';
-        const offset = 15; // Distance from node edge in pixels
+        const offset = 10; // Distance from node edge in pixels
+        const hoverPadding = 8; // Extra padding to bridge gap between node and button
 
         const allButtons = [
           {
             direction: 'top' as const,
             icon: ArrowUp,
-            style: {
-              top: `${-offset}px`,
+            containerStyle: {
+              position: 'absolute' as const,
+              top: `${-offset}px`, // Adjust for padding and transform
               left: '50%',
               transform: 'translate(-50%, -50%)',
+              paddingBottom: `${hoverPadding}px`, // Extend hover area toward node
             },
           },
           {
             direction: 'bottom' as const,
             icon: ArrowDown,
-            style: {
-              bottom: `${-offset}px`,
+            containerStyle: {
+              position: 'absolute' as const,
+              bottom: `${-offset}px`, // Adjust for padding and transform
               left: '50%',
               transform: 'translate(-50%, 50%)',
+              paddingTop: `${hoverPadding}px`, // Extend hover area toward node
             },
           },
           {
             direction: 'left' as const,
             icon: ArrowLeft,
-            style: {
-              left: `${-offset}px`,
+            containerStyle: {
+              position: 'absolute' as const,
+              left: `${-offset}px`, // Adjust for padding and transform
               top: '50%',
               transform: 'translate(-50%, -50%)',
+              paddingRight: `${hoverPadding}px`, // Extend hover area toward node
             },
           },
           {
             direction: 'right' as const,
             icon: ArrowRight,
-            style: {
-              right: `${-offset}px`,
+            containerStyle: {
+              position: 'absolute' as const,
+              right: `${-offset}px`, // Adjust for padding and transform
               top: '50%',
               transform: 'translate(50%, -50%)',
+              paddingLeft: `${hoverPadding}px`, // Extend hover area toward node
             },
           },
         ];
@@ -671,26 +680,30 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
           ? allButtons.filter(btn => btn.direction !== 'left')
           : allButtons;
 
-        return buttons.map(({ direction, icon: Icon, style }) => (
-          <button
+        return buttons.map(({ direction, icon: Icon, containerStyle }) => (
+          <div
             key={direction}
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              onAddArrow(direction);
-            }}
             style={{
-              position: 'absolute',
-              ...style,
+              ...containerStyle,
               zIndex: 100,
+              pointerEvents: 'auto',
             }}
-            className={`bg-blue-500/30 hover:bg-blue-500/60 text-white rounded-full p-0.5 transition-all duration-200 hover:scale-110 border border-blue-400/50 pointer-events-auto ${
+            className={`${
               isNodeSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
             }`}
-            title={`Add arrow ${direction}`}
           >
-            <Icon size={12} />
-          </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onAddArrow(direction);
+              }}
+              className="bg-blue-500/30 hover:bg-blue-500/60 text-white rounded-full p-0.5 transition-all duration-200 hover:scale-110 border border-blue-400/50"
+              title={`Add arrow ${direction}`}
+            >
+              <Icon size={12} />
+            </button>
+          </div>
         ));
       })()}
     </div>
