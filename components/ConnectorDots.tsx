@@ -457,13 +457,45 @@ export default function ConnectorDots({
     return { x: plusX, y: plusY };
   }, [x1, y1, x2, y2]);
 
-  // Don't render anything if hidden
+  // Check if this is a floating arrow (only show plus button for floating arrows)
+  const isFloatingArrow = edge.target === undefined;
+
+  // For floating arrows, always render plus button hitbox (even when dots are hidden)
+  // This allows hovering the plus button area to show both buttons
+  if (visibilityMode === 'hidden' && isFloatingArrow && onCreateNodeFromFloatingArrow && !draggingConnector) {
+    const plusPos = getPlusButtonPosition();
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          left: `${plusPos.x}px`,
+          top: `${plusPos.y}px`,
+          transform: 'translate(-50%, -50%)',
+          width: '30px',
+          height: '30px',
+          borderRadius: '50%',
+          cursor: 'pointer',
+          pointerEvents: 'auto',
+          zIndex: targetNodeIsSelected ? 499 : 999,
+        }}
+        onClick={handlePlusButtonClick}
+        onMouseEnter={() => {
+          setHoveredPlusButton(true);
+          onDestinationDotHover?.();
+        }}
+        onMouseLeave={() => {
+          setHoveredPlusButton(false);
+          onDestinationDotLeave?.();
+        }}
+      />
+    );
+  }
+
+  // Don't render anything else if hidden
   if (visibilityMode === 'hidden') {
     return null;
   }
-
-  // Check if this is a floating arrow (only show plus button for floating arrows)
-  const isFloatingArrow = edge.target === undefined;
 
   return (
     <>
