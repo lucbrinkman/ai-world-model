@@ -453,7 +453,7 @@ export default function Home() {
       const updatedNodes = prev.nodes.map(node => {
         if (node.id === nodeId) {
           // Calculate floating endpoint position based on direction
-          const offset = 150; // Distance from node center
+          const offset = 75; // Distance from node center
           let targetX = node.position.x;
           let targetY = node.position.y;
 
@@ -843,7 +843,7 @@ export default function Home() {
       connections: [
         {
           type: '-' as const, // Always connection
-          targetX: x + 150, // Free-floating edge pointing to the right
+          targetX: x + 75, // Free-floating edge pointing to the right
           targetY: y,
           label: 'Always',
         },
@@ -1054,13 +1054,13 @@ export default function Home() {
             if (connections.length === 0) {
               // Create 2 new free-floating connections
               connections = [
-                { type: 'y' as const, targetX: n.position.x + 150, targetY: n.position.y - 50, label: 'Yes' },
-                { type: 'n' as const, targetX: n.position.x + 150, targetY: n.position.y + 50, label: 'No' },
+                { type: 'y' as const, targetX: n.position.x + 75, targetY: n.position.y - 50, label: 'Yes' },
+                { type: 'n' as const, targetX: n.position.x + 75, targetY: n.position.y + 50, label: 'No' },
               ];
             } else if (connections.length === 1) {
               // Keep existing as YES, add NO
               connections[0] = { ...connections[0], type: 'y' as const };
-              connections.push({ type: 'n' as const, targetX: n.position.x + 150, targetY: n.position.y + 50, label: 'No' });
+              connections.push({ type: 'n' as const, targetX: n.position.x + 75, targetY: n.position.y + 50, label: 'No' });
             } else {
               // Has 2+ connections: convert first to YES, second to NO, keep rest as-is
               connections[0] = { ...connections[0], type: 'y' as const };
