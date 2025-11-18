@@ -41,7 +41,7 @@ interface FlowchartProps {
   onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
   onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
   onDeleteEdge?: (edgeIndex: number) => void;
-  onAddArrow?: (nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', targetX?: number, targetY?: number) => void;
+  onAddArrow?: (nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number) => void;
   onNewArrowPreviewChange?: (nodeId: string, pos: { x: number; y: number } | null) => void;
   onCancelNewArrow?: (nodeId: string) => void;
   onConfirmNewArrow?: (nodeId: string, targetX: number, targetY: number) => void;
@@ -628,7 +628,10 @@ export default function Flowchart({
                 onSliderChange={nodeSliderValue !== undefined && onSliderChange ? (value) => onSliderChange(node.id, value) : undefined}
                 onSliderChangeComplete={nodeSliderValue !== undefined && onSliderChangeComplete ? () => onSliderChangeComplete(node.id) : undefined}
                 showAddArrows={shouldShowAddArrows}
-                onAddArrow={shouldShowAddArrows ? (direction) => onAddArrow(node.id, direction) : undefined}
+                onAddArrow={shouldShowAddArrows ? (direction) => {
+                  const bounds = nodeBounds.get(node.id);
+                  onAddArrow(node.id, direction, bounds?.width, bounds?.height);
+                } : undefined}
               />
             );
           })}

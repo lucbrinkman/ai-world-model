@@ -432,7 +432,7 @@ export default function Home() {
   }, [edges, nodes, graphData.nodes]);
 
   // Add arrow handler
-  const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right') => {
+  const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number) => {
     // Find the node we're adding an arrow to
     const targetNode = graphData.nodes.find(n => n.id === nodeId);
     if (!targetNode) return;
@@ -453,22 +453,26 @@ export default function Home() {
       const updatedNodes = prev.nodes.map(node => {
         if (node.id === nodeId) {
           // Calculate floating endpoint position based on direction
-          const offset = 75; // Distance from node center
+          // Use actual node dimensions if available, with fallbacks
+          const width = nodeWidth ?? 145;
+          const height = nodeHeight ?? 55;
+          const desiredClearance = 50; // How far beyond the node edge we want the endpoint
+
           let targetX = node.position.x;
           let targetY = node.position.y;
 
           switch (direction) {
             case 'top':
-              targetY -= offset;
+              targetY -= (height / 2 + desiredClearance);
               break;
             case 'bottom':
-              targetY += offset;
+              targetY += (height / 2 + desiredClearance);
               break;
             case 'left':
-              targetX -= offset;
+              targetX -= (width / 2 + desiredClearance);
               break;
             case 'right':
-              targetX += offset;
+              targetX += (width / 2 + desiredClearance);
               break;
           }
 
