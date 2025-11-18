@@ -9,6 +9,7 @@ import Flowchart from '@/components/Flowchart';
 import ZoomControls from '@/components/ZoomControls';
 import DragHint from '@/components/DragHint';
 import { WelcomeModal } from '@/components/WelcomeModal';
+import { AuthModal } from '@/components/auth/AuthModal';
 import DeleteNodeDialog from '@/components/DeleteNodeDialog';
 import DeleteEdgeDialog from '@/components/DeleteEdgeDialog';
 import MobileWarning from '@/components/MobileWarning';
@@ -42,6 +43,7 @@ export default function Home() {
   const [showMobileWarning, setShowMobileWarning] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Zoom state (pan is now handled by native scrolling)
@@ -1109,6 +1111,15 @@ export default function Home() {
               />
             </div>
             <div className="flex items-center gap-3">
+              {/* Show Sign In button when user is not logged in */}
+              {!authLoading && !user && (
+                <button
+                  onClick={() => setAuthModalOpen(true)}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md text-sm transition-colors font-medium"
+                >
+                  Sign In
+                </button>
+              )}
               <Link
                 href="/about"
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition-colors"
@@ -1181,6 +1192,12 @@ export default function Home() {
         isOpen={showWelcomeModal}
         onClose={() => setShowWelcomeModal(false)}
         userEmail={user?.email || ''}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
       />
 
       {/* Delete Node Dialog */}
