@@ -48,36 +48,32 @@ export default function Sidebar({
     .sort((a, b) => (a.node.sliderIndex || 0) - (b.node.sliderIndex || 0))
     .map(({ index }) => index);
 
-  if (isCollapsed) {
-    return (
-      <div className="fixed left-0 top-[125px] h-screen z-10">
-        <button
-          onClick={onToggleCollapse}
-          className="bg-gray-800 hover:bg-gray-700 p-2 rounded-r-md border-r border-t border-b border-gray-700 transition-colors"
-          aria-label="Expand sidebar"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-96 h-screen overflow-y-auto bg-background border-r border-gray-800 p-6 flex-shrink-0 transition-all duration-300">
-      {/* Collapse Button */}
-      <div className="mb-6 flex justify-end">
-        <button
-          onClick={onToggleCollapse}
-          className="text-gray-400 hover:text-gray-300 transition-colors"
-          aria-label="Collapse sidebar"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-      </div>
+    <div
+      className={`h-screen bg-background border-r border-gray-800 flex-shrink-0 transition-all duration-300 ease-in-out relative overflow-hidden ${
+        isCollapsed ? 'w-0' : 'w-96'
+      }`}
+    >
+      {/* Expand/Collapse Button - always visible */}
+      <button
+        onClick={onToggleCollapse}
+        className={`absolute top-[125px] bg-gray-800 hover:bg-gray-700 p-2 rounded-r-md border-r border-t border-b border-gray-700 transition-all duration-300 z-10 ${
+          isCollapsed ? 'left-0' : 'right-0 border-l'
+        }`}
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d={isCollapsed ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"}
+          />
+        </svg>
+      </button>
+
+      {/* Sidebar Content */}
+      <div className={`h-screen overflow-y-auto p-6 ${isCollapsed ? 'invisible' : 'visible'}`}>
 
       {/* Options Section */}
       <div className="mb-6">
@@ -161,6 +157,7 @@ export default function Sidebar({
             );
           })}
         </div>
+      </div>
       </div>
     </div>
   );
