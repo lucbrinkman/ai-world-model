@@ -11,6 +11,7 @@ interface DocumentPickerProps {
   onDocumentSelect: (documentId: string) => void;
   onCreateNew: () => void;
   onRename: (newName: string) => void;
+  onEditorClose?: () => void;
 }
 
 export default function DocumentPicker({
@@ -20,6 +21,7 @@ export default function DocumentPicker({
   onDocumentSelect,
   onCreateNew,
   onRename,
+  onEditorClose,
 }: DocumentPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -170,6 +172,7 @@ export default function DocumentPicker({
       setIsHovering(false);
       setShowTooltip(false);
       setRenameError(null);
+      onEditorClose?.();
       return;
     }
 
@@ -195,13 +198,14 @@ export default function DocumentPicker({
     setIsHovering(false);
     setShowTooltip(false);
     setRenameError(null);
+    onEditorClose?.();
 
     // Set cooldown period to prevent hover from immediately reactivating
     justRenamed.current = true;
     setTimeout(() => {
       justRenamed.current = false;
     }, 300); // 300ms cooldown
-  }, [renameValue, currentDocumentName, isAuthenticated, currentDocumentId, onRename, renameError]);
+  }, [renameValue, currentDocumentName, isAuthenticated, currentDocumentId, onRename, renameError, onEditorClose]);
 
   // Handle clicks outside when renaming to submit
   useEffect(() => {
@@ -209,6 +213,9 @@ export default function DocumentPicker({
 
     const handleClickOutside = (event: MouseEvent) => {
       if (renameInputRef.current && !renameInputRef.current.contains(event.target as Node)) {
+        // Call onEditorClose FIRST to set the timestamp before any other handlers run
+        onEditorClose?.();
+
         // If there's an error, reset the value instead of trying to submit again
         if (renameError) {
           setRenameValue(currentDocumentName);
@@ -234,6 +241,7 @@ export default function DocumentPicker({
       setRenameValue(currentDocumentName);
       setRenameError(null);
       setIsRenaming(false);
+      onEditorClose?.();
     }
   };
 

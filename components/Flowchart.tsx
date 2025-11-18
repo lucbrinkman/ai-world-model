@@ -47,6 +47,7 @@ interface FlowchartProps {
   onBackgroundClick?: () => void;
   onSliderChange?: (nodeId: string, value: number) => void;
   onSliderChangeComplete?: (nodeId: string) => void;
+  editorCloseTimestampRef?: React.MutableRefObject<number>;
 }
 
 export default function Flowchart({
@@ -89,6 +90,7 @@ export default function Flowchart({
   onBackgroundClick,
   onSliderChange,
   onSliderChangeComplete,
+  editorCloseTimestampRef,
 }: FlowchartProps) {
   // Create refs for all nodes, indexed by node ID (not array index!)
   const nodeRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -304,7 +306,22 @@ export default function Flowchart({
       return;
     }
 
-    // Check 3: If an edge is selected, just deselect it (don't open context menu)
+    // Check 2b: Also check document title editor close
+    if (editorCloseTimestampRef) {
+      const timeSinceTitleEdit = Date.now() - editorCloseTimestampRef.current;
+      if (timeSinceTitleEdit < 300) {
+        editorCloseTimestampRef.current = 0;
+        return;
+      }
+    }
+
+    // Check 3: If a node is selected, just deselect it (don't open context menu)
+    if (selectedNodeId !== null) {
+      onBackgroundClick?.();
+      return;
+    }
+
+    // Check 4: If an edge is selected, just deselect it (don't open context menu)
     if (selectedEdgeIndex !== -1) {
       onBackgroundClick?.();
       return;
@@ -319,7 +336,7 @@ export default function Flowchart({
     } else {
       setContextMenu({ x: e.clientX, y: e.clientY });
     }
-  }, [contextMenu, didDragRef, lastInteractionRef, onBackgroundClick, selectedEdgeIndex]);
+  }, [contextMenu, didDragRef, lastInteractionRef, onBackgroundClick, selectedEdgeIndex, selectedNodeId]);
 
   // Handle adding a node from context menu
   const handleAddNodeFromMenu = () => {

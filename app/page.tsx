@@ -59,6 +59,13 @@ export default function Home() {
   // Track if we've done the initial document load
   const hasLoadedInitialDocument = useRef(false);
 
+  // Track editor close events to prevent context menu from opening
+  const editorCloseTimestampRef = useRef(0);
+
+  const handleEditorClose = useCallback(() => {
+    editorCloseTimestampRef.current = Date.now();
+  }, []);
+
   // Load sidebar collapse state from localStorage on mount
   useEffect(() => {
     const savedState = localStorage.getItem('sidebarCollapsed');
@@ -1060,6 +1067,7 @@ export default function Home() {
                 onDocumentSelect={handleDocumentSelect}
                 onCreateNew={handleCreateNewDocument}
                 onRename={handleRenameDocument}
+                onEditorClose={handleEditorClose}
               />
               <AutoSaveIndicator
                 saveStatus={saveStatus}
@@ -1118,6 +1126,7 @@ export default function Home() {
             onBackgroundClick={handleBackgroundClick}
             onSliderChange={handleSliderChange}
             onSliderChangeComplete={handleSliderChangeComplete}
+            editorCloseTimestampRef={editorCloseTimestampRef}
           />
           <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />
           <ZoomControls
