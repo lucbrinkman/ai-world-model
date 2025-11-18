@@ -629,8 +629,9 @@ function HomeContent() {
         // Find this node in defaultGraphData to get its original probability
         const defaultNode = defaultGraphData.nodes.find(n => n.id === node.id);
         // Only update probability for question nodes that exist in the default data
-        // Custom nodes (user-added or modified) are left unchanged
-        if (node.type === 'n' && node.sliderIndex !== null && defaultNode && defaultNode.probability !== undefined) {
+        // AND have a valid probability value (not null or undefined)
+        // Custom nodes and nodes without default probabilities are left unchanged
+        if (node.type === 'n' && node.sliderIndex !== null && defaultNode && defaultNode.probability != null) {
           // Preserve all node fields (including custom title), only update probability
           return { ...node, probability: defaultNode.probability };
         }
