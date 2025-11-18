@@ -5,6 +5,7 @@ import { Document } from '@/lib/types';
 import { getUserDocuments, deleteDocument, renameDocument } from '@/lib/actions/documents';
 import TemplateChoiceDialog from './TemplateChoiceDialog';
 import NewDocumentWarningDialog from './NewDocumentWarningDialog';
+import { ShareModal } from './ShareModal';
 
 interface DocumentPickerProps {
   currentDocumentId: string | null;
@@ -35,6 +36,7 @@ export default function DocumentPicker({
   const [renameError, setRenameError] = useState<string | null>(null);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -91,7 +93,7 @@ export default function DocumentPicker({
     setIsHovering(true);
     hoverTimeoutRef.current = setTimeout(() => {
       setShowTooltip(true);
-    }, 500); // Show tooltip after 0.5 seconds
+    }, 350); // Show tooltip after 0.35 seconds
   };
 
   const handleMouseLeave = () => {
@@ -438,6 +440,25 @@ export default function DocumentPicker({
             Rename Current
           </button>
 
+          {/* Share Current button */}
+          <button
+            onClick={() => {
+              if (currentDocumentId) {
+                setIsShareModalOpen(true);
+                setIsOpen(false);
+              }
+            }}
+            disabled={!currentDocumentId}
+            className={`w-full px-4 py-2 text-left text-sm border-b border-gray-600 ${
+              currentDocumentId
+                ? 'text-white hover:bg-gray-700 cursor-pointer'
+                : 'text-gray-500 cursor-not-allowed'
+            }`}
+            title={!currentDocumentId ? 'Save document first to enable sharing' : ''}
+          >
+            Share Current
+          </button>
+
           {/* Documents list */}
           {loading ? (
             <div className="px-4 py-2 text-sm text-gray-400">Loading...</div>
@@ -488,6 +509,14 @@ export default function DocumentPicker({
           setShowTemplateDialog(false);
         }}
         onCancel={() => setShowTemplateDialog(false)}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        documentId={currentDocumentId}
+        initialIsPublic={false}
       />
     </div>
   );

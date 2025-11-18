@@ -34,11 +34,11 @@ export function useAuth() {
       // Auto-migrate localStorage draft when user signs in/up (not on page refresh)
       if (wasAnonymous && isNowAuthenticated && event === 'SIGNED_IN') {
         if (hasDraftInLocalStorage()) {
-          const draft = loadFromLocalStorage()
-          if (draft) {
-            // Create document from localStorage draft with auto-generated name
-            const result = await createDocument(null, draft)
-            if (!result.error) {
+          const result = loadFromLocalStorage()
+          if (result) {
+            // Create document from localStorage draft with name (or auto-generate)
+            const createResult = await createDocument(result.name, result.data)
+            if (!createResult.error) {
               // Clear localStorage after successful migration
               clearLocalStorage()
               console.log('Successfully migrated localStorage draft to cloud')

@@ -125,7 +125,7 @@ export function Profile({ onClose }: ProfileProps) {
     return (
       <div className="p-6">
         <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
         </div>
       </div>
     )
@@ -134,7 +134,7 @@ export function Profile({ onClose }: ProfileProps) {
   if (!user) {
     return (
       <div className="p-6">
-        <p className="text-gray-600">Not signed in</p>
+        <p className="text-gray-400">Not signed in</p>
       </div>
     )
   }
@@ -142,10 +142,10 @@ export function Profile({ onClose }: ProfileProps) {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Profile</h2>
+        <h2 className="text-2xl font-bold text-white">Profile</h2>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-300"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -154,40 +154,40 @@ export function Profile({ onClose }: ProfileProps) {
       </div>
 
       <div className="space-y-4">
-        <div className="bg-gray-50 p-4 rounded-md">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <p className="text-gray-900">{user.email}</p>
+        <div className="bg-gray-700 p-4 rounded-md">
+          <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+          <p className="text-white">{user.email}</p>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded-md">
-          <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
-          <p className="text-gray-600 text-sm font-mono break-all">{user.id}</p>
+        <div className="bg-gray-700 p-4 rounded-md">
+          <label className="block text-sm font-medium text-gray-300 mb-1">User ID</label>
+          <p className="text-gray-400 text-sm font-mono break-all">{user.id}</p>
         </div>
 
         {/* Create Password Section */}
         {!showPasswordCreate ? (
-          <div className="pt-4 pb-4 border-b border-gray-200">
+          <div className="pt-4 pb-4 border-b border-gray-700">
             <button
               onClick={() => setShowPasswordCreate(true)}
-              className="w-full text-left px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-md text-sm text-purple-700 font-medium transition-colors"
+              className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-sm text-gray-200 font-medium transition-colors"
             >
               + Create an optional password
             </button>
-            <p className="text-xs text-gray-500 mt-2 px-1">
+            <p className="text-xs text-gray-400 mt-2 px-1">
               Add a password to sign in faster (you can still use magic links)
             </p>
           </div>
         ) : (
-          <div className="pt-4 pb-4 border-b border-gray-200">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Create Password</h3>
+          <div className="pt-4 pb-4 border-b border-gray-700">
+            <h3 className="text-sm font-medium text-white mb-3">Create Password</h3>
             {passwordSuccess && (
-              <div className="bg-green-50 text-green-700 p-3 rounded-md text-sm mb-3">
+              <div className="bg-green-900/50 text-green-200 p-3 rounded-md text-sm mb-3 border border-green-700">
                 Password created successfully!
               </div>
             )}
             <form onSubmit={handleCreatePassword} className="space-y-3">
               {passwordError && (
-                <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm">
+                <div className="bg-red-900/50 text-red-200 p-3 rounded-md text-sm border border-red-700">
                   {passwordError}
                 </div>
               )}
@@ -197,7 +197,7 @@ export function Profile({ onClose }: ProfileProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="New password"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 text-sm"
+                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-sm"
                 />
               </div>
               <div>
@@ -206,7 +206,7 @@ export function Profile({ onClose }: ProfileProps) {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm password"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 text-sm"
+                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-sm"
                 />
               </div>
               <div className="flex gap-2">
@@ -218,14 +218,14 @@ export function Profile({ onClose }: ProfileProps) {
                     setConfirmPassword('')
                     setPasswordError(null)
                   }}
-                  className="flex-1 px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm"
+                  className="flex-1 px-3 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-gray-600 text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={passwordLoading}
-                  className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 text-sm"
+                  className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm"
                 >
                   {passwordLoading ? 'Creating...' : 'Create'}
                 </button>
@@ -238,7 +238,7 @@ export function Profile({ onClose }: ProfileProps) {
           <Link
             href="/privacy"
             target="_blank"
-            className="block text-center text-sm text-purple-600 hover:text-purple-700 mb-2"
+            className="block text-center text-sm text-blue-400 hover:text-blue-300 mb-2"
           >
             Privacy Policy
           </Link>
@@ -246,7 +246,7 @@ export function Profile({ onClose }: ProfileProps) {
           <button
             onClick={handleExportData}
             disabled={exporting}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {exporting ? 'Exporting...' : 'Download My Data'}
           </button>

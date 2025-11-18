@@ -114,6 +114,8 @@ export interface Document {
   created_at: string;
   updated_at: string;
   last_opened_at: string;
+  is_public: boolean;
+  share_token: string;
 }
 
 // Constants

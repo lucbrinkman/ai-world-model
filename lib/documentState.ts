@@ -1,15 +1,19 @@
 import { DocumentData, GraphNode, GraphMetadata } from './types';
 
 const STORAGE_KEY = 'ai_futures_draft_document';
+const NAME_KEY = 'ai_futures_draft_name';
 
 /**
  * Save document data to localStorage (for anonymous users)
  */
-export function saveToLocalStorage(data: DocumentData): void {
+export function saveToLocalStorage(data: DocumentData, name?: string): void {
   if (typeof window === 'undefined') return;
 
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (name) {
+      localStorage.setItem(NAME_KEY, name);
+    }
   } catch (error) {
     console.error('Failed to save to localStorage:', error);
   }
@@ -19,7 +23,7 @@ export function saveToLocalStorage(data: DocumentData): void {
  * Load document data from localStorage (for anonymous users)
  * Migrates old data format to ensure all nodes have the probability field
  */
-export function loadFromLocalStorage(): DocumentData | null {
+export function loadFromLocalStorage(): { data: DocumentData; name: string | null } | null {
   if (typeof window === 'undefined') return null;
 
   try {
@@ -27,6 +31,7 @@ export function loadFromLocalStorage(): DocumentData | null {
     if (!stored) return null;
 
     const data = JSON.parse(stored) as DocumentData;
+    const name = localStorage.getItem(NAME_KEY);
 
     // Migrate old data: ensure all nodes have probability field
     const migratedNodes = data.nodes.map(node => {
@@ -41,8 +46,11 @@ export function loadFromLocalStorage(): DocumentData | null {
     });
 
     return {
-      ...data,
-      nodes: migratedNodes
+      data: {
+        ...data,
+        nodes: migratedNodes
+      },
+      name: name || null
     };
   } catch (error) {
     console.error('Failed to load from localStorage:', error);
@@ -67,6 +75,7 @@ export function clearLocalStorage(): void {
 
   try {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(NAME_KEY);
   } catch (error) {
     console.error('Failed to clear localStorage:', error);
   }
