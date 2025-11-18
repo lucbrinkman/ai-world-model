@@ -621,8 +621,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         </div>
       )}
 
-      {/* Add arrow buttons - shown when node is selected and eligible */}
-      {showAddArrows && onAddArrow && !isDragging && (() => {
+      {/* Add arrow buttons - shown on hover for eligible nodes */}
+      {showAddArrows && onAddArrow && (() => {
         // Determine if this is an outcome node (has colored bubbles on the left)
         const isOutcomeNode = type === 'g' || type === 'a' || type === 'e';
         const offset = 15; // Distance from node edge in pixels

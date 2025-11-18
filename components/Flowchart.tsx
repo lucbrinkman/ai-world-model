@@ -585,14 +585,13 @@ export default function Flowchart({
             const graphNode = graphData.nodes.find(n => n.id === node.id);
             const nodeSliderValue = graphNode?.probability !== null && graphNode?.probability !== undefined ? graphNode.probability : undefined;
 
-            // Calculate if this node should show add arrow buttons
+            // Calculate if this node is eligible for add arrow buttons
             const outgoingEdges = edges.filter(e => e.source === node.index);
             const isIntermediate = outgoingEdges.length === 1;
             const isOutcomeWithNoArrows =
               (node.type === 'g' || node.type === 'a' || node.type === 'e') &&
               outgoingEdges.length === 0;
             const shouldShowAddArrows =
-              selectedNodeId === node.id &&
               node.type !== NT.START &&
               (isIntermediate || isOutcomeWithNoArrows) &&
               onAddArrow !== undefined;
