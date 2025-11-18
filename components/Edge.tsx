@@ -1,7 +1,7 @@
 import { Edge as EdgeType, EdgeType as ET, Node } from '@/lib/types';
 import { calculateAlpha, calculateArrowWidth, calculateArrowHeadLength } from '@/lib/probability';
 import { useRef, useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 interface EdgeProps {
   edge: EdgeType;
@@ -562,7 +562,7 @@ export default function Edge({
                 e.stopPropagation();
                 onDelete();
               }}
-              className="bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow-md transition-all duration-200 hover:scale-110"
+              className="bg-gray-400 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-all duration-200 hover:scale-110"
               title="Delete connection"
               style={{
                 width: '20px',
@@ -573,7 +573,7 @@ export default function Edge({
                 transform: 'translate(-50%, -50%)'
               }}
             >
-              <X size={9} />
+              <Trash2 size={12} />
             </button>
           </foreignObject>
         );

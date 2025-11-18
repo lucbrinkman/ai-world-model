@@ -31,6 +31,11 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 
 **Important:** This repository uses **multiple worktrees** - the user may be working in different directories on different branches simultaneously.
 
+**Worktree Safety Rule:**
+- **NEVER** make edits to files in any worktree other than the one Claude Code was started in
+- Only read from, write to, and execute commands within the current working directory
+- If the user needs changes in a different worktree, they will navigate there and start a new session
+
 **Development Model:**
 - Solo developer project - no GitHub PRs or code review process
 - Merge feature branches to main locally, then push to GitHub

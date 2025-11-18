@@ -2,6 +2,7 @@ import { Node as NodeType, NodeType as NT, NODE_COLORS, NodeDragEndHandler, Node
 import { toPercentString, calculateAlpha, calculateNodeBorderWidth } from '@/lib/probability';
 import { forwardRef, useState, useRef, useEffect, useCallback } from 'react';
 import OutcomeTypeSwitcher from './OutcomeTypeSwitcher';
+import { Trash2, Pin } from 'lucide-react';
 
 // Helper function to snap coordinate to grid
 const snapToGrid = (value: number, gridSize: number): number => {
@@ -494,48 +495,51 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         </div>
       )}
 
-      {/* Delete button - shown when node is selected */}
-      {isNodeSelected && onDelete && node.type !== 's' && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(node.id);
-          }}
-          className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg transition-colors z-10"
-          title="Delete node (Delete/Backspace)"
+      {/* Button container - shown when node is selected */}
+      {isNodeSelected && (
+        <div
+          className="absolute flex flex-row gap-1 z-10"
           style={{
-            fontSize: '14px',
-            lineHeight: '1',
+            top: `${-32 - borderWidth}px`,
+            right: `${-borderWidth}px`,
           }}
         >
-          ×
-        </button>
-      )}
+          {/* Pin button (left) */}
+          {onSetProbabilityRoot && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSetProbabilityRoot();
+              }}
+              onMouseEnter={(e) => {
+                e.stopPropagation();
+                onSetProbabilityRootHoverStart?.();
+              }}
+              onMouseLeave={(e) => {
+                e.stopPropagation();
+                onSetProbabilityRootHoverEnd?.();
+              }}
+              className={`${isSelected ? 'bg-blue-600' : 'bg-gray-400'} hover:bg-blue-600 text-white rounded w-7 h-7 flex items-center justify-center shadow-lg transition-colors`}
+              title="Set as start (100% probability)"
+            >
+              <Pin size={14} />
+            </button>
+          )}
 
-      {/* Set probability root button - shown when node is selected */}
-      {isNodeSelected && onSetProbabilityRoot && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSetProbabilityRoot();
-          }}
-          onMouseEnter={(e) => {
-            e.stopPropagation();
-            onSetProbabilityRootHoverStart?.();
-          }}
-          onMouseLeave={(e) => {
-            e.stopPropagation();
-            onSetProbabilityRootHoverEnd?.();
-          }}
-          className="absolute -top-5 -left-5 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg transition-colors z-10"
-          title="Set as start (100% probability)"
-          style={{
-            fontSize: '14px',
-            lineHeight: '1',
-          }}
-        >
-          ⊙
-        </button>
+          {/* Trash button (right) */}
+          {onDelete && node.type !== 's' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(node.id);
+              }}
+              className="bg-gray-400 hover:bg-red-600 text-white rounded w-7 h-7 flex items-center justify-center shadow-lg transition-colors"
+              title="Delete node (Delete/Backspace)"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
       )}
 
       {/* Outcome type switcher - shown for outcome nodes */}
