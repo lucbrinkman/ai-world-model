@@ -259,6 +259,7 @@ export default function Flowchart({
       e.preventDefault(); // Prevent text selection
       setIsDragging(true);
       didDragRef.current = false; // Reset drag flag
+
       const container = scrollContainerRef.current;
       if (container) {
         dragStartRef.current = {
@@ -281,6 +282,14 @@ export default function Flowchart({
     setContextMenu(null);
     onNodeClick(index);
   }, [onNodeClick]);
+
+  // Wrap node drag state change to close context menu when dragging starts
+  const handleNodeDragStateChangeWrapper = useCallback((isDragging: boolean, shiftHeld: boolean, cursorX?: number, cursorY?: number) => {
+    if (isDragging) {
+      setContextMenu(null);
+    }
+    onNodeDragStateChange(isDragging, shiftHeld, cursorX, cursorY);
+  }, [onNodeDragStateChange]);
 
   // Wrap edge click to also close context menu
   const handleEdgeClick = useCallback((index: number) => {
@@ -373,6 +382,10 @@ export default function Flowchart({
 
       // Mark that we've dragged if moved more than a few pixels
       if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+        if (!didDragRef.current) {
+          // Close context menu when we actually start dragging
+          setContextMenu(null);
+        }
         didDragRef.current = true;
       }
 
@@ -566,7 +579,7 @@ export default function Flowchart({
                 onMouseLeave={onNodeLeave}
                 onDragMove={updateBounds}
                 onDragEnd={onNodeDragEnd}
-                onDragStateChange={onNodeDragStateChange}
+                onDragStateChange={handleNodeDragStateChangeWrapper}
                 onUpdateText={onUpdateNodeText}
                 onEditorClose={handleEditorClose}
                 onSelect={onNodeSelect}
