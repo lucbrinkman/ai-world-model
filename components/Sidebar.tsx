@@ -144,7 +144,7 @@ export default function Sidebar({
             onClick={onLoadAuthorsEstimates}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-m text-sm transition-colors"
           >
-            Author's estimates
+            Default Estimates
           </button>
         </div>
 

@@ -42,7 +42,7 @@ function HomeContent() {
   const [nodeToDelete, setNodeToDelete] = useState<{ id: string; title: string } | null>(null);
   const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
   const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
-  const [minOpacity, setMinOpacity] = useState(100);
+  const [minOpacity, setMinOpacity] = useState(60);
   const [undoStack, setUndoStack] = useState<GraphNode[][]>([]);
   const [showMobileWarning, setShowMobileWarning] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
@@ -622,13 +622,16 @@ function HomeContent() {
     analytics.trackAction('reset');
   }, [graphData.nodes]);
 
-  // Load author's estimates
+  // Load default estimates (only updates recognized nodes, preserves custom nodes)
   const handleLoadAuthorsEstimates = useCallback(() => {
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
         // Find this node in defaultGraphData to get its original probability
         const defaultNode = defaultGraphData.nodes.find(n => n.id === node.id);
-        if (node.type === 'n' && node.sliderIndex !== null && defaultNode) {
+        // Only update probability for question nodes that exist in the default data
+        // Custom nodes (user-added or modified) are left unchanged
+        if (node.type === 'n' && node.sliderIndex !== null && defaultNode && defaultNode.probability !== undefined) {
+          // Preserve all node fields (including custom title), only update probability
           return { ...node, probability: defaultNode.probability };
         }
         return node;
