@@ -593,7 +593,34 @@ export default function Home() {
         return node;
       });
 
-      // Connect any floating arrow endpoints to this node if dropped on them
+      // Helper function to check if there's a path from one node to another
+      const hasPath = (fromId: string, toId: string, nodes: typeof updatedNodes): boolean => {
+        if (fromId === toId) return true;
+
+        const visited = new Set<string>();
+        const queue = [fromId];
+
+        while (queue.length > 0) {
+          const currentId = queue.shift()!;
+          if (currentId === toId) return true;
+          if (visited.has(currentId)) continue;
+
+          visited.add(currentId);
+          const currentNode = nodes.find(n => n.id === currentId);
+
+          if (currentNode) {
+            currentNode.connections.forEach(conn => {
+              if (conn.targetId && !visited.has(conn.targetId)) {
+                queue.push(conn.targetId);
+              }
+            });
+          }
+        }
+
+        return false;
+      };
+
+      // Connect or push away floating arrow endpoints depending on whether it would create a cycle
       const nodeWidth = 145;
       const nodeHeight = 55;
       const padding = 10; // Small padding around the node
@@ -616,13 +643,55 @@ export default function Home() {
               connection.targetY >= nodeBounds.top &&
               connection.targetY <= nodeBounds.bottom
             ) {
-              // Connect the arrow to the dropped node
-              return {
-                ...connection,
-                targetId: nodeId,
-                targetX: undefined,
-                targetY: undefined,
-              };
+              // Check if connecting this arrow to the dropped node would create a cycle
+              // A cycle would occur if there's already a path from the dropped node to the source node
+              const wouldCreateCycle = hasPath(nodeId, node.id, updatedNodes);
+
+              if (wouldCreateCycle) {
+                // Push the arrow away to avoid creating a cycle
+                const dx = connection.targetX - newX;
+                const dy = connection.targetY - newY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // If endpoint is at the exact center, push it to the right
+                if (distance === 0) {
+                  return {
+                    ...connection,
+                    targetX: nodeBounds.right + 5,
+                    targetY: newY,
+                  };
+                }
+
+                // Normalize direction
+                const normalizedDx = dx / distance;
+                const normalizedDy = dy / distance;
+
+                // Calculate which edge of the rectangle we'll exit from
+                const halfWidth = nodeWidth / 2;
+                const halfHeight = nodeHeight / 2;
+
+                // Find which edge we hit first by comparing ratios
+                const tX = normalizedDx !== 0 ? halfWidth / Math.abs(normalizedDx) : Infinity;
+                const tY = normalizedDy !== 0 ? halfHeight / Math.abs(normalizedDy) : Infinity;
+                const t = Math.min(tX, tY);
+
+                // Push distance is to the edge plus padding plus extra space (doubled)
+                const pushDistance = t + (padding + 5) * 2;
+
+                return {
+                  ...connection,
+                  targetX: newX + normalizedDx * pushDistance,
+                  targetY: newY + normalizedDy * pushDistance,
+                };
+              } else {
+                // Connect the arrow to the dropped node (no cycle would be created)
+                return {
+                  ...connection,
+                  targetId: nodeId,
+                  targetX: undefined,
+                  targetY: undefined,
+                };
+              }
             }
           }
           return connection;
