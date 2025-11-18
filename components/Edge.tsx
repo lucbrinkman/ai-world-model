@@ -20,6 +20,8 @@ interface EdgeProps {
   onDelete?: () => void;
   onLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
   onEditorClose?: () => void;
+  onDestinationDotHover?: () => void;
+  onDestinationDotLeave?: () => void;
   previewTargetNode?: Node | null;
   previewTargetBounds?: DOMRect;
   previewFloatingPos?: { x: number; y: number } | null;
@@ -42,6 +44,8 @@ export default function Edge({
   onDelete,
   onLabelUpdate,
   onEditorClose,
+  onDestinationDotHover,
+  onDestinationDotLeave,
   previewTargetNode,
   previewTargetBounds,
   previewFloatingPos,
@@ -513,6 +517,19 @@ export default function Edge({
         >
           {labelText}
         </text>
+      )}
+
+      {/* Invisible hover target for destination dot */}
+      {onDestinationDotHover && onDestinationDotLeave && (
+        <circle
+          cx={x2}
+          cy={y2}
+          r={15}
+          fill="transparent"
+          style={{ cursor: 'pointer', pointerEvents: 'all' }}
+          onMouseEnter={onDestinationDotHover}
+          onMouseLeave={onDestinationDotLeave}
+        />
       )}
 
       {/* Delete button - shown when edge is selected */}

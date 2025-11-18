@@ -31,6 +31,7 @@ export default function Home() {
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(-1);
   const [selectedEdgeIndex, setSelectedEdgeIndex] = useState(-1);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [hoveredDestinationDotIndex, setHoveredDestinationDotIndex] = useState(-1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [nodeToDelete, setNodeToDelete] = useState<{ id: string; title: string } | null>(null);
   const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
@@ -270,6 +271,15 @@ export default function Home() {
     // Deselect node when selecting an edge
     setProbabilityRootIndex(startNodeIndex);
     setSelectedNodeId(null);
+  }, []);
+
+  // Destination dot hover handlers
+  const handleDestinationDotHover = useCallback((edgeIndex: number) => {
+    setHoveredDestinationDotIndex(edgeIndex);
+  }, []);
+
+  const handleDestinationDotLeave = useCallback(() => {
+    setHoveredDestinationDotIndex(-1);
   }, []);
 
   // Edge reconnect handler
@@ -1098,6 +1108,7 @@ export default function Home() {
             hoveredNodeIndex={hoveredNodeIndex}
             selectedEdgeIndex={selectedEdgeIndex}
             selectedNodeId={selectedNodeId}
+            hoveredDestinationDotIndex={hoveredDestinationDotIndex}
             boldPaths={true}
             transparentPaths={minOpacity < 100}
             minOpacity={minOpacity}
@@ -1126,6 +1137,8 @@ export default function Home() {
             onBackgroundClick={handleBackgroundClick}
             onSliderChange={handleSliderChange}
             onSliderChangeComplete={handleSliderChangeComplete}
+            onDestinationDotHover={handleDestinationDotHover}
+            onDestinationDotLeave={handleDestinationDotLeave}
             editorCloseTimestampRef={editorCloseTimestampRef}
           />
           <DragHint isVisible={isDraggingNode} shiftHeld={dragShiftHeld} cursorX={dragCursorPos.x} cursorY={dragCursorPos.y} />

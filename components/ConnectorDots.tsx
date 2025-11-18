@@ -12,7 +12,11 @@ interface ConnectorDotsProps {
   nodeBounds: Map<string, DOMRect>;
   sourceBounds?: DOMRect;
   targetBounds?: DOMRect;
+  visibilityMode: 'full' | 'destination-only' | 'hidden';
   onReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
+  onEdgeSelect?: (edgeIndex: number) => void;
+  onDestinationDotHover?: () => void;
+  onDestinationDotLeave?: () => void;
   screenToCanvasCoords?: (screenX: number, screenY: number) => { x: number; y: number };
   onPreviewChange?: (previewNode: Node | null, previewPos: { x: number; y: number } | null) => void;
 }
@@ -27,7 +31,11 @@ export default function ConnectorDots({
   nodeBounds,
   sourceBounds,
   targetBounds,
+  visibilityMode,
   onReconnect,
+  onEdgeSelect,
+  onDestinationDotHover,
+  onDestinationDotLeave,
   screenToCanvasCoords,
   onPreviewChange,
 }: ConnectorDotsProps) {
@@ -36,6 +44,8 @@ export default function ConnectorDots({
   const [previewTargetNode, setPreviewTargetNode] = useState<Node | null>(null);
   const [previewFloatingPos, setPreviewFloatingPos] = useState<{ x: number; y: number } | null>(null);
   const [blockedNodeTooltip, setBlockedNodeTooltip] = useState<{ x: number; y: number } | null>(null);
+  const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
+  const [hasMoved, setHasMoved] = useState(false);
 
   // Notify parent of preview state changes
   useEffect(() => {
@@ -190,6 +200,8 @@ export default function ConnectorDots({
   const handleConnectorMouseDown = useCallback((e: React.MouseEvent, end: 'source' | 'target') => {
     e.stopPropagation();
     e.preventDefault();
+    setMouseDownPos({ x: e.clientX, y: e.clientY });
+    setHasMoved(false);
     setDraggingConnector(end);
   }, []);
 
@@ -202,13 +214,33 @@ export default function ConnectorDots({
 
   // Global mouse handlers
   useEffect(() => {
-    if (!draggingConnector || !onReconnect) return;
+    if (!draggingConnector) return;
 
     const handleGlobalMouseUp = (e: MouseEvent) => {
-      if (!screenToCanvasCoords) {
+      // Check if this was a click (no movement) or a drag
+      const CLICK_THRESHOLD = 5; // pixels
+      const isClick = !hasMoved && mouseDownPos &&
+        Math.abs(e.clientX - mouseDownPos.x) < CLICK_THRESHOLD &&
+        Math.abs(e.clientY - mouseDownPos.y) < CLICK_THRESHOLD;
+
+      if (isClick && visibilityMode === 'destination-only' && onEdgeSelect) {
+        // This was a click in destination-only mode, select the edge
+        onEdgeSelect(edgeIndex);
         setDraggingConnector(null);
         setPreviewTargetNode(null);
         setPreviewFloatingPos(null);
+        setMouseDownPos(null);
+        setHasMoved(false);
+        return;
+      }
+
+      // Otherwise, handle as drag/reconnect
+      if (!screenToCanvasCoords || !onReconnect) {
+        setDraggingConnector(null);
+        setPreviewTargetNode(null);
+        setPreviewFloatingPos(null);
+        setMouseDownPos(null);
+        setHasMoved(false);
         return;
       }
 
@@ -262,10 +294,22 @@ export default function ConnectorDots({
       setDraggingConnector(null);
       setPreviewTargetNode(null);
       setPreviewFloatingPos(null);
+      setMouseDownPos(null);
+      setHasMoved(false);
     };
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (!screenToCanvasCoords) return;
+
+      // Track if mouse has moved beyond threshold
+      const MOVE_THRESHOLD = 3; // pixels
+      if (!hasMoved && mouseDownPos) {
+        const dx = e.clientX - mouseDownPos.x;
+        const dy = e.clientY - mouseDownPos.y;
+        if (Math.abs(dx) > MOVE_THRESHOLD || Math.abs(dy) > MOVE_THRESHOLD) {
+          setHasMoved(true);
+        }
+      }
 
       const canvasPos = screenToCanvasCoords(e.clientX, e.clientY);
       const SNAP_DISTANCE_SQUARED = SNAP_DISTANCE * SNAP_DISTANCE;
@@ -329,26 +373,33 @@ export default function ConnectorDots({
       window.removeEventListener('mouseup', handleGlobalMouseUp);
       window.removeEventListener('mousemove', handleGlobalMouseMove);
     };
-  }, [draggingConnector, onReconnect, edgeIndex, allNodes, allEdges, nodeBounds, sourceNode, screenToCanvasCoords]);
+  }, [draggingConnector, onReconnect, onEdgeSelect, edgeIndex, allNodes, allEdges, nodeBounds, sourceNode, screenToCanvasCoords, hasMoved, mouseDownPos, visibilityMode]);
+
+  // Don't render anything if hidden
+  if (visibilityMode === 'hidden') {
+    return null;
+  }
 
   return (
     <>
       {/* Source connector dot - non-interactive */}
-      <div
-        style={{
-          position: 'absolute',
-          left: `${x1}px`,
-          top: `${y1}px`,
-          transform: 'translate(-50%, -50%)',
-          width: '10px',
-          height: '10px',
-          borderRadius: '50%',
-          backgroundColor: '#1E90FF',
-          border: '2px solid white',
-          opacity: 0.5,
-          pointerEvents: 'none',
-        }}
-      />
+      {visibilityMode === 'full' && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${x1}px`,
+            top: `${y1}px`,
+            transform: 'translate(-50%, -50%)',
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: '#1E90FF',
+            border: '2px solid white',
+            opacity: 0.5,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
 
       {/* Target connector dot - draggable */}
       <div
@@ -367,8 +418,14 @@ export default function ConnectorDots({
           zIndex: 1000,
         }}
         onMouseDown={(e) => handleConnectorMouseDown(e, 'target')}
-        onMouseEnter={() => setHoveredConnector('target')}
-        onMouseLeave={() => setHoveredConnector(null)}
+        onMouseEnter={() => {
+          setHoveredConnector('target');
+          onDestinationDotHover?.();
+        }}
+        onMouseLeave={() => {
+          setHoveredConnector(null);
+          onDestinationDotLeave?.();
+        }}
       />
 
       {/* Invisible larger hitbox for easier clicking */}
@@ -386,8 +443,14 @@ export default function ConnectorDots({
           zIndex: 999,
         }}
         onMouseDown={(e) => handleConnectorMouseDown(e, 'target')}
-        onMouseEnter={() => setHoveredConnector('target')}
-        onMouseLeave={() => setHoveredConnector(null)}
+        onMouseEnter={() => {
+          setHoveredConnector('target');
+          onDestinationDotHover?.();
+        }}
+        onMouseLeave={() => {
+          setHoveredConnector(null);
+          onDestinationDotLeave?.();
+        }}
       />
 
       {/* Blocked node tooltip */}

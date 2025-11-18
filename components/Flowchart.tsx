@@ -15,6 +15,7 @@ interface FlowchartProps {
   hoveredNodeIndex: number;
   selectedEdgeIndex: number;
   selectedNodeId: string | null;
+  hoveredDestinationDotIndex: number;
   boldPaths: boolean;
   transparentPaths: boolean;
   minOpacity: number;
@@ -47,6 +48,8 @@ interface FlowchartProps {
   onBackgroundClick?: () => void;
   onSliderChange?: (nodeId: string, value: number) => void;
   onSliderChangeComplete?: (nodeId: string) => void;
+  onDestinationDotHover?: (edgeIndex: number) => void;
+  onDestinationDotLeave?: () => void;
   editorCloseTimestampRef?: React.MutableRefObject<number>;
 }
 
@@ -58,6 +61,7 @@ export default function Flowchart({
   hoveredNodeIndex,
   selectedEdgeIndex,
   selectedNodeId,
+  hoveredDestinationDotIndex,
   boldPaths,
   transparentPaths,
   minOpacity,
@@ -90,6 +94,8 @@ export default function Flowchart({
   onBackgroundClick,
   onSliderChange,
   onSliderChangeComplete,
+  onDestinationDotHover,
+  onDestinationDotLeave,
   editorCloseTimestampRef,
 }: FlowchartProps) {
   // Create refs for all nodes, indexed by node ID (not array index!)
@@ -103,7 +109,7 @@ export default function Flowchart({
   const [isPositioned, setIsPositioned] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const lastInteractionRef = useRef<{ type: 'editor-close' | null; timestamp: number }>({ type: null, timestamp: 0 });
-  const [edgePreview, setEdgePreview] = useState<{ node: NodeType | null; pos: { x: number; y: number } | null }>({ node: null, pos: null });
+  const [edgePreview, setEdgePreview] = useState<{ edgeIndex: number | null; node: NodeType | null; pos: { x: number; y: number } | null }>({ edgeIndex: null, node: null, pos: null });
 
   // Ref callback to set initial scroll position immediately on mount
   const scrollContainerRefCallback = useCallback((node: HTMLDivElement | null) => {
@@ -371,8 +377,21 @@ export default function Flowchart({
   };
 
   // Handle edge preview changes (memoized to prevent infinite loops)
-  const handlePreviewChange = useCallback((node: NodeType | null, pos: { x: number; y: number } | null) => {
-    setEdgePreview({ node, pos });
+  const handlePreviewChange = useCallback((edgeIndex: number, node: NodeType | null, pos: { x: number; y: number } | null) => {
+    // Only update if:
+    // 1. We're setting actual preview data (node or pos is not null), OR
+    // 2. We're clearing the preview for the currently active edge
+    setEdgePreview(prev => {
+      if (node !== null || pos !== null) {
+        // Setting new preview data
+        return { edgeIndex, node, pos };
+      } else if (prev.edgeIndex === edgeIndex) {
+        // Clearing preview for the active edge
+        return { edgeIndex: null, node: null, pos: null };
+      }
+      // Otherwise, don't update (another edge is trying to clear, ignore it)
+      return prev;
+    });
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -542,9 +561,11 @@ export default function Flowchart({
                   onDelete={shouldShowDelete ? () => onDeleteEdge(index) : undefined}
                   onLabelUpdate={onEdgeLabelUpdate}
                   onEditorClose={handleEditorClose}
-                  previewTargetNode={index === selectedEdgeIndex ? edgePreview.node : null}
-                  previewTargetBounds={index === selectedEdgeIndex && edgePreview.node ? nodeBounds.get(edgePreview.node.id) : undefined}
-                  previewFloatingPos={isNewArrowPreview ? newArrowPreviewPos : (index === selectedEdgeIndex ? edgePreview.pos : null)}
+                  onDestinationDotHover={onDestinationDotHover ? () => onDestinationDotHover(index) : undefined}
+                  onDestinationDotLeave={onDestinationDotLeave}
+                  previewTargetNode={edgePreview.edgeIndex === index ? edgePreview.node : null}
+                  previewTargetBounds={edgePreview.edgeIndex === index && edgePreview.node ? nodeBounds.get(edgePreview.node.id) : undefined}
+                  previewFloatingPos={isNewArrowPreview ? newArrowPreviewPos : (edgePreview.edgeIndex === index ? edgePreview.pos : null)}
                 />
               );
             })}
@@ -593,14 +614,26 @@ export default function Flowchart({
           })}
 
           {/* Connector dots (HTML, rendered on top of nodes) */}
-          {selectedEdgeIndex !== -1 && (() => {
-            const edge = edges[selectedEdgeIndex];
-            if (!edge) return null;
-
+          {edges.map((edge, edgeIndex) => {
             const sourceNode = nodes[edge.source];
             const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
             const sourceBounds = nodeBounds.get(sourceNode.id);
             const targetBounds = targetNode ? nodeBounds.get(targetNode.id) : undefined;
+
+            // Calculate visibility mode for this edge
+            let visibilityMode: 'full' | 'destination-only' | 'hidden';
+            if (selectedEdgeIndex === edgeIndex) {
+              visibilityMode = 'full';
+            } else if (selectedNodeId === sourceNode.id) {
+              // Source node is selected, show destination dot only
+              visibilityMode = 'destination-only';
+            } else if (hoveredDestinationDotIndex === edgeIndex) {
+              // Destination dot is being hovered
+              visibilityMode = 'destination-only';
+            } else {
+              // Default: hidden
+              visibilityMode = 'hidden';
+            }
 
             const screenToCanvasCoords = (screenX: number, screenY: number) => {
               if (!containerRef.current || !scrollContainerRef.current) return { x: 0, y: 0 };
@@ -616,9 +649,9 @@ export default function Flowchart({
 
             return (
               <ConnectorDots
-                key={`connector-${selectedEdgeIndex}`}
+                key={`connector-${edgeIndex}`}
                 edge={edge}
-                edgeIndex={selectedEdgeIndex}
+                edgeIndex={edgeIndex}
                 sourceNode={sourceNode}
                 targetNode={targetNode}
                 allNodes={nodes}
@@ -626,12 +659,16 @@ export default function Flowchart({
                 nodeBounds={nodeBounds}
                 sourceBounds={sourceBounds}
                 targetBounds={targetBounds}
+                visibilityMode={visibilityMode}
                 onReconnect={onEdgeReconnect}
+                onEdgeSelect={onEdgeClick}
+                onDestinationDotHover={onDestinationDotHover ? () => onDestinationDotHover(edgeIndex) : undefined}
+                onDestinationDotLeave={onDestinationDotLeave}
                 screenToCanvasCoords={screenToCanvasCoords}
-                onPreviewChange={handlePreviewChange}
+                onPreviewChange={(node, pos) => handlePreviewChange(edgeIndex, node, pos)}
               />
             );
-          })()}
+          })}
 
 
           {/* Add arrow buttons (shown when intermediate node or outcome node is selected) */}
