@@ -526,7 +526,7 @@ export default function Edge({
           cy={y2}
           r={15}
           fill="transparent"
-          style={{ cursor: 'pointer', pointerEvents: 'all' }}
+          style={{ cursor: 'grab', pointerEvents: 'all' }}
           onMouseEnter={onDestinationDotHover}
           onMouseLeave={onDestinationDotLeave}
         />
