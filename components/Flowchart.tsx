@@ -3,7 +3,6 @@ import NodeComponent from './Node';
 import EdgeComponent from './Edge';
 import ConnectorDots from './ConnectorDots';
 import ContextMenu from './ContextMenu';
-import AddArrowButtons from './AddArrowButtons';
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 
@@ -586,6 +585,18 @@ export default function Flowchart({
             const graphNode = graphData.nodes.find(n => n.id === node.id);
             const nodeSliderValue = graphNode?.probability !== null && graphNode?.probability !== undefined ? graphNode.probability : undefined;
 
+            // Calculate if this node should show add arrow buttons
+            const outgoingEdges = edges.filter(e => e.source === node.index);
+            const isIntermediate = outgoingEdges.length === 1;
+            const isOutcomeWithNoArrows =
+              (node.type === 'g' || node.type === 'a' || node.type === 'e') &&
+              outgoingEdges.length === 0;
+            const shouldShowAddArrows =
+              selectedNodeId === node.id &&
+              node.type !== NT.START &&
+              (isIntermediate || isOutcomeWithNoArrows) &&
+              onAddArrow !== undefined;
+
             return (
               <NodeComponent
                 key={node.id}
@@ -615,6 +626,8 @@ export default function Flowchart({
                 sliderValue={nodeSliderValue}
                 onSliderChange={nodeSliderValue !== undefined && onSliderChange ? (value) => onSliderChange(node.id, value) : undefined}
                 onSliderChangeComplete={nodeSliderValue !== undefined && onSliderChangeComplete ? () => onSliderChangeComplete(node.id) : undefined}
+                showAddArrows={shouldShowAddArrows}
+                onAddArrow={shouldShowAddArrows ? (direction) => onAddArrow(node.id, direction) : undefined}
               />
             );
           })}
@@ -678,41 +691,6 @@ export default function Flowchart({
               />
             );
           })}
-
-
-          {/* Add arrow buttons (shown when intermediate node or outcome node is selected) */}
-          {selectedNodeId && onAddArrow && (() => {
-            const node = nodes.find(n => n.id === selectedNodeId);
-            if (!node) return null;
-
-            // Never show add arrow buttons for start node
-            if (node.type === NT.START) return null;
-
-            const outgoingEdges = edges.filter(e => e.source === node.index);
-
-            // Show add arrow buttons if:
-            // 1. Node is intermediate (has 1 outgoing arrow), OR
-            // 2. Node is an outcome type (good/ambivalent/existential) with 0 outgoing arrows
-            const isIntermediate = outgoingEdges.length === 1;
-            const isOutcomeWithNoArrows =
-              (node.type === 'g' || node.type === 'a' || node.type === 'e') &&
-              outgoingEdges.length === 0;
-
-            if (!isIntermediate && !isOutcomeWithNoArrows) return null;
-
-            const bounds = nodeBounds.get(node.id);
-            if (!bounds) return null;
-
-            return (
-              <AddArrowButtons
-                key={`add-arrows-${node.id}`}
-                nodeId={node.id}
-                nodeType={node.type}
-                nodeBounds={bounds}
-                onAddArrow={(direction) => onAddArrow(node.id, direction)}
-              />
-            );
-          })()}
         </div>
       </div>
 

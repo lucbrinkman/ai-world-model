@@ -2,7 +2,7 @@ import { Node as NodeType, NodeType as NT, NODE_COLORS, NodeDragEndHandler, Node
 import { toPercentString, calculateAlpha, calculateNodeBorderWidth } from '@/lib/probability';
 import { forwardRef, useState, useRef, useEffect, useCallback } from 'react';
 import OutcomeTypeSwitcher from './OutcomeTypeSwitcher';
-import { Trash2, Pin } from 'lucide-react';
+import { Trash2, Pin, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
 // Helper function to snap coordinate to grid
 const snapToGrid = (value: number, gridSize: number): number => {
@@ -35,6 +35,8 @@ interface NodeProps {
   sliderValue?: number;
   onSliderChange?: (value: number) => void;
   onSliderChangeComplete?: () => void;
+  showAddArrows?: boolean;
+  onAddArrow?: (direction: 'top' | 'bottom' | 'left' | 'right') => void;
 }
 
 const Node = forwardRef<HTMLDivElement, NodeProps>(({
@@ -63,6 +65,8 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   sliderValue,
   onSliderChange,
   onSliderChangeComplete,
+  showAddArrows,
+  onAddArrow,
 }, ref) => {
   const { x, y, text, p, type } = node;
 
@@ -616,6 +620,79 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
           </div>
         </div>
       )}
+
+      {/* Add arrow buttons - shown when node is selected and eligible */}
+      {showAddArrows && onAddArrow && !isDragging && (() => {
+        // Determine if this is an outcome node (has colored bubbles on the left)
+        const isOutcomeNode = type === 'g' || type === 'a' || type === 'e';
+        const offset = 15; // Distance from node edge in pixels
+
+        const allButtons = [
+          {
+            direction: 'top' as const,
+            icon: ArrowUp,
+            style: {
+              top: `${-offset}px`,
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            },
+          },
+          {
+            direction: 'bottom' as const,
+            icon: ArrowDown,
+            style: {
+              bottom: `${-offset}px`,
+              left: '50%',
+              transform: 'translate(-50%, 50%)',
+            },
+          },
+          {
+            direction: 'left' as const,
+            icon: ArrowLeft,
+            style: {
+              left: `${-offset}px`,
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            },
+          },
+          {
+            direction: 'right' as const,
+            icon: ArrowRight,
+            style: {
+              right: `${-offset}px`,
+              top: '50%',
+              transform: 'translate(50%, -50%)',
+            },
+          },
+        ];
+
+        // Filter out left arrow for outcome nodes to avoid overlap with outcome type bubbles
+        const buttons = isOutcomeNode
+          ? allButtons.filter(btn => btn.direction !== 'left')
+          : allButtons;
+
+        return buttons.map(({ direction, icon: Icon, style }) => (
+          <button
+            key={direction}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onAddArrow(direction);
+            }}
+            style={{
+              position: 'absolute',
+              ...style,
+              zIndex: 100,
+            }}
+            className={`bg-blue-500/30 hover:bg-blue-500/60 text-white rounded-full p-0.5 transition-all duration-200 hover:scale-110 border border-blue-400/50 pointer-events-auto ${
+              isNodeSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
+            title={`Add arrow ${direction}`}
+          >
+            <Icon size={12} />
+          </button>
+        ));
+      })()}
     </div>
   );
 });
