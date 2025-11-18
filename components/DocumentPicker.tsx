@@ -137,7 +137,7 @@ export default function DocumentPicker({
 
       // If we deleted the current document, create a new one
       if (documentId === currentDocumentId) {
-        onCreateNew();
+        onCreateNew(false);
       }
     }
   };
