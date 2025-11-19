@@ -15,7 +15,7 @@ export function FeedbackButton({ userEmail, userName }: FeedbackButtonProps) {
   return (
     <>
       {/* Floating Feedback Button */}
-      <div className="absolute bottom-10 left-6 z-[9998]">
+      <div className="absolute bottom-10 left-6 z-40">
         <button
           onClick={() => setIsModalOpen(true)}
           className="relative flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
