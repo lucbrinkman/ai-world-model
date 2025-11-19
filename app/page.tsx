@@ -1017,21 +1017,6 @@ function HomeContent() {
     setAutoEditNodeId(newNodeId);
   }, [edges, nodes]);
 
-  const handleInitiateDelete = useCallback((nodeId: string) => {
-    // Find the node to delete
-    const node = graphData.nodes.find(n => n.id === nodeId);
-    if (!node) return;
-
-    // Prevent deleting the start node
-    if (node.type === 's') {
-      alert('Cannot delete the start node');
-      return;
-    }
-
-    // Delete immediately (undo/redo provides safety net)
-    handleDeleteNode(nodeId);
-  }, [graphData, handleDeleteNode]);
-
   const handleDeleteNode = useCallback((nodeId: string) => {
     // Find the node to delete
     const nodeToDelete = graphData.nodes.find(n => n.id === nodeId);
@@ -1102,6 +1087,21 @@ function HomeContent() {
       });
     });
   }, [graphData, nodes, probabilityRootIndex]);
+
+  const handleInitiateDelete = useCallback((nodeId: string) => {
+    // Find the node to delete
+    const node = graphData.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    // Prevent deleting the start node
+    if (node.type === 's') {
+      alert('Cannot delete the start node');
+      return;
+    }
+
+    // Delete immediately (undo/redo provides safety net)
+    handleDeleteNode(nodeId);
+  }, [graphData, handleDeleteNode]);
 
   const handleInitiateDeleteEdge = useCallback((edgeIndex: number) => {
     // Delete immediately (undo/redo provides safety net)
