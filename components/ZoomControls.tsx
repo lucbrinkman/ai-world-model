@@ -1,6 +1,7 @@
 import { MIN_ZOOM, MAX_ZOOM } from '@/lib/types';
 import Tooltip from './Tooltip';
 import { useModifierKey } from '@/hooks/useKeyboardShortcut';
+import { Locate, Plus, Minus } from 'lucide-react';
 
 interface ZoomControlsProps {
   zoom: number;
@@ -35,8 +36,8 @@ export default function ZoomControls({
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -59,8 +60,8 @@ export default function ZoomControls({
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -82,9 +83,9 @@ export default function ZoomControls({
         <button
           onClick={onZoomIn}
           disabled={zoom >= MAX_ZOOM}
-          className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed rounded text-lg font-bold transition-colors"
+          className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed rounded transition-colors"
         >
-          +
+          <Plus size={20} />
         </button>
       </Tooltip>
 
@@ -98,9 +99,9 @@ export default function ZoomControls({
         <button
           onClick={onZoomOut}
           disabled={zoom <= MIN_ZOOM}
-          className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed rounded text-lg font-bold transition-colors"
+          className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed rounded transition-colors"
         >
-          −
+          <Minus size={20} />
         </button>
       </Tooltip>
 
@@ -111,22 +112,7 @@ export default function ZoomControls({
             onClick={onReset}
             className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded text-xs font-medium transition-colors"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-              <path d="M21 3v5h-5" />
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-              <path d="M3 21v-5h5" />
-            </svg>
+            <Locate size={20} />
           </button>
         </Tooltip>
       </div>

@@ -15,6 +15,7 @@ interface NodeProps {
   isSelected: boolean;
   isHovered: boolean;
   isNodeSelected: boolean;
+  isProbabilityRootPreview?: boolean;
   shouldStartEditing?: boolean;
   transparentPaths: boolean;
   minOpacity: number;
@@ -47,6 +48,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   isSelected,
   isHovered,
   isNodeSelected,
+  isProbabilityRootPreview = false,
   shouldStartEditing,
   transparentPaths,
   minOpacity,
@@ -191,8 +193,11 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   const ORANGE_COLOR = '#ff8c00'; // Orange for probability root
 
   const getBorderColor = () => {
-    // Probability root is orange
+    // Probability root is orange (actually set)
     if (isSelected) return ORANGE_COLOR;
+
+    // Preview hover on "Set as Start" button - show orange but don't change border width
+    if (isProbabilityRootPreview) return ORANGE_COLOR;
 
     switch (type) {
       case NT.QUESTION:
@@ -212,8 +217,11 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   };
 
   const getBackgroundColor = () => {
-    // Probability root is orange with transparency
+    // Probability root is orange with transparency (actually set)
     if (isSelected) return ORANGE_COLOR + '33'; // 20% opacity
+
+    // Preview hover on "Set as Start" button - show orange background
+    if (isProbabilityRootPreview) return ORANGE_COLOR + '33'; // 20% opacity
 
     switch (type) {
       case NT.QUESTION:
@@ -233,8 +241,12 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   };
 
   const getTextColor = () => {
-    // Probability root is orange
+    // Probability root is orange (actually set)
     if (isSelected) return ORANGE_COLOR;
+
+    // Preview hover on "Set as Start" button - show orange text
+    if (isProbabilityRootPreview) return ORANGE_COLOR;
+
     if ((isHovered || isNodeSelected) && type === NT.QUESTION) return NODE_COLORS.QUESTION.hover;
     return '#ffffff';
   };
@@ -527,7 +539,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         >
           {/* Pin button (left) */}
           {onSetProbabilityRoot && (
-            <Tooltip content="Set as start (100% probability)" position="top">
+            <Tooltip content="Set as start" position="top">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -541,7 +553,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
                   e.stopPropagation();
                   onSetProbabilityRootHoverEnd?.();
                 }}
-                className={`${isSelected ? 'bg-blue-600' : 'bg-gray-400'} hover:bg-blue-600 text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors`}
+                className={`${isSelected ? 'bg-orange-500' : 'bg-gray-400'} hover:bg-orange-500 text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors`}
               >
                 <Pin size={14} />
               </button>

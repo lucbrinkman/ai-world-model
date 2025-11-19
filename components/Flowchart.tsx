@@ -11,6 +11,7 @@ interface FlowchartProps {
   edges: EdgeType[];
   graphData: GraphData;
   probabilityRootIndex: number;
+  previewProbabilityRootIndex?: number | null;
   hoveredNodeIndex: number;
   selectedEdgeIndex: number;
   selectedNodeId: string | null;
@@ -63,6 +64,7 @@ export default function Flowchart({
   edges,
   graphData,
   probabilityRootIndex,
+  previewProbabilityRootIndex,
   hoveredNodeIndex,
   selectedEdgeIndex,
   selectedNodeId,
@@ -613,6 +615,7 @@ export default function Flowchart({
                 isSelected={node.index === probabilityRootIndex}
                 isHovered={node.index === hoveredNodeIndex}
                 isNodeSelected={node.id === selectedNodeId}
+                isProbabilityRootPreview={previewProbabilityRootIndex !== null && previewProbabilityRootIndex !== undefined && node.index === previewProbabilityRootIndex}
                 shouldStartEditing={node.id === autoEditNodeId}
                 transparentPaths={transparentPaths}
                 minOpacity={minOpacity}

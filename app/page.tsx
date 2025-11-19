@@ -1408,6 +1408,7 @@ function HomeContent() {
             edges={edges}
             graphData={graphData}
             probabilityRootIndex={probabilityRootIndex}
+            previewProbabilityRootIndex={previewProbabilityRootIndex}
             hoveredNodeIndex={hoveredNodeIndex}
             selectedEdgeIndex={selectedEdgeIndex}
             selectedNodeId={selectedNodeId}
