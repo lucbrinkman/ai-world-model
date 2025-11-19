@@ -25,6 +25,7 @@ interface EdgeProps {
   previewTargetNode?: Node | null;
   previewTargetBounds?: DOMRect;
   previewFloatingPos?: { x: number; y: number } | null;
+  onDeleteButtonPositionChange?: (position: { x: number; y: number } | null) => void;
 }
 
 export default function Edge({
@@ -49,6 +50,7 @@ export default function Edge({
   previewTargetNode,
   previewTargetBounds,
   previewFloatingPos,
+  onDeleteButtonPositionChange,
 }: EdgeProps) {
   const { p, yn } = edge;
 
@@ -345,6 +347,39 @@ export default function Edge({
   const boxX = labelX - boxDimensions.width / 2;
   const boxY = labelY - boxDimensions.height / 2;
 
+  // Calculate and report delete button position
+  useEffect(() => {
+    if (!isSelected || !onDelete || !onDeleteButtonPositionChange) {
+      onDeleteButtonPositionChange?.(null);
+      return;
+    }
+
+    // For labeled edges, wait for text measurements to complete before reporting position
+    // Default boxDimensions is { width: 84, height: 30 }
+    if (labelText && labelDescription && boxDimensions.width === 84 && boxDimensions.height === 30) {
+      // Still using default dimensions, text not measured yet - don't report position
+      return;
+    }
+
+    let deleteButtonX: number;
+    let deleteButtonY: number;
+
+    if (labelText && labelDescription) {
+      // For labeled edges: position to the right and slightly up from label box
+      deleteButtonX = boxX + boxDimensions.width + 4;
+      deleteButtonY = boxY - 7;
+    } else {
+      // For unlabeled edges: position perpendicular to arrow direction
+      const perpOffset = 14;
+      const perpX = -dy / dlen;
+      const perpY = dx / dlen;
+      deleteButtonX = labelX + perpX * perpOffset;
+      deleteButtonY = labelY + perpY * perpOffset;
+    }
+
+    onDeleteButtonPositionChange({ x: deleteButtonX, y: deleteButtonY });
+  }, [isSelected, onDelete, onDeleteButtonPositionChange, labelText, labelDescription, boxX, boxY, boxDimensions.width, boxDimensions.height, labelX, labelY, dy, dx, dlen]);
+
   // Handle double-click to edit label
   const handleLabelDoubleClick = (e: React.MouseEvent) => {
     if (onLabelUpdate) {
@@ -532,55 +567,6 @@ export default function Edge({
         />
       )}
 
-      {/* Delete button - shown when edge is selected */}
-      {isSelected && onDelete && (() => {
-        let deleteButtonX: number;
-        let deleteButtonY: number;
-
-        if (labelText && labelDescription) {
-          // For labeled edges: position at top-right of label box
-          deleteButtonX = boxX + boxDimensions.width + 4;
-          deleteButtonY = boxY - 7;
-        } else {
-          // For unlabeled edges: position perpendicular to arrow direction
-          // Calculate perpendicular offset (rotate arrow direction by 90 degrees)
-          const perpOffset = 14; // Distance from arrow center
-          const perpX = -dy / dlen; // Perpendicular unit vector x
-          const perpY = dx / dlen;  // Perpendicular unit vector y
-
-          deleteButtonX = labelX + perpX * perpOffset;
-          deleteButtonY = labelY + perpY * perpOffset;
-        }
-
-        return (
-          <foreignObject
-            x={deleteButtonX}
-            y={deleteButtonY}
-            width="20"
-            height="20"
-            style={{ overflow: 'visible' }}
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="bg-gray-400 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-all duration-200 hover:scale-110"
-              title="Delete connection"
-              style={{
-                width: '20px',
-                height: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transform: 'translate(-50%, -50%)'
-              }}
-            >
-              <Trash2 size={12} />
-            </button>
-          </foreignObject>
-        );
-      })()}
     </g>
   );
 }
