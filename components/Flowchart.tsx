@@ -5,7 +5,6 @@ import ConnectorDots from './ConnectorDots';
 import ContextMenu from './ContextMenu';
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
-import { Trash2 } from 'lucide-react';
 
 interface FlowchartProps {
   nodes: NodeType[];
@@ -126,7 +125,6 @@ export default function Flowchart({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const lastInteractionRef = useRef<{ type: 'editor-close' | null; timestamp: number }>({ type: null, timestamp: 0 });
   const [edgePreview, setEdgePreview] = useState<{ edgeIndex: number | null; node: NodeType | null; pos: { x: number; y: number } | null }>({ edgeIndex: null, node: null, pos: null });
-  const [deleteButtonPositions, setDeleteButtonPositions] = useState<Map<number, { x: number; y: number } | null>>(new Map());
 
   // Ref callback to set initial scroll position immediately on mount
   const scrollContainerRefCallback = useCallback((node: HTMLDivElement | null) => {
@@ -396,15 +394,6 @@ export default function Flowchart({
     setContextMenu(null);
   };
 
-  // Handle delete button position updates from edges
-  const handleDeleteButtonPositionChange = useCallback((edgeIndex: number, position: { x: number; y: number } | null) => {
-    setDeleteButtonPositions(prev => {
-      const newMap = new Map(prev);
-      newMap.set(edgeIndex, position);
-      return newMap;
-    });
-  }, []);
-
   // Handle edge preview changes (memoized to prevent infinite loops)
   const handlePreviewChange = useCallback((edgeIndex: number, node: NodeType | null, pos: { x: number; y: number } | null) => {
     // Only update if:
@@ -595,7 +584,6 @@ export default function Flowchart({
                   previewTargetNode={edgePreview.edgeIndex === index ? edgePreview.node : null}
                   previewTargetBounds={edgePreview.edgeIndex === index && edgePreview.node ? nodeBounds.get(edgePreview.node.id) : undefined}
                   previewFloatingPos={isNewArrowPreview ? newArrowPreviewPos : (edgePreview.edgeIndex === index ? edgePreview.pos : null)}
-                  onDeleteButtonPositionChange={(position) => handleDeleteButtonPositionChange(index, position)}
                 />
               );
             })}
@@ -672,52 +660,6 @@ export default function Flowchart({
               />
             );
           })}
-
-          {/* Second SVG layer for interactive overlays (delete buttons) */}
-          <svg
-            className="absolute top-0 left-0"
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
-            style={{
-              zIndex: 10000,
-              pointerEvents: 'none'
-            }}
-          >
-            {selectedEdgeIndex !== -1 && onDeleteEdge && draggingEdgeIndex !== selectedEdgeIndex && (() => {
-              const position = deleteButtonPositions.get(selectedEdgeIndex);
-              if (!position) return null;
-
-              // Render delete button in SVG foreignObject at position provided by Edge
-              return (
-                <foreignObject
-                  x={position.x - 10}
-                  y={position.y - 10}
-                  width={20}
-                  height={20}
-                  style={{ overflow: 'visible', pointerEvents: 'auto' }}
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteEdge(selectedEdgeIndex);
-                    }}
-                    className="bg-gray-400 hover:bg-red-600 text-white rounded-full p-1 shadow-md hover:scale-110"
-                    title="Delete connection"
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </foreignObject>
-              );
-            })()}
-          </svg>
 
           {/* Connector dots (HTML, rendered on top of nodes) */}
           {(() => {
