@@ -23,10 +23,11 @@ export function MagicLinkAuth({ onClose, onSwitchToPassword }: MagicLinkAuthProp
 
     // Send email in background
     const supabase = createClient()
+    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
     supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${redirectUrl}/auth/callback`,
       },
     }).then(({ error }) => {
       if (error) {
