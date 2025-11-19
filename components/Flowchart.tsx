@@ -17,6 +17,7 @@ interface FlowchartProps {
   autoEditNodeId: string | null;
   hoveredDestinationDotIndex: number;
   draggingEdgeIndex: number;
+  pendingNewArrow?: { nodeId: string; edgeIndex: number } | null;
   boldPaths: boolean;
   transparentPaths: boolean;
   minOpacity: number;
@@ -42,7 +43,7 @@ interface FlowchartProps {
   onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
   onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
   onDeleteEdge?: (edgeIndex: number) => void;
-  onAddArrow?: (nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number) => void;
+  onAddArrow?: (nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number, mousePos?: { clientX: number; clientY: number }) => void;
   onNewArrowPreviewChange?: (nodeId: string, pos: { x: number; y: number } | null) => void;
   onCancelNewArrow?: (nodeId: string) => void;
   onConfirmNewArrow?: (nodeId: string, targetX: number, targetY: number) => void;
@@ -69,6 +70,7 @@ export default function Flowchart({
   autoEditNodeId,
   hoveredDestinationDotIndex,
   draggingEdgeIndex,
+  pendingNewArrow,
   boldPaths,
   transparentPaths,
   minOpacity,
@@ -637,47 +639,59 @@ export default function Flowchart({
                 onSliderChange={nodeSliderValue !== undefined && onSliderChange ? (value) => onSliderChange(node.id, value) : undefined}
                 onSliderChangeComplete={nodeSliderValue !== undefined && onSliderChangeComplete ? () => onSliderChangeComplete(node.id) : undefined}
                 showAddArrows={shouldShowAddArrows}
-                onAddArrow={shouldShowAddArrows ? (direction) => {
+                onAddArrow={shouldShowAddArrows ? (direction, mousePos) => {
                   const bounds = nodeBounds.get(node.id);
-                  onAddArrow(node.id, direction, bounds?.width, bounds?.height);
+                  onAddArrow(node.id, direction, bounds?.width, bounds?.height, mousePos);
                 } : undefined}
               />
             );
           })}
 
           {/* Connector dots (HTML, rendered on top of nodes) */}
-          {edges.map((edge, edgeIndex) => {
-            const sourceNode = nodes[edge.source];
-            const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
-            const sourceBounds = nodeBounds.get(sourceNode.id);
-            const targetBounds = targetNode ? nodeBounds.get(targetNode.id) : undefined;
+          {(() => {
+            // Track connection index per source node
+            const connectionIndexByNode = new Map<number, number>();
 
-            // Calculate visibility mode for this edge
-            let visibilityMode: 'full' | 'destination-only' | 'hidden';
-            if (selectedEdgeIndex === edgeIndex) {
-              visibilityMode = 'full';
-            } else if (selectedNodeId === sourceNode.id) {
-              // Source node is selected, show destination dot only
-              visibilityMode = 'destination-only';
-            } else if (hoveredDestinationDotIndex === edgeIndex || draggingEdgeIndex === edgeIndex) {
-              // Destination dot is being hovered or dragged
-              visibilityMode = 'destination-only';
-            } else {
-              // Default: hidden
-              visibilityMode = 'hidden';
-            }
+            return edges.map((edge, edgeIndex) => {
+              const sourceNode = nodes[edge.source];
+              const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
+              const sourceBounds = nodeBounds.get(sourceNode.id);
+              const targetBounds = targetNode ? nodeBounds.get(targetNode.id) : undefined;
 
-            const screenToCanvasCoords = (screenX: number, screenY: number) => {
-              if (!containerRef.current || !scrollContainerRef.current) return { x: 0, y: 0 };
-              const scrollContainer = scrollContainerRef.current;
-              const scrollRect = scrollContainer.getBoundingClientRect();
-              const zoomFactor = zoom / 100;
+              // Track which connection this is for the source node
+              const currentConnectionIndex = connectionIndexByNode.get(edge.source) || 0;
+              connectionIndexByNode.set(edge.source, currentConnectionIndex + 1);
 
-              const canvasX = (scrollContainer.scrollLeft + screenX - scrollRect.left - CANVAS_PADDING) / zoomFactor;
-              const canvasY = (scrollContainer.scrollTop + screenY - scrollRect.top - CANVAS_PADDING) / zoomFactor;
+              // Calculate visibility mode for this edge
+              let visibilityMode: 'full' | 'destination-only' | 'hidden';
+              if (selectedEdgeIndex === edgeIndex) {
+                visibilityMode = 'full';
+              } else if (selectedNodeId === sourceNode.id) {
+                // Source node is selected, show destination dot only
+                visibilityMode = 'destination-only';
+              } else if (hoveredDestinationDotIndex === edgeIndex || draggingEdgeIndex === edgeIndex) {
+                // Destination dot is being hovered or dragged
+                visibilityMode = 'destination-only';
+              } else {
+                // Default: hidden
+                visibilityMode = 'hidden';
+              }
 
-              return { x: canvasX, y: canvasY };
-            };
+              const screenToCanvasCoords = (screenX: number, screenY: number) => {
+                if (!containerRef.current || !scrollContainerRef.current) return { x: 0, y: 0 };
+                const scrollContainer = scrollContainerRef.current;
+                const scrollRect = scrollContainer.getBoundingClientRect();
+                const zoomFactor = zoom / 100;
+
+                const canvasX = (scrollContainer.scrollLeft + screenX - scrollRect.left - CANVAS_PADDING) / zoomFactor;
+                const canvasY = (scrollContainer.scrollTop + screenY - scrollRect.top - CANVAS_PADDING) / zoomFactor;
+
+                return { x: canvasX, y: canvasY };
+              };
+
+              // Check if this is the pending new arrow that should start dragging
+              // Compare using the connection index within the source node, not the global edge index
+              const isPendingNewArrow = pendingNewArrow?.nodeId === sourceNode.id && pendingNewArrow?.edgeIndex === currentConnectionIndex;
 
             return (
               <ConnectorDots
@@ -702,9 +716,11 @@ export default function Flowchart({
                 screenToCanvasCoords={screenToCanvasCoords}
                 onPreviewChange={(node, pos) => handlePreviewChange(edgeIndex, node, pos)}
                 onCreateNodeFromFloatingArrow={onCreateNodeFromFloatingArrow}
+                shouldStartDragging={isPendingNewArrow}
               />
             );
-          })}
+            });
+          })()}
         </div>
       </div>
 

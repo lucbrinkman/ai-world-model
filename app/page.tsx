@@ -36,6 +36,7 @@ function HomeContent() {
   const [autoEditNodeId, setAutoEditNodeId] = useState<string | null>(null);
   const [hoveredDestinationDotIndex, setHoveredDestinationDotIndex] = useState(-1);
   const [draggingEdgeIndex, setDraggingEdgeIndex] = useState(-1);
+  const [pendingNewArrow, setPendingNewArrow] = useState<{ nodeId: string; edgeIndex: number } | null>(null);
   const [minOpacity, setMinOpacity] = useState(60);
 
   // Undo/redo history: Single array with current position index
@@ -403,6 +404,7 @@ function HomeContent() {
 
   const handleDestinationDotDragEnd = useCallback(() => {
     setDraggingEdgeIndex(-1);
+    setPendingNewArrow(null); // Clear pending arrow when drag ends
   }, []);
 
   // Edge reconnect handler
@@ -543,7 +545,7 @@ function HomeContent() {
   }, [edges, nodes, graphData.nodes]);
 
   // Add arrow handler
-  const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number) => {
+  const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number, mousePos?: { clientX: number; clientY: number }) => {
     // Close any open text editor before adding the arrow
     // Force blur on any active textarea to trigger save
     if (document.activeElement instanceof HTMLTextAreaElement) {
@@ -554,6 +556,10 @@ function HomeContent() {
     // Find the node we're adding an arrow to
     const targetNode = graphData.nodes.find(n => n.id === nodeId);
     if (!targetNode) return;
+
+    // Calculate which edge index the new arrow will have (for drag-to-create)
+    const currentConnectionCount = targetNode.connections.length;
+    const newEdgeIndex = currentConnectionCount; // Will be added at this index
 
     // Determine if this will convert to a question node
     const isIntermediateNode = targetNode.type === 'i';
@@ -637,6 +643,14 @@ function HomeContent() {
 
       return { ...prev, nodes: updatedNodes };
     });
+
+    // If mousePos is provided, signal that we want to start dragging this new arrow
+    if (mousePos) {
+      // Use setTimeout to ensure the arrow is rendered before we try to drag it
+      setTimeout(() => {
+        setPendingNewArrow({ nodeId, edgeIndex: newEdgeIndex });
+      }, 0);
+    }
   }, [graphData.nodes, handleEditorClose]);
 
   // Reset sliders to 50%
@@ -1413,6 +1427,7 @@ function HomeContent() {
             autoEditNodeId={autoEditNodeId}
             hoveredDestinationDotIndex={hoveredDestinationDotIndex}
             draggingEdgeIndex={draggingEdgeIndex}
+            pendingNewArrow={pendingNewArrow}
             boldPaths={true}
             transparentPaths={minOpacity < 100}
             minOpacity={minOpacity}

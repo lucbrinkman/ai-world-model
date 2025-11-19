@@ -15,6 +15,7 @@ interface ConnectorDotsProps {
   targetBounds?: DOMRect;
   visibilityMode: 'full' | 'destination-only' | 'hidden';
   targetNodeIsSelected?: boolean;
+  shouldStartDragging?: boolean;
   onReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
   onEdgeSelect?: (edgeIndex: number) => void;
   onDestinationDotHover?: () => void;
@@ -38,6 +39,7 @@ export default function ConnectorDots({
   targetBounds,
   visibilityMode,
   targetNodeIsSelected,
+  shouldStartDragging,
   onReconnect,
   onEdgeSelect,
   onDestinationDotHover,
@@ -61,6 +63,15 @@ export default function ConnectorDots({
   useEffect(() => {
     onPreviewChange?.(previewTargetNode, previewFloatingPos);
   }, [previewTargetNode, previewFloatingPos, onPreviewChange]);
+
+  // Auto-start dragging when shouldStartDragging is true
+  useEffect(() => {
+    if (shouldStartDragging && !draggingConnector) {
+      setDraggingConnector('target');
+      setHasMoved(false);
+      onDestinationDotDragStart?.();
+    }
+  }, [shouldStartDragging, draggingConnector, onDestinationDotDragStart, edgeIndex]);
 
   // Calculate positions (same logic as Edge.tsx)
   const effectiveTargetNode = previewFloatingPos ? undefined :
