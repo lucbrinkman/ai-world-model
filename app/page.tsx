@@ -81,6 +81,14 @@ function HomeContent() {
   // Track slider drag session for undo
   const sliderDragSessionRef = useRef<string | null>(null);
 
+  // Ref to track current nodes for undo/redo (avoids stale closures)
+  const currentNodesRef = useRef<GraphNode[]>(graphData.nodes);
+
+  // Keep ref updated
+  useEffect(() => {
+    currentNodesRef.current = graphData.nodes;
+  }, [graphData.nodes]);
+
   // Share button tooltip timeout
   const shareTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -683,49 +691,55 @@ function HomeContent() {
   const handleUndo = useCallback(() => {
     if (pastStates.length === 0) return;
 
-    setPastStates(prev => {
-      const newPast = [...prev];
-      const previousState = newPast.pop()!;
+    // Use flushSync to ensure state updates happen synchronously
+    flushSync(() => {
+      setPastStates(prev => {
+        const newPast = [...prev];
+        const previousState = newPast.pop()!;
 
-      // Save current state to future
-      setFutureStates(future => [...future, graphData.nodes]);
+        // Save current state to future using ref to avoid stale closure
+        setFutureStates(future => [...future, currentNodesRef.current]);
 
-      // Restore previous state
-      setGraphData(current => ({
-        ...current,
-        nodes: previousState,
-      }));
+        // Restore previous state
+        setGraphData(current => ({
+          ...current,
+          nodes: previousState,
+        }));
 
-      // Track analytics
-      analytics.trackAction('undo');
-
-      return newPast;
+        return newPast;
+      });
     });
-  }, [pastStates, graphData.nodes]);
+
+    // Track analytics
+    analytics.trackAction('undo');
+  }, [pastStates]);
 
   // Redo handler
   const handleRedo = useCallback(() => {
     if (futureStates.length === 0) return;
 
-    setFutureStates(prev => {
-      const newFuture = [...prev];
-      const nextState = newFuture.pop()!;
+    // Use flushSync to ensure state updates happen synchronously
+    flushSync(() => {
+      setFutureStates(prev => {
+        const newFuture = [...prev];
+        const nextState = newFuture.pop()!;
 
-      // Save current state to past
-      setPastStates(past => [...past, graphData.nodes].slice(-50));
+        // Save current state to past using ref to avoid stale closure
+        setPastStates(past => [...past, currentNodesRef.current].slice(-50));
 
-      // Restore next state
-      setGraphData(current => ({
-        ...current,
-        nodes: nextState,
-      }));
+        // Restore next state
+        setGraphData(current => ({
+          ...current,
+          nodes: nextState,
+        }));
 
-      // Track analytics
-      analytics.trackAction('redo');
-
-      return newFuture;
+        return newFuture;
+      });
     });
-  }, [futureStates, graphData.nodes]);
+
+    // Track analytics
+    analytics.trackAction('redo');
+  }, [futureStates]);
 
   // Node drag end handler
   const handleNodeDragEnd = useCallback((nodeId: string, newX: number, newY: number) => {
