@@ -112,24 +112,18 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
     setEditText(text);
   }, [text]);
 
-  // Auto-focus textarea when entering edit mode
+  // Auto-focus and select all text when entering edit mode
   useEffect(() => {
     if (isEditing && editInputRef.current) {
       editInputRef.current.focus();
-      editInputRef.current.select();
+      // Select all text in contentEditable
+      const range = document.createRange();
+      range.selectNodeContents(editInputRef.current);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
     }
   }, [isEditing]);
-
-  // Auto-resize textarea to fit content
-  useEffect(() => {
-    if (isEditing && editInputRef.current) {
-      const textarea = editInputRef.current;
-      // Reset height to auto to get the correct scrollHeight
-      textarea.style.height = 'auto';
-      // Set height to scrollHeight to fit content
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  }, [isEditing, editText]);
 
   // Auto-start editing when requested
   useEffect(() => {
@@ -147,12 +141,14 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
 
     const handleClickOutside = (e: MouseEvent) => {
       if (editInputRef.current && !editInputRef.current.contains(e.target as Node)) {
-        const newText = editText.trim();
+        const newText = editInputRef.current.textContent?.trim() || '';
         if (newText && newText !== text && onUpdateText) {
           onUpdateText(node.id, newText);
         }
         setIsEditing(false);
         onEditorClose?.();
+        // Clear text selection
+        window.getSelection()?.removeAllRanges();
       }
     };
 
@@ -176,12 +172,14 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   };
 
   const saveEdit = useCallback(() => {
-    const newText = editText.trim();
+    const newText = editInputRef.current?.textContent?.trim() || '';
     if (newText && newText !== text && onUpdateText) {
       onUpdateText(node.id, newText);
     }
     setIsEditing(false);
     onEditorClose?.();
+    // Clear text selection
+    window.getSelection()?.removeAllRanges();
   }, [editText, text, onUpdateText, node.id, onEditorClose]);
 
   const handleEditKeyDown = (e: React.KeyboardEvent) => {
@@ -490,61 +488,50 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         {percent}
       </div>
 
-      {/* Node text */}
-      {isEditing ? (
-        <textarea
-          ref={editInputRef}
-          value={editText}
-          onChange={(e) => setEditText(e.target.value)}
-          onBlur={handleEditBlur}
-          onKeyDown={handleEditKeyDown}
-          className="text-xs font-normal leading-tight text-center resize-none outline-none overflow-hidden"
+      {/* Node text - single contentEditable div for both display and editing */}
+      <div
+        ref={editInputRef}
+        contentEditable={isEditing}
+        suppressContentEditableWarning
+        onBlur={handleEditBlur}
+        onKeyDown={handleEditKeyDown}
+        className="text-xs font-normal leading-tight text-center outline-none"
+        style={{
+          color: getTextColor(),
+          fontWeight: 400,
+          paddingTop: '0.12rem',
+          paddingBottom: '0.12rem',
+          cursor: isEditing ? 'text' : 'pointer',
+        }}
+        onClick={(e) => {
+          if (isEditing) {
+            e.stopPropagation();
+          }
+        }}
+      >
+        {/* Invisible spacer to push first line text to the right */}
+        <span
           style={{
-            color: getTextColor(),
-            backgroundColor: 'transparent',
-            fontWeight: 400,
-            padding: '0.12rem',
-            width: '100%',
-            border: 'none',
+            float: 'left',
+            width: `${spacerWidth}px`,
+            height: '1px',
           }}
-          onClick={(e) => e.stopPropagation()}
         />
-      ) : (
-        <div
-          className="text-xs font-normal leading-tight text-center"
+        {/* Invisible spacer on right for symmetry */}
+        <span
           style={{
-            color: getTextColor(),
-            fontWeight: 400,
-            paddingTop: '0.12rem',
-            paddingBottom: '0.12rem',
+            float: 'right',
+            width: `${spacerWidth}px`,
+            height: '1px',
           }}
-        >
-          {/* Invisible spacer to push first line text to the right */}
-          <span
-            style={{
-              float: 'left',
-              width: `${spacerWidth}px`,
-              height: '1px',
-              // backgroundColor: 'red', // Red highlight for debugging
-            }}
-          />
-          {/* Invisible spacer on right for symmetry */}
-          <span
-            style={{
-              float: 'right',
-              width: `${spacerWidth}px`,
-              height: '1px',
-              // backgroundColor: 'red', // Red highlight for debugging
-            }}
-          />
-          {lines.map((line, i) => (
-            <span key={i}>
-              {line}
-              {i < lines.length - 1 && <br />}
-            </span>
-          ))}
-        </div>
-      )}
+        />
+        {lines.map((line, i) => (
+          <span key={i}>
+            {line}
+            {i < lines.length - 1 && <br />}
+          </span>
+        ))}
+      </div>
 
       {/* Button container - shown when node is selected */}
       {isNodeSelected && (
