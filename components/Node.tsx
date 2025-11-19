@@ -697,7 +697,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
             key={direction}
             style={{
               ...containerStyle,
-              zIndex: 100,
+              zIndex: 1001,
               pointerEvents: 'auto',
             }}
             className={`${
@@ -705,7 +705,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
             }`}
           >
             <button
-              onClick={(e) => {
+              onMouseDown={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 onAddArrow(direction);
