@@ -22,6 +22,7 @@ import { useAutoSave } from '@/lib/autoSave';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
 import DocumentPicker from '@/components/DocumentPicker';
 import { ShareModal } from '@/components/ShareModal';
+import { FeedbackButton } from '@/components/FeedbackButton';
 import { analytics } from '@/lib/analytics';
 
 function HomeContent() {
@@ -1482,6 +1483,12 @@ function HomeContent() {
         onClose={() => setIsShareModalOpen(false)}
         documentId={currentDocumentId}
         initialIsPublic={false}
+      />
+
+      {/* Feedback Button */}
+      <FeedbackButton
+        userEmail={user?.email}
+        userName={user?.user_metadata?.full_name}
       />
 
       {/* Dev-only buttons */}
