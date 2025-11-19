@@ -22,6 +22,7 @@ import { useAutoSave } from '@/lib/autoSave';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
 import DocumentPicker from '@/components/DocumentPicker';
 import { ShareModal } from '@/components/ShareModal';
+import { FeedbackButton } from '@/components/FeedbackButton';
 import { analytics } from '@/lib/analytics';
 
 function HomeContent() {
@@ -1532,7 +1533,7 @@ function HomeContent() {
         </header>
 
         {/* Flowchart */}
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 relative">
           <Flowchart
             nodes={nodes}
             edges={edges}
@@ -1592,6 +1593,12 @@ function HomeContent() {
             onUndo={handleUndo}
             onRedo={handleRedo}
           />
+
+          {/* Feedback Button */}
+          <FeedbackButton
+            userEmail={user?.email}
+            userName={user?.user_metadata?.full_name}
+          />
         </div>
       </div>
 
@@ -1618,7 +1625,7 @@ function HomeContent() {
 
       {/* Dev-only buttons */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 flex gap-2 z-50">
+        <div className="fixed bottom-10 right-20 flex gap-2 z-50">
           {/* Clear Site Data button */}
           <button
             onClick={async () => {
