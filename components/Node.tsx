@@ -120,6 +120,17 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
     }
   }, [isEditing]);
 
+  // Auto-resize textarea to fit content
+  useEffect(() => {
+    if (isEditing && editInputRef.current) {
+      const textarea = editInputRef.current;
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set height to scrollHeight to fit content
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [isEditing, editText]);
+
   // Auto-start editing when requested
   useEffect(() => {
     if (shouldStartEditing && onUpdateText && !isDragging) {
@@ -487,14 +498,13 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
           onChange={(e) => setEditText(e.target.value)}
           onBlur={handleEditBlur}
           onKeyDown={handleEditKeyDown}
-          className="text-xs font-normal leading-tight text-center resize-none outline-none"
+          className="text-xs font-normal leading-tight text-center resize-none outline-none overflow-hidden"
           style={{
             color: getTextColor(),
             backgroundColor: 'transparent',
             fontWeight: 400,
             padding: '0.12rem',
             width: '100%',
-            minHeight: '40px',
             border: 'none',
           }}
           onClick={(e) => e.stopPropagation()}
