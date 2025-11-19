@@ -81,6 +81,9 @@ function HomeContent() {
   // Track slider drag session for undo
   const sliderDragSessionRef = useRef<string | null>(null);
 
+  // Prevent multiple simultaneous undo/redo operations
+  const undoRedoInProgressRef = useRef(false);
+
   // Share button tooltip timeout
   const shareTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -681,14 +684,30 @@ function HomeContent() {
 
   // Undo handler
   const handleUndo = useCallback(() => {
+    // Prevent multiple simultaneous undo operations
+    if (undoRedoInProgressRef.current) {
+      console.log('[UNDO] BLOCKED - operation in progress');
+      return;
+    }
     if (pastStates.length === 0) return;
+
+    undoRedoInProgressRef.current = true;
+
+    // Capture current state BEFORE any updates
+    const currentState = graphData.nodes;
 
     setPastStates(prev => {
       const newPast = [...prev];
       const previousState = newPast.pop()!;
 
+      console.log('[UNDO] Past length:', prev.length, '→', newPast.length);
+      console.log('[UNDO] Saving current to future, restoring previous from past');
+
       // Save current state to future
-      setFutureStates(future => [...future, graphData.nodes]);
+      setFutureStates(future => {
+        console.log('[UNDO] Future length:', future.length, '→', future.length + 1);
+        return [...future, currentState];
+      });
 
       // Restore previous state
       setGraphData(current => ({
@@ -699,20 +718,42 @@ function HomeContent() {
       // Track analytics
       analytics.trackAction('undo');
 
+      // Reset the lock after a short delay to allow state updates to complete
+      setTimeout(() => {
+        undoRedoInProgressRef.current = false;
+      }, 50);
+
       return newPast;
     });
   }, [pastStates, graphData.nodes]);
 
   // Redo handler
   const handleRedo = useCallback(() => {
+    // Prevent multiple simultaneous redo operations
+    if (undoRedoInProgressRef.current) {
+      console.log('[REDO] BLOCKED - operation in progress');
+      return;
+    }
     if (futureStates.length === 0) return;
+
+    undoRedoInProgressRef.current = true;
+
+    // Capture current state BEFORE any updates
+    const currentState = graphData.nodes;
 
     setFutureStates(prev => {
       const newFuture = [...prev];
       const nextState = newFuture.pop()!;
 
+      console.log('[REDO] Future length:', prev.length, '→', newFuture.length);
+      console.log('[REDO] Saving current to past, restoring next from future');
+
       // Save current state to past
-      setPastStates(past => [...past, graphData.nodes].slice(-50));
+      setPastStates(past => {
+        const newPast = [...past, currentState].slice(-50);
+        console.log('[REDO] Past length:', past.length, '→', newPast.length);
+        return newPast;
+      });
 
       // Restore next state
       setGraphData(current => ({
@@ -722,6 +763,11 @@ function HomeContent() {
 
       // Track analytics
       analytics.trackAction('redo');
+
+      // Reset the lock after a short delay to allow state updates to complete
+      setTimeout(() => {
+        undoRedoInProgressRef.current = false;
+      }, 50);
 
       return newFuture;
     });

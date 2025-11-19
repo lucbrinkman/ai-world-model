@@ -50,9 +50,10 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             posthog.opt_out_capturing()
           }
 
-          if (process.env.NODE_ENV === 'development') {
-            posthog.debug()
-          }
+          // Debug mode disabled
+          // if (process.env.NODE_ENV === 'development') {
+          //   posthog.debug()
+          // }
         },
       })
 
