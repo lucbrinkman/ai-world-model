@@ -42,6 +42,9 @@ function HomeContent() {
   const [history, setHistory] = useState<GraphNode[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
+  // Suppress history updates during continuous operations (like slider drag)
+  const suppressHistoryRef = useRef(false);
+
   // Computed undo/redo availability
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -272,6 +275,11 @@ function HomeContent() {
 
   // Auto-history tracker: Watch graphData.nodes and save current state to history
   useEffect(() => {
+    // Skip if suppression is active (during continuous operations like slider drag)
+    if (suppressHistoryRef.current) {
+      return;
+    }
+
     // Skip if current state is already in history at current index (happens during undo/redo)
     if (graphData.nodes === history[historyIndex]) {
       return;
@@ -291,6 +299,9 @@ function HomeContent() {
 
   // Slider change handler
   const handleSliderChange = useCallback((nodeId: string, value: number) => {
+    // Suppress history tracking during continuous drag
+    suppressHistoryRef.current = true;
+
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node =>
         node.id === nodeId ? { ...node, probability: value } : node
@@ -301,6 +312,12 @@ function HomeContent() {
 
   // Slider change complete handler
   const handleSliderChangeComplete = useCallback((nodeId: string) => {
+    // Re-enable history tracking
+    suppressHistoryRef.current = false;
+
+    // Force one final state update to capture end state in history
+    setGraphData(prev => ({ ...prev, nodes: [...prev.nodes] }));
+
     // Track analytics
     const node = graphData.nodes.find(n => n.id === nodeId);
     if (node && node.probability !== null) {
@@ -1209,20 +1226,28 @@ function HomeContent() {
   // Keyboard handler for Delete/Backspace keys
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger if a node is selected and we're not editing text
-      if (!selectedNodeId) return;
+      // Only trigger if a node or edge is selected and we're not editing text
+      if (!selectedNodeId && selectedEdgeIndex < 0) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if ((e.target as HTMLElement).contentEditable === 'true') return;
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
-        handleInitiateDelete(selectedNodeId);
+
+        // Delete edge if one is selected
+        if (selectedEdgeIndex >= 0) {
+          handleInitiateDeleteEdge(selectedEdgeIndex);
+        }
+        // Otherwise delete node if one is selected
+        else if (selectedNodeId) {
+          handleInitiateDelete(selectedNodeId);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeId, handleInitiateDelete]);
+  }, [selectedNodeId, selectedEdgeIndex, handleInitiateDelete, handleInitiateDeleteEdge]);
 
   // Keyboard handler for Undo/Redo
   useEffect(() => {
