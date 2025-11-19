@@ -43,7 +43,13 @@ function HomeContent() {
   const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
   const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
   const [minOpacity, setMinOpacity] = useState(60);
-  const [undoStack, setUndoStack] = useState<GraphNode[][]>([]);
+  const [pastStates, setPastStates] = useState<GraphNode[][]>([]);
+  const [futureStates, setFutureStates] = useState<GraphNode[][]>([]);
+
+  // Computed undo/redo availability
+  const canUndo = pastStates.length > 0;
+  const canRedo = futureStates.length > 0;
+
   const [showMobileWarning, setShowMobileWarning] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -71,6 +77,9 @@ function HomeContent() {
 
   // Track editor close events to prevent context menu from opening
   const editorCloseTimestampRef = useRef(0);
+
+  // Track slider drag session for undo
+  const sliderDragSessionRef = useRef<string | null>(null);
 
   // Share button tooltip timeout
   const shareTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -268,15 +277,32 @@ function HomeContent() {
     authLoading,
   });
 
+  // History helper: Save current state before making changes
+  const saveToHistory = useCallback(() => {
+    setPastStates(prev => {
+      const newPast = [...prev, graphData.nodes];
+      // Limit history to 50 states
+      return newPast.slice(-50);
+    });
+    // Clear future (branching undo)
+    setFutureStates([]);
+  }, [graphData.nodes]);
+
   // Slider change handler
   const handleSliderChange = useCallback((nodeId: string, value: number) => {
+    // Save to history at the START of a drag session (only once per drag)
+    if (sliderDragSessionRef.current !== nodeId) {
+      saveToHistory();
+      sliderDragSessionRef.current = nodeId;
+    }
+
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node =>
         node.id === nodeId ? { ...node, probability: value } : node
       );
       return { ...prev, nodes: updatedNodes };
     });
-  }, []);
+  }, [saveToHistory]);
 
   // Slider change complete handler (for undo)
   const handleSliderChangeComplete = useCallback((nodeId: string) => {
@@ -286,14 +312,8 @@ function HomeContent() {
       analytics.trackSliderChange(nodeId, node.probability);
     }
 
-    // Save to undo stack
-    setUndoStack(prev => {
-      const currentState = graphData.nodes;
-      if (prev.length === 0 || JSON.stringify(prev[prev.length - 1]) !== JSON.stringify(currentState)) {
-        return [...prev, currentState];
-      }
-      return prev;
-    });
+    // Reset drag session ref (so next drag will save to history)
+    sliderDragSessionRef.current = null;
   }, [graphData.nodes]);
 
   // Node click handler - no longer changes probability root
@@ -381,6 +401,9 @@ function HomeContent() {
     const edge = edges[edgeIndex];
     if (!edge) return;
 
+    // Save to history before making changes
+    saveToHistory();
+
     // Convert indices to IDs
     const sourceNodeId = nodes[edge.source].id;
     const targetNodeId = edge.target !== undefined ? nodes[edge.target].id : undefined;
@@ -416,12 +439,15 @@ function HomeContent() {
       return { ...prev, nodes: updatedNodes };
     });
 
-  }, [edges, nodes]);
+  }, [edges, nodes, saveToHistory]);
 
   // Edge label update handler
   const handleEdgeLabelUpdate = useCallback((edgeIndex: number, newLabel: string) => {
     const edge = edges[edgeIndex];
     if (!edge || edge.source === undefined || edge.target === undefined) return;
+
+    // Save to history before making changes
+    saveToHistory();
 
     // Convert indices to IDs
     const sourceNodeId = nodes[edge.source].id;
@@ -445,12 +471,15 @@ function HomeContent() {
       return { ...prev, nodes: updatedNodes };
     });
 
-  }, [edges, nodes]);
+  }, [edges, nodes, saveToHistory]);
 
   // Delete edge handler
   const handleDeleteEdge = useCallback((edgeIndex: number) => {
     const edge = edges[edgeIndex];
     if (!edge || edge.source === undefined) return;
+
+    // Save to history before making changes
+    saveToHistory();
 
     const sourceNode = nodes[edge.source];
     const sourceGraphNode = graphData.nodes.find(n => n.id === sourceNode.id);
@@ -511,13 +540,16 @@ function HomeContent() {
     });
 
     setSelectedEdgeIndex(-1);
-  }, [edges, nodes, graphData.nodes]);
+  }, [edges, nodes, graphData.nodes, saveToHistory]);
 
   // Add arrow handler
   const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number) => {
     // Find the node we're adding an arrow to
     const targetNode = graphData.nodes.find(n => n.id === nodeId);
     if (!targetNode) return;
+
+    // Save to history before making changes
+    saveToHistory();
 
     // Determine if this will convert to a question node
     const isIntermediateNode = targetNode.type === 'i';
@@ -601,10 +633,13 @@ function HomeContent() {
 
       return { ...prev, nodes: updatedNodes };
     });
-  }, [graphData.nodes]);
+  }, [graphData.nodes, saveToHistory]);
 
   // Reset sliders to 50%
   const handleResetSliders = useCallback(() => {
+    // Save to history before making changes
+    saveToHistory();
+
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
         if (node.type === 'n' && node.sliderIndex !== null) {
@@ -615,15 +650,15 @@ function HomeContent() {
       return { ...prev, nodes: updatedNodes };
     });
 
-    // Save to undo stack
-    setUndoStack(prev => [...prev, graphData.nodes]);
-
     // Track analytics
     analytics.trackAction('reset');
-  }, [graphData.nodes]);
+  }, [saveToHistory]);
 
   // Load default estimates (only updates recognized nodes, preserves custom nodes)
   const handleLoadAuthorsEstimates = useCallback(() => {
+    // Save to history before making changes
+    saveToHistory();
+
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
         // Find this node in defaultGraphData to get its original probability
@@ -640,37 +675,63 @@ function HomeContent() {
       return { ...prev, nodes: updatedNodes };
     });
 
-    // Save to undo stack
-    setUndoStack(prev => [...prev, graphData.nodes]);
-
     // Track analytics
     analytics.trackAction('load_authors_estimates');
-  }, [graphData.nodes]);
+  }, [saveToHistory]);
 
   // Undo handler
   const handleUndo = useCallback(() => {
-    setUndoStack(prev => {
-      if (prev.length > 1) {
-        const newStack = [...prev];
-        newStack.pop();
-        const previousState = newStack[newStack.length - 1];
+    if (pastStates.length === 0) return;
 
-        setGraphData(current => ({
-          ...current,
-          nodes: previousState,
-        }));
+    setPastStates(prev => {
+      const newPast = [...prev];
+      const previousState = newPast.pop()!;
 
-        // Track analytics
-        analytics.trackAction('undo');
+      // Save current state to future
+      setFutureStates(future => [...future, graphData.nodes]);
 
-        return newStack;
-      }
-      return prev;
+      // Restore previous state
+      setGraphData(current => ({
+        ...current,
+        nodes: previousState,
+      }));
+
+      // Track analytics
+      analytics.trackAction('undo');
+
+      return newPast;
     });
-  }, []);
+  }, [pastStates, graphData.nodes]);
+
+  // Redo handler
+  const handleRedo = useCallback(() => {
+    if (futureStates.length === 0) return;
+
+    setFutureStates(prev => {
+      const newFuture = [...prev];
+      const nextState = newFuture.pop()!;
+
+      // Save current state to past
+      setPastStates(past => [...past, graphData.nodes].slice(-50));
+
+      // Restore next state
+      setGraphData(current => ({
+        ...current,
+        nodes: nextState,
+      }));
+
+      // Track analytics
+      analytics.trackAction('redo');
+
+      return newFuture;
+    });
+  }, [futureStates, graphData.nodes]);
 
   // Node drag end handler
   const handleNodeDragEnd = useCallback((nodeId: string, newX: number, newY: number) => {
+    // Save to history before making changes
+    saveToHistory();
+
     // Update graph data with new position (auto-save will handle persistence)
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
@@ -799,7 +860,7 @@ function HomeContent() {
       };
     });
 
-  }, []);
+  }, [saveToHistory]);
 
   // Reset node positions handler
   const handleResetNodePositions = useCallback(() => {
@@ -901,6 +962,9 @@ function HomeContent() {
 
   // Graph editing handlers
   const handleUpdateNodeText = useCallback((nodeId: string, newText: string) => {
+    // Save to history before making changes
+    saveToHistory();
+
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
         if (node.id === nodeId) {
@@ -916,10 +980,13 @@ function HomeContent() {
         nodes: updatedNodes,
       };
     });
-  }, []);
+  }, [saveToHistory]);
 
 
   const handleAddNode = useCallback((x: number, y: number) => {
+    // Save to history before making changes
+    saveToHistory();
+
     // Generate a unique ID for the new node
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).substring(2, 9);
@@ -944,11 +1011,14 @@ function HomeContent() {
     // Trigger auto-edit for the newly created node
     setAutoEditNodeId(newNodeId);
 
-  }, [graphData]);
+  }, [saveToHistory]);
 
   const handleCreateNodeFromFloatingArrow = useCallback((edgeIndex: number, position: { x: number; y: number }) => {
     const edge = edges[edgeIndex];
     if (!edge || edge.target !== undefined) return; // Only handle floating arrows
+
+    // Save to history before making changes
+    saveToHistory();
 
     // Generate a unique ID for the new node
     const timestamp = Date.now();
@@ -1000,7 +1070,7 @@ function HomeContent() {
 
     // Trigger auto-edit for the newly created node
     setAutoEditNodeId(newNodeId);
-  }, [edges, nodes]);
+  }, [edges, nodes, saveToHistory]);
 
   const handleInitiateDelete = useCallback((nodeId: string) => {
     // Find the node to delete
@@ -1022,6 +1092,9 @@ function HomeContent() {
     // Find the node to delete
     const nodeToDelete = graphData.nodes.find(n => n.id === nodeId);
     if (!nodeToDelete) return;
+
+    // Save to history before making changes
+    saveToHistory();
 
     // Get the node's position for converting incoming edges to free-floating
     const nodePosition = nodeToDelete.position;
@@ -1090,7 +1163,7 @@ function HomeContent() {
         };
       });
     });
-  }, [graphData, nodes, probabilityRootIndex]);
+  }, [graphData, nodes, probabilityRootIndex, saveToHistory]);
 
   const handleCancelDelete = useCallback(() => {
     setDeleteDialogOpen(false);
@@ -1124,6 +1197,9 @@ function HomeContent() {
 
     const oldType = node.type;
     if (oldType === newType) return; // No change
+
+    // Save to history before making changes
+    saveToHistory();
 
     flushSync(() => {
       setGraphData(prev => {
@@ -1207,7 +1283,7 @@ function HomeContent() {
       });
 
       });
-  }, [graphData]);
+  }, [graphData, saveToHistory]);
 
   // Keyboard handler for Delete/Backspace keys
   useEffect(() => {
@@ -1226,6 +1302,32 @@ function HomeContent() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, handleInitiateDelete]);
+
+  // Keyboard handler for Undo/Redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger when typing in text inputs (but allow for range/slider inputs)
+      if (e.target instanceof HTMLInputElement && e.target.type !== 'range') return;
+      if (e.target instanceof HTMLTextAreaElement) return;
+      if ((e.target as HTMLElement).contentEditable === 'true') return;
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
+        // Ctrl+Z / Cmd+Z = Undo
+        e.preventDefault();
+        handleUndo();
+      } else if (cmdOrCtrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        // Ctrl+Y / Cmd+Y or Ctrl+Shift+Z / Cmd+Shift+Z = Redo
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
 
   // Settings change handlers with analytics
   const handleMinOpacityChange = useCallback((value: number) => {
@@ -1393,6 +1495,10 @@ function HomeContent() {
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onReset={handleResetView}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
           />
         </div>
       </div>

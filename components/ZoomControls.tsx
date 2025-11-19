@@ -5,6 +5,10 @@ interface ZoomControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
 }
 
 export default function ZoomControls({
@@ -12,9 +16,62 @@ export default function ZoomControls({
   onZoomIn,
   onZoomOut,
   onReset,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
 }: ZoomControlsProps) {
   return (
     <div className="fixed bottom-4 right-4 bg-background border border-gray-800 rounded-lg p-2 shadow-lg flex flex-col gap-2 z-10">
+      {/* Redo Button */}
+      <button
+        onClick={onRedo}
+        disabled={!canRedo}
+        className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed rounded transition-colors"
+        title="Redo (Ctrl+Y)"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 7v6h-6" />
+          <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
+        </svg>
+      </button>
+
+      {/* Undo Button */}
+      <button
+        onClick={onUndo}
+        disabled={!canUndo}
+        className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed rounded transition-colors"
+        title="Undo (Ctrl+Z)"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 7v6h6" />
+          <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+        </svg>
+      </button>
+
+      {/* Divider */}
+      <div className="border-t border-gray-800"></div>
+
       {/* Zoom In Button */}
       <button
         onClick={onZoomIn}
