@@ -2,6 +2,7 @@ import { Edge as EdgeType, Node, SNAP_DISTANCE } from '@/lib/types';
 import { isAncestorOf } from '@/lib/probability';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Plus } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 interface ConnectorDotsProps {
   edge: EdgeType;
@@ -519,31 +520,33 @@ export default function ConnectorDots({
       )}
 
       {/* Target connector dot - draggable */}
-      <div
-        style={{
-          position: 'absolute',
-          left: `${x2}px`,
-          top: `${y2}px`,
-          transform: 'translate(-50%, -50%)',
-          width: draggingConnector === 'target' || hoveredConnector === 'target' ? '16px' : '12px',
-          height: draggingConnector === 'target' || hoveredConnector === 'target' ? '16px' : '12px',
-          borderRadius: '50%',
-          backgroundColor: draggingConnector === 'target' ? '#FFD700' : (hoveredConnector === 'target' ? '#FFA500' : '#1E90FF'),
-          border: '2px solid white',
-          cursor: draggingConnector === 'target' ? 'grabbing' : 'grab',
-          pointerEvents: 'auto',
-          zIndex: targetNodeIsSelected ? 500 : 1000,
-        }}
-        onMouseDown={(e) => handleConnectorMouseDown(e, 'target')}
-        onMouseEnter={() => {
-          setHoveredConnector('target');
-          onDestinationDotHover?.();
-        }}
-        onMouseLeave={() => {
-          setHoveredConnector(null);
-          onDestinationDotLeave?.();
-        }}
-      />
+      <Tooltip content="Drag to move" position="top" disabled={draggingConnector === 'target'}>
+        <div
+          style={{
+            position: 'absolute',
+            left: `${x2}px`,
+            top: `${y2}px`,
+            transform: 'translate(-50%, -50%)',
+            width: draggingConnector === 'target' || hoveredConnector === 'target' ? '16px' : '12px',
+            height: draggingConnector === 'target' || hoveredConnector === 'target' ? '16px' : '12px',
+            borderRadius: '50%',
+            backgroundColor: draggingConnector === 'target' ? '#FFD700' : (hoveredConnector === 'target' ? '#FFA500' : '#1E90FF'),
+            border: '2px solid white',
+            cursor: draggingConnector === 'target' ? 'grabbing' : 'grab',
+            pointerEvents: 'auto',
+            zIndex: targetNodeIsSelected ? 500 : 1000,
+          }}
+          onMouseDown={(e) => handleConnectorMouseDown(e, 'target')}
+          onMouseEnter={() => {
+            setHoveredConnector('target');
+            onDestinationDotHover?.();
+          }}
+          onMouseLeave={() => {
+            setHoveredConnector(null);
+            onDestinationDotLeave?.();
+          }}
+        />
+      </Tooltip>
 
       {/* Invisible larger hitbox for easier clicking */}
       <div
@@ -578,37 +581,39 @@ export default function ConnectorDots({
         return (
           <>
             {/* Visible plus button */}
-            <div
-              style={{
-                position: 'absolute',
-                left: `${plusPos.x}px`,
-                top: `${plusPos.y}px`,
-                transform: `translate(-50%, -50%) ${hoveredPlusButton ? 'scale(1.1)' : 'scale(1)'}`,
-                width: `${buttonSize}px`,
-                height: `${buttonSize}px`,
-                borderRadius: '50%',
-                backgroundColor: hoveredPlusButton ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.3)', // blue-500/60 and blue-500/30
-                cursor: 'pointer',
-                pointerEvents: 'auto',
-                zIndex: targetNodeIsSelected ? 500 : 1000,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease',
-              }}
-              onClick={handlePlusButtonClick}
-              onMouseEnter={() => {
-                setHoveredPlusButton(true);
-                onDestinationDotHover?.();
-              }}
-              onMouseLeave={() => {
-                setHoveredPlusButton(false);
-                onDestinationDotLeave?.();
-              }}
-            >
-              {/* Lucide Plus icon */}
-              <Plus size={buttonSize - 4} color="white" strokeWidth={2.5} />
-            </div>
+            <Tooltip content="Add node" position="top">
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${plusPos.x}px`,
+                  top: `${plusPos.y}px`,
+                  transform: `translate(-50%, -50%) ${hoveredPlusButton ? 'scale(1.1)' : 'scale(1)'}`,
+                  width: `${buttonSize}px`,
+                  height: `${buttonSize}px`,
+                  borderRadius: '50%',
+                  backgroundColor: hoveredPlusButton ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.3)', // blue-500/60 and blue-500/30
+                  cursor: 'pointer',
+                  pointerEvents: 'auto',
+                  zIndex: targetNodeIsSelected ? 500 : 1000,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                }}
+                onClick={handlePlusButtonClick}
+                onMouseEnter={() => {
+                  setHoveredPlusButton(true);
+                  onDestinationDotHover?.();
+                }}
+                onMouseLeave={() => {
+                  setHoveredPlusButton(false);
+                  onDestinationDotLeave?.();
+                }}
+              >
+                {/* Lucide Plus icon */}
+                <Plus size={buttonSize - 4} color="white" strokeWidth={2.5} />
+              </div>
+            </Tooltip>
 
             {/* Invisible larger hitbox for easier clicking */}
             <div

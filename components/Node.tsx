@@ -3,6 +3,7 @@ import { toPercentString, calculateAlpha, calculateNodeBorderWidth } from '@/lib
 import { forwardRef, useState, useRef, useEffect, useCallback } from 'react';
 import OutcomeTypeSwitcher from './OutcomeTypeSwitcher';
 import { Trash2, Pin, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 // Helper function to snap coordinate to grid
 const snapToGrid = (value: number, gridSize: number): number => {
@@ -526,38 +527,40 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         >
           {/* Pin button (left) */}
           {onSetProbabilityRoot && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSetProbabilityRoot();
-              }}
-              onMouseEnter={(e) => {
-                e.stopPropagation();
-                onSetProbabilityRootHoverStart?.();
-              }}
-              onMouseLeave={(e) => {
-                e.stopPropagation();
-                onSetProbabilityRootHoverEnd?.();
-              }}
-              className={`${isSelected ? 'bg-blue-600' : 'bg-gray-400'} hover:bg-blue-600 text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors`}
-              title="Set as start (100% probability)"
-            >
-              <Pin size={14} />
-            </button>
+            <Tooltip content="Set as start (100% probability)" position="top">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSetProbabilityRoot();
+                }}
+                onMouseEnter={(e) => {
+                  e.stopPropagation();
+                  onSetProbabilityRootHoverStart?.();
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation();
+                  onSetProbabilityRootHoverEnd?.();
+                }}
+                className={`${isSelected ? 'bg-blue-600' : 'bg-gray-400'} hover:bg-blue-600 text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors`}
+              >
+                <Pin size={14} />
+              </button>
+            </Tooltip>
           )}
 
           {/* Trash button (right) */}
           {onDelete && node.type !== 's' && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(node.id);
-              }}
-              className="bg-gray-400 hover:bg-red-600 text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
-              title="Delete node (Delete/Backspace)"
-            >
-              <Trash2 size={14} />
-            </button>
+            <Tooltip content="Delete node" position="top">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(node.id);
+                }}
+                className="bg-gray-400 hover:bg-red-600 text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
+              >
+                <Trash2 size={14} />
+              </button>
+            </Tooltip>
           )}
         </div>
       )}
@@ -704,17 +707,18 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
               isNodeSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
             }`}
           >
-            <button
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                onAddArrow(direction);
-              }}
-              className="bg-blue-500/30 hover:bg-blue-500/60 text-white rounded-full p-0.5 transition-all duration-200 hover:scale-110 border border-blue-400/50"
-              title={`Add arrow ${direction}`}
-            >
-              <Icon size={12} />
-            </button>
+            <Tooltip content="Drag to add arrow" position={direction === 'bottom' ? 'bottom' : 'top'}>
+              <button
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onAddArrow(direction);
+                }}
+                className="bg-blue-500/30 hover:bg-blue-500/60 text-white rounded-full p-0.5 transition-all duration-200 hover:scale-110 border border-blue-400/50"
+              >
+                <Icon size={12} />
+              </button>
+            </Tooltip>
           </div>
         ));
       })()}

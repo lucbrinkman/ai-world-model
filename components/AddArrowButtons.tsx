@@ -1,4 +1,5 @@
 import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 interface AddArrowButtonsProps {
   nodeId: string;
@@ -61,21 +62,21 @@ export default function AddArrowButtons({
   return (
     <>
       {buttons.map(({ direction, icon: Icon, x, y }) => (
-        <button
-          key={direction}
-          onClick={(e) => handleClick(e, direction)}
-          style={{
-            position: 'absolute',
-            left: `${x}px`,
-            top: `${y}px`,
-            transform: 'translate(-50%, -50%)',
-            zIndex: 100,
-          }}
-          className="bg-blue-500/30 hover:bg-blue-500/60 text-white rounded-full p-0.5 transition-all duration-200 hover:scale-110 border border-blue-400/50"
-          title={`Add arrow ${direction}`}
-        >
-          <Icon size={12} />
-        </button>
+        <Tooltip key={direction} content="Drag to add arrow" position={direction === 'bottom' ? 'bottom' : 'top'}>
+          <button
+            onClick={(e) => handleClick(e, direction)}
+            style={{
+              position: 'absolute',
+              left: `${x}px`,
+              top: `${y}px`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 100,
+            }}
+            className="bg-blue-500/30 hover:bg-blue-500/60 text-white rounded-full p-0.5 transition-all duration-200 hover:scale-110 border border-blue-400/50"
+          >
+            <Icon size={12} />
+          </button>
+        </Tooltip>
       ))}
     </>
   );

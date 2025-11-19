@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 interface DeleteEdgeButtonProps {
   edgeIndex: number;
@@ -23,16 +24,17 @@ export default function DeleteEdgeButton({
         zIndex: 150,
       }}
     >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow-md transition-all duration-200 hover:scale-110"
-        title="Delete connection"
-      >
-        <X size={9} />
-      </button>
+      <Tooltip content="Delete connection" position="top">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow-md transition-all duration-200 hover:scale-110"
+        >
+          <X size={9} />
+        </button>
+      </Tooltip>
     </div>
   );
 }

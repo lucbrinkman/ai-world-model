@@ -6,6 +6,7 @@ import { getUserDocuments, deleteDocument, renameDocument } from '@/lib/actions/
 import TemplateChoiceDialog from './TemplateChoiceDialog';
 import NewDocumentWarningDialog from './NewDocumentWarningDialog';
 import { ShareModal } from './ShareModal';
+import Tooltip from './Tooltip';
 
 interface DocumentPickerProps {
   currentDocumentId: string | null;
@@ -31,15 +32,12 @@ export default function DocumentPicker({
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(currentDocumentName);
   const [loading, setLoading] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const justRenamed = useRef(false);
 
   // Load documents when dropdown opens or when renaming starts
@@ -65,14 +63,6 @@ export default function DocumentPicker({
   // Focus rename input when renaming starts
   useEffect(() => {
     if (isRenaming) {
-      // Clear hover state and tooltip when entering rename mode
-      setIsHovering(false);
-      setShowTooltip(false);
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-        hoverTimeoutRef.current = null;
-      }
-
       if (renameInputRef.current) {
         renameInputRef.current.focus();
         renameInputRef.current.select();
@@ -84,35 +74,6 @@ export default function DocumentPicker({
   useEffect(() => {
     setRenameValue(currentDocumentName);
   }, [currentDocumentName]);
-
-  // Handle hover timeout for tooltip
-  const handleMouseEnter = () => {
-    // Don't activate hover if we just renamed (cooldown period)
-    if (justRenamed.current) return;
-
-    setIsHovering(true);
-    hoverTimeoutRef.current = setTimeout(() => {
-      setShowTooltip(true);
-    }, 350); // Show tooltip after 0.35 seconds
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovering(false);
-    setShowTooltip(false);
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-  };
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const loadDocuments = async () => {
     setLoading(true);
@@ -273,23 +234,14 @@ export default function DocumentPicker({
       <>
         <div className="relative" ref={dropdownRef}>
           <div className="flex items-center gap-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm">
-            <div className="relative inline-block">
+            <Tooltip content="Rename" position="bottom" disabled={justRenamed.current}>
               <span
-                className={`font-medium cursor-text px-1 py-0.5 rounded transition-all ${
-                  isHovering ? 'border border-gray-500' : 'border border-transparent'
-                }`}
+                className="font-medium cursor-text px-1 py-0.5 rounded transition-all hover:border hover:border-gray-500 border border-transparent"
                 onClick={() => setIsRenaming(true)}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
               >
                 {renameValue}
               </span>
-              {showTooltip && (
-                <div className="absolute top-full left-0 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap z-50">
-                  Rename
-                </div>
-              )}
-            </div>
+            </Tooltip>
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="hover:bg-gray-700 p-1 rounded"
@@ -383,23 +335,14 @@ export default function DocumentPicker({
         </div>
       ) : (
         <div className="flex items-center gap-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm">
-          <div className="relative inline-block">
+          <Tooltip content="Rename" position="bottom" disabled={justRenamed.current}>
             <span
-              className={`font-medium cursor-text px-1 py-0.5 rounded transition-all ${
-                isHovering ? 'border border-gray-500' : 'border border-transparent'
-              }`}
+              className="font-medium cursor-text px-1 py-0.5 rounded transition-all hover:border hover:border-gray-500 border border-transparent"
               onClick={() => setIsRenaming(true)}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
             >
               {renameValue}
             </span>
-            {showTooltip && (
-              <div className="absolute top-full left-0 mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap z-50">
-                Rename
-              </div>
-            )}
-          </div>
+          </Tooltip>
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="hover:bg-gray-700 p-1 rounded"
@@ -441,23 +384,28 @@ export default function DocumentPicker({
           </button>
 
           {/* Share Current button */}
-          <button
-            onClick={() => {
-              if (currentDocumentId) {
-                setIsShareModalOpen(true);
-                setIsOpen(false);
-              }
-            }}
-            disabled={!currentDocumentId}
-            className={`w-full px-4 py-2 text-left text-sm border-b border-gray-600 ${
-              currentDocumentId
-                ? 'text-white hover:bg-gray-700 cursor-pointer'
-                : 'text-gray-500 cursor-not-allowed'
-            }`}
-            title={!currentDocumentId ? 'Save document first to enable sharing' : ''}
+          <Tooltip
+            content="Save document first to enable sharing"
+            position="right"
+            disabled={!!currentDocumentId}
           >
-            Share Current
-          </button>
+            <button
+              onClick={() => {
+                if (currentDocumentId) {
+                  setIsShareModalOpen(true);
+                  setIsOpen(false);
+                }
+              }}
+              disabled={!currentDocumentId}
+              className={`w-full px-4 py-2 text-left text-sm border-b border-gray-600 ${
+                currentDocumentId
+                  ? 'text-white hover:bg-gray-700 cursor-pointer'
+                  : 'text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              Share Current
+            </button>
+          </Tooltip>
 
           {/* Documents list */}
           {loading ? (

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { NODE_COLORS, type NodeType } from '@/lib/types';
+import Tooltip from './Tooltip';
 
 interface OutcomeTypeSwitcherProps {
   nodeId: string;
@@ -43,38 +44,38 @@ export default function OutcomeTypeSwitcher({
       onClick={(e) => e.stopPropagation()}
     >
       {outcomeTypes.map(({ type, label, color }) => (
-        <button
-          key={type}
-          onClick={(e) => {
-            e.stopPropagation();
-            onChangeType(nodeId, type);
-          }}
-          className="flex items-center justify-end cursor-pointer"
-          style={{
-            width: '100%', // Fill parent
-            height: '11px',
-            backgroundColor: color,
-            borderRadius: isHovered ? '4px' : '50%',
-            border: currentType === type ? `2px solid ${color}` : '1px solid rgba(255, 255, 255, 0.3)',
-            opacity: currentType === type ? 1 : (isHovered ? 0.9 : 0.6),
-            padding: isHovered ? '0 8px' : '0',
-            transition: 'border-radius 200ms ease-in-out, opacity 200ms ease-in-out, padding 200ms ease-in-out',
-          }}
-          title={label}
-        >
-          {isHovered && (
-            <span
-              className="font-medium whitespace-nowrap"
-              style={{
-                fontSize: '10px',
-                color: type === 'e' ? 'white' : 'black', // Black for Good/Ambivalent, white for Bad
-                textShadow: type === 'e' ? '0 1px 2px rgba(0, 0, 0, 0.8)' : 'none',
-              }}
-            >
-              {label}
-            </span>
-          )}
-        </button>
+        <Tooltip key={type} content={label} position="left" disabled={isHovered}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onChangeType(nodeId, type);
+            }}
+            className="flex items-center justify-end cursor-pointer"
+            style={{
+              width: '100%', // Fill parent
+              height: '11px',
+              backgroundColor: color,
+              borderRadius: isHovered ? '4px' : '50%',
+              border: currentType === type ? `2px solid ${color}` : '1px solid rgba(255, 255, 255, 0.3)',
+              opacity: currentType === type ? 1 : (isHovered ? 0.9 : 0.6),
+              padding: isHovered ? '0 8px' : '0',
+              transition: 'border-radius 200ms ease-in-out, opacity 200ms ease-in-out, padding 200ms ease-in-out',
+            }}
+          >
+            {isHovered && (
+              <span
+                className="font-medium whitespace-nowrap"
+                style={{
+                  fontSize: '10px',
+                  color: type === 'e' ? 'white' : 'black', // Black for Good/Ambivalent, white for Bad
+                  textShadow: type === 'e' ? '0 1px 2px rgba(0, 0, 0, 0.8)' : 'none',
+                }}
+              >
+                {label}
+              </span>
+            )}
+          </button>
+        </Tooltip>
       ))}
     </div>
   );

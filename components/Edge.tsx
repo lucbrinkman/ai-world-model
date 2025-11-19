@@ -2,6 +2,7 @@ import { Edge as EdgeType, EdgeType as ET, Node } from '@/lib/types';
 import { calculateAlpha, calculateArrowWidth, calculateArrowHeadLength } from '@/lib/probability';
 import { useRef, useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 interface EdgeProps {
   edge: EdgeType;
@@ -560,24 +561,25 @@ export default function Edge({
             height="20"
             style={{ overflow: 'visible' }}
           >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="bg-gray-400 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-all duration-200 hover:scale-110"
-              title="Delete connection"
-              style={{
-                width: '20px',
-                height: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transform: 'translate(-50%, -50%)'
-              }}
-            >
-              <Trash2 size={12} />
-            </button>
+            <Tooltip content="Delete connection" position="top">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="bg-gray-400 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-all duration-200 hover:scale-110"
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transform: 'translate(-50%, -50%)'
+                }}
+              >
+                <Trash2 size={12} />
+              </button>
+            </Tooltip>
           </foreignObject>
         );
       })()}
