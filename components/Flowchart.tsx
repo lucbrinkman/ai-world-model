@@ -126,9 +126,11 @@ export default function Flowchart({
   const scrollContainerRefCallback = useCallback((node: HTMLDivElement | null) => {
     scrollContainerRef.current = node;
     if (node && !isPositioned) {
-      // Set initial position immediately when element is created
-      node.scrollLeft = CANVAS_PADDING;
-      node.scrollTop = CANVAS_PADDING;
+      // Set initial position to show START node near top-left
+      // START node is at canvas position (450, 420)
+      // Position it 200px from left edge, 100px from top edge
+      node.scrollLeft = CANVAS_PADDING + 270;
+      node.scrollTop = CANVAS_PADDING + 320;
       // Make visible now that it's positioned
       setIsPositioned(true);
     }
@@ -204,10 +206,11 @@ export default function Flowchart({
     // Skip the initial mount (handled by ref callback), only respond to reset button clicks
     if (resetTrigger > 1 && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      // Position the top-left of the canvas at the top-left of the viewport
-      // The canvas is centered in the large area with CANVAS_PADDING on all sides
-      container.scrollLeft = CANVAS_PADDING;
-      container.scrollTop = CANVAS_PADDING;
+      // Reset to show START node near top-left
+      // START node is at canvas position (450, 420)
+      // Position it 200px from left edge, 100px from top edge
+      container.scrollLeft = CANVAS_PADDING + 450 - 200;
+      container.scrollTop = CANVAS_PADDING + 420 - 100;
     }
   }, [resetTrigger]);
 

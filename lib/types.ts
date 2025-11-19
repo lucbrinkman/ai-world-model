@@ -119,8 +119,8 @@ export interface Document {
 }
 
 // Constants
-export const CANVAS_WIDTH = 1400;
-export const CANVAS_HEIGHT = 1800;
+export const CANVAS_WIDTH = 2800;
+export const CANVAS_HEIGHT = 3600;
 export const SLIDER_DEFAULT_VALUE = 50;
 export const SLIDER_COUNT = 21;
 

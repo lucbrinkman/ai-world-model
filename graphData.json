@@ -3,8 +3,8 @@
     "version": "1.0",
     "title": "Map of AI Futures",
     "canvas": {
-      "width": 1400,
-      "height": 1800
+      "width": 2800,
+      "height": 3600
     }
   },
   "nodes": [
@@ -14,8 +14,8 @@
       "title": "START",
       "description": "",
       "position": {
-        "x": 150,
-        "y": 120
+        "x": 450,
+        "y": 420
       },
       "sliderIndex": null,
       "probability": null,
@@ -33,8 +33,8 @@
       "title": "Advanced AI is permanently banned",
       "description": "",
       "position": {
-        "x": 1250,
-        "y": 120
+        "x": 1550,
+        "y": 420
       },
       "sliderIndex": null,
       "probability": null,
@@ -46,8 +46,8 @@
       "title": "Will current AI approaches plateau before AGI-level capabilities?",
       "description": "",
       "position": {
-        "x": 150,
-        "y": 270
+        "x": 450,
+        "y": 570
       },
       "sliderIndex": 0,
       "probability": 50,
@@ -70,8 +70,8 @@
       "title": "Will new approaches unlock AGI-level capabilities?",
       "description": "",
       "position": {
-        "x": 400,
-        "y": 270
+        "x": 700,
+        "y": 570
       },
       "sliderIndex": 1,
       "probability": 70,
@@ -94,8 +94,8 @@
       "title": "Permanent AI winter",
       "description": "",
       "position": {
-        "x": 400,
-        "y": 420
+        "x": 700,
+        "y": 720
       },
       "sliderIndex": null,
       "probability": null,
@@ -107,8 +107,8 @@
       "title": "Will we pause advancing AI capabilities before they reach catastrophic potential?",
       "description": "",
       "position": {
-        "x": 400,
-        "y": 120
+        "x": 700,
+        "y": 420
       },
       "sliderIndex": 2,
       "probability": 25,
@@ -131,8 +131,8 @@
       "title": "Pause allows more safety research and other precautions",
       "description": "",
       "position": {
-        "x": 700,
-        "y": 120
+        "x": 1000,
+        "y": 420
       },
       "sliderIndex": null,
       "probability": null,
@@ -150,8 +150,8 @@
       "title": "Will we continue AI capabilities research after a pause?",
       "description": "",
       "position": {
-        "x": 1000,
-        "y": 120
+        "x": 1300,
+        "y": 420
       },
       "sliderIndex": 3,
       "probability": 96,
@@ -174,8 +174,8 @@
       "title": "Frontier AI reaches capabilities with catastrophic potential",
       "description": "",
       "position": {
-        "x": 700,
-        "y": 270
+        "x": 1000,
+        "y": 570
       },
       "sliderIndex": null,
       "probability": null,
@@ -193,8 +193,8 @@
       "title": "Does a pre-AGI catastrophe occur (e.g. AI misuse via cyber- or bio-weapons)?",
       "description": "",
       "position": {
-        "x": 1000,
-        "y": 420
+        "x": 1300,
+        "y": 720
       },
       "sliderIndex": 4,
       "probability": 55,
@@ -217,8 +217,8 @@
       "title": "Pre-AGI catastrophe does occur!",
       "description": "",
       "position": {
-        "x": 1000,
-        "y": 270
+        "x": 1300,
+        "y": 570
       },
       "sliderIndex": null,
       "probability": null,
@@ -236,8 +236,8 @@
       "title": "Humanity permanently fully stops frontier AI development (after catastrophe)?",
       "description": "",
       "position": {
-        "x": 1250,
-        "y": 420
+        "x": 1550,
+        "y": 720
       },
       "sliderIndex": 5,
       "probability": 5,
@@ -260,8 +260,8 @@
       "title": "Research towards AGI continues. First AGI exists",
       "description": "",
       "position": {
-        "x": 1250,
-        "y": 570
+        "x": 1550,
+        "y": 870
       },
       "sliderIndex": null,
       "probability": null,
@@ -279,8 +279,8 @@
       "title": "Will AGI become transformative?",
       "description": "",
       "position": {
-        "x": 1000,
-        "y": 570
+        "x": 1300,
+        "y": 870
       },
       "sliderIndex": 6,
       "probability": 95,
@@ -303,8 +303,8 @@
       "title": "Powerful, but not transformative AGI",
       "description": "",
       "position": {
-        "x": 700,
-        "y": 570
+        "x": 1000,
+        "y": 870
       },
       "sliderIndex": null,
       "probability": null,
@@ -316,8 +316,8 @@
       "title": "Do we have a practical solution for AGI alignment?",
       "description": "",
       "position": {
-        "x": 1000,
-        "y": 720
+        "x": 1300,
+        "y": 1020
       },
       "sliderIndex": 7,
       "probability": 75,
@@ -340,8 +340,8 @@
       "title": "Will the first AGI lab implement alignment correctly?",
       "description": "",
       "position": {
-        "x": 700,
-        "y": 720
+        "x": 1000,
+        "y": 1020
       },
       "sliderIndex": 8,
       "probability": 65,
@@ -364,8 +364,8 @@
       "title": "Will the first AGI prevent other AGIs from appearing?",
       "description": "",
       "position": {
-        "x": 400,
-        "y": 720
+        "x": 700,
+        "y": 1020
       },
       "sliderIndex": 9,
       "probability": 40,
@@ -388,8 +388,8 @@
       "title": "Will all other AGI labs implement alignment correctly?",
       "description": "",
       "position": {
-        "x": 400,
-        "y": 870
+        "x": 700,
+        "y": 1170
       },
       "sliderIndex": 10,
       "probability": 65,
@@ -412,8 +412,8 @@
       "title": "Multiple conflicting AGIs exist",
       "description": "",
       "position": {
-        "x": 700,
-        "y": 870
+        "x": 1000,
+        "y": 1170
       },
       "sliderIndex": null,
       "probability": null,
@@ -431,8 +431,8 @@
       "title": "All AGIs are aligned",
       "description": "",
       "position": {
-        "x": 150,
-        "y": 870
+        "x": 450,
+        "y": 1170
       },
       "sliderIndex": null,
       "probability": null,
@@ -450,8 +450,8 @@
       "title": "Is AGI aligned with humanity's interests as a whole?",
       "description": "",
       "position": {
-        "x": 150,
-        "y": 1020
+        "x": 450,
+        "y": 1320
       },
       "sliderIndex": 11,
       "probability": 20,
@@ -474,8 +474,8 @@
       "title": "AGI utopia",
       "description": "",
       "position": {
-        "x": 400,
-        "y": 1020
+        "x": 700,
+        "y": 1320
       },
       "sliderIndex": null,
       "probability": null,
@@ -487,8 +487,8 @@
       "title": "Are AGI controllers wise enough to avoid unintended consequences?",
       "description": "",
       "position": {
-        "x": 150,
-        "y": 1170
+        "x": 450,
+        "y": 1470
       },
       "sliderIndex": 12,
       "probability": 60,
@@ -511,8 +511,8 @@
       "title": "Does AGI protect its users?",
       "description": "",
       "position": {
-        "x": 150,
-        "y": 1320
+        "x": 450,
+        "y": 1620
       },
       "sliderIndex": 13,
       "probability": 75,
@@ -535,8 +535,8 @@
       "title": "Accidental human extinction",
       "description": "",
       "position": {
-        "x": 150,
-        "y": 1470
+        "x": 450,
+        "y": 1770
       },
       "sliderIndex": null,
       "probability": null,
@@ -548,8 +548,8 @@
       "title": "Do AGI controllers have good intentions?",
       "description": "",
       "position": {
-        "x": 400,
-        "y": 1170
+        "x": 700,
+        "y": 1470
       },
       "sliderIndex": 14,
       "probability": 75,
@@ -572,8 +572,8 @@
       "title": "Authoritarian dystopia",
       "description": "",
       "position": {
-        "x": 400,
-        "y": 1320
+        "x": 700,
+        "y": 1620
       },
       "sliderIndex": null,
       "probability": null,
@@ -585,8 +585,8 @@
       "title": "(At least one) Misaligned AGI",
       "description": "",
       "position": {
-        "x": 1000,
-        "y": 870
+        "x": 1300,
+        "y": 1170
       },
       "sliderIndex": null,
       "probability": null,
@@ -604,8 +604,8 @@
       "title": "Do we figure out right away that it's misaligned?",
       "description": "",
       "position": {
-        "x": 700,
-        "y": 1020
+        "x": 1000,
+        "y": 1320
       },
       "sliderIndex": 15,
       "probability": 10,
@@ -628,8 +628,8 @@
       "title": "Can we easily turn it off?",
       "description": "",
       "position": {
-        "x": 1000,
-        "y": 1020
+        "x": 1300,
+        "y": 1320
       },
       "sliderIndex": 16,
       "probability": 30,
@@ -652,8 +652,8 @@
       "title": "We get a second chance at building AGI",
       "description": "",
       "position": {
-        "x": 1250,
-        "y": 1020
+        "x": 1550,
+        "y": 1320
       },
       "sliderIndex": null,
       "probability": null,
@@ -665,8 +665,8 @@
       "title": "Does it pursue actions that harm us?",
       "description": "",
       "position": {
-        "x": 1000,
-        "y": 1170
+        "x": 1300,
+        "y": 1470
       },
       "sliderIndex": 17,
       "probability": 95,
@@ -689,8 +689,8 @@
       "title": "Can we destroy it?",
       "description": "",
       "position": {
-        "x": 1250,
-        "y": 1170
+        "x": 1550,
+        "y": 1470
       },
       "sliderIndex": 18,
       "probability": 3,
@@ -713,8 +713,8 @@
       "title": "Does it benefit from our extinction?",
       "description": "",
       "position": {
-        "x": 1250,
-        "y": 1320
+        "x": 1550,
+        "y": 1620
       },
       "sliderIndex": 19,
       "probability": 97,
@@ -737,8 +737,8 @@
       "title": "AGI-initiated human extinction",
       "description": "",
       "position": {
-        "x": 1250,
-        "y": 1470
+        "x": 1550,
+        "y": 1770
       },
       "sliderIndex": null,
       "probability": null,
@@ -750,8 +750,8 @@
       "title": "Does it benefit from our suffering?",
       "description": "",
       "position": {
-        "x": 1000,
-        "y": 1320
+        "x": 1300,
+        "y": 1620
       },
       "sliderIndex": 20,
       "probability": 4,
@@ -774,8 +774,8 @@
       "title": "AI dystopia: humans survive, but AI is in control",
       "description": "",
       "position": {
-        "x": 1000,
-        "y": 1470
+        "x": 1300,
+        "y": 1770
       },
       "sliderIndex": null,
       "probability": null,
@@ -787,8 +787,8 @@
       "title": "Astronomical suffering",
       "description": "",
       "position": {
-        "x": 700,
-        "y": 1320
+        "x": 1000,
+        "y": 1620
       },
       "sliderIndex": null,
       "probability": null,
