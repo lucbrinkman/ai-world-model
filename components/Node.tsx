@@ -707,8 +707,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
             <button
               onMouseDown={(e) => {
                 e.stopPropagation();
-                // Don't preventDefault - allow drag detection
-                // Create arrow immediately and signal potential drag
+                // Always create arrow at mouse position and start dragging immediately
                 onAddArrow(direction, { clientX: e.clientX, clientY: e.clientY });
               }}
               className="bg-blue-500/30 hover:bg-blue-500/60 text-white rounded-full p-0.5 transition-all duration-200 hover:scale-110 border border-blue-400/50"

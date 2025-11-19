@@ -17,7 +17,7 @@ interface FlowchartProps {
   autoEditNodeId: string | null;
   hoveredDestinationDotIndex: number;
   draggingEdgeIndex: number;
-  pendingNewArrow?: { nodeId: string; edgeIndex: number } | null;
+  pendingNewArrow?: { nodeId: string; edgeIndex: number; mousePos: { clientX: number; clientY: number } } | null;
   boldPaths: boolean;
   transparentPaths: boolean;
   minOpacity: number;
@@ -43,7 +43,7 @@ interface FlowchartProps {
   onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
   onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
   onDeleteEdge?: (edgeIndex: number) => void;
-  onAddArrow?: (nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number, mousePos?: { clientX: number; clientY: number }) => void;
+  onAddArrow?: (nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number, canvasPos?: { x: number; y: number }, mousePos?: { clientX: number; clientY: number }) => void;
   onNewArrowPreviewChange?: (nodeId: string, pos: { x: number; y: number } | null) => void;
   onCancelNewArrow?: (nodeId: string) => void;
   onConfirmNewArrow?: (nodeId: string, targetX: number, targetY: number) => void;
@@ -641,7 +641,18 @@ export default function Flowchart({
                 showAddArrows={shouldShowAddArrows}
                 onAddArrow={shouldShowAddArrows ? (direction, mousePos) => {
                   const bounds = nodeBounds.get(node.id);
-                  onAddArrow(node.id, direction, bounds?.width, bounds?.height, mousePos);
+                  // Convert screen coordinates to canvas coordinates if mousePos provided
+                  let canvasPos: { x: number; y: number } | undefined;
+                  if (mousePos && scrollContainerRef.current) {
+                    const scrollContainer = scrollContainerRef.current;
+                    const scrollRect = scrollContainer.getBoundingClientRect();
+                    const zoomFactor = zoom / 100;
+                    canvasPos = {
+                      x: (scrollContainer.scrollLeft + mousePos.clientX - scrollRect.left - CANVAS_PADDING) / zoomFactor,
+                      y: (scrollContainer.scrollTop + mousePos.clientY - scrollRect.top - CANVAS_PADDING) / zoomFactor
+                    };
+                  }
+                  onAddArrow(node.id, direction, bounds?.width, bounds?.height, canvasPos, mousePos);
                 } : undefined}
               />
             );
@@ -717,6 +728,7 @@ export default function Flowchart({
                 onPreviewChange={(node, pos) => handlePreviewChange(edgeIndex, node, pos)}
                 onCreateNodeFromFloatingArrow={onCreateNodeFromFloatingArrow}
                 shouldStartDragging={isPendingNewArrow}
+                initialMousePos={isPendingNewArrow ? pendingNewArrow?.mousePos : undefined}
               />
             );
             });

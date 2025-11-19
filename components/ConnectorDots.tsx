@@ -16,6 +16,7 @@ interface ConnectorDotsProps {
   visibilityMode: 'full' | 'destination-only' | 'hidden';
   targetNodeIsSelected?: boolean;
   shouldStartDragging?: boolean;
+  initialMousePos?: { clientX: number; clientY: number };
   onReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
   onEdgeSelect?: (edgeIndex: number) => void;
   onDestinationDotHover?: () => void;
@@ -40,6 +41,7 @@ export default function ConnectorDots({
   visibilityMode,
   targetNodeIsSelected,
   shouldStartDragging,
+  initialMousePos,
   onReconnect,
   onEdgeSelect,
   onDestinationDotHover,
@@ -56,8 +58,10 @@ export default function ConnectorDots({
   const [previewTargetNode, setPreviewTargetNode] = useState<Node | null>(null);
   const [previewFloatingPos, setPreviewFloatingPos] = useState<{ x: number; y: number } | null>(null);
   const [blockedNodeTooltip, setBlockedNodeTooltip] = useState<{ x: number; y: number } | null>(null);
+  const [parentNodeTooltip, setParentNodeTooltip] = useState<{ x: number; y: number } | null>(null);
   const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
   const [hasMoved, setHasMoved] = useState(false);
+  const prevShouldStartDraggingRef = useRef<boolean>(false);
 
   // Notify parent of preview state changes
   useEffect(() => {
@@ -69,9 +73,32 @@ export default function ConnectorDots({
     if (shouldStartDragging && !draggingConnector) {
       setDraggingConnector('target');
       setHasMoved(false);
+      // Set initial mouse position so drag tracking works
+      if (initialMousePos) {
+        setMouseDownPos({ x: initialMousePos.clientX, y: initialMousePos.clientY });
+      }
       onDestinationDotDragStart?.();
     }
-  }, [shouldStartDragging, draggingConnector, onDestinationDotDragStart, edgeIndex]);
+  }, [shouldStartDragging, draggingConnector, initialMousePos, onDestinationDotDragStart, edgeIndex]);
+
+  // Clean up drag state when shouldStartDragging transitions from true to false
+  useEffect(() => {
+    const prevShouldStartDragging = prevShouldStartDraggingRef.current;
+    prevShouldStartDraggingRef.current = shouldStartDragging ?? false;
+
+    // Only clean up if shouldStartDragging transitioned from true to false
+    if (prevShouldStartDragging && !shouldStartDragging && draggingConnector) {
+      console.log('[ConnectorDots] Cleaning up drag state - shouldStartDragging transitioned from true to false');
+      setDraggingConnector(null);
+      setPreviewTargetNode(null);
+      setPreviewFloatingPos(null);
+      setMouseDownPos(null);
+      setHasMoved(false);
+      setBlockedNodeTooltip(null);
+      setParentNodeTooltip(null);
+      onDestinationDotDragEnd?.();
+    }
+  }, [shouldStartDragging, draggingConnector, onDestinationDotDragEnd]);
 
   // Calculate positions (same logic as Edge.tsx)
   const effectiveTargetNode = previewFloatingPos ? undefined :
@@ -230,10 +257,11 @@ export default function ConnectorDots({
     }
   }, [onDestinationDotDragStart]);
 
-  // Clear tooltip when dragging stops
+  // Clear tooltips when dragging stops
   useEffect(() => {
     if (!draggingConnector) {
       setBlockedNodeTooltip(null);
+      setParentNodeTooltip(null);
     }
   }, [draggingConnector]);
 
@@ -271,7 +299,45 @@ export default function ConnectorDots({
         return;
       }
 
-      const canvasPos = screenToCanvasCoords(e.clientX, e.clientY);
+      let canvasPos = screenToCanvasCoords(e.clientX, e.clientY);
+      console.log('[mouseUp] Initial canvasPos:', canvasPos);
+
+      // Check if canvasPos is close to source node - if so, snap to default position
+      const sourceBoundsForSnap = nodeBounds.get(sourceNode.id);
+      if (sourceBoundsForSnap) {
+        // Use same logic as snap-to-node: calculate closest point on bounding box
+        const closestX = Math.max(sourceBoundsForSnap.left, Math.min(canvasPos.x, sourceBoundsForSnap.right));
+        const closestY = Math.max(sourceBoundsForSnap.top, Math.min(canvasPos.y, sourceBoundsForSnap.bottom));
+        const dx = closestX - canvasPos.x;
+        const dy = closestY - canvasPos.y;
+        const distSquared = dx * dx + dy * dy;
+        const dist = Math.sqrt(distSquared);
+
+        // Use larger threshold than SNAP_DISTANCE for snapping to default position
+        const SNAP_TO_DEFAULT_DISTANCE = SNAP_DISTANCE * 2; // 100 pixels
+        const SNAP_TO_DEFAULT_DISTANCE_SQUARED = SNAP_TO_DEFAULT_DISTANCE * SNAP_TO_DEFAULT_DISTANCE;
+
+        console.log('[mouseUp] Distance to source node edge:', dist, 'threshold:', SNAP_TO_DEFAULT_DISTANCE);
+
+        if (distSquared < SNAP_TO_DEFAULT_DISTANCE_SQUARED) {
+          console.log('[mouseUp] Within snap threshold! Snapping to default position...');
+          // Snap to default position: 50px beyond node edge in the direction of current endpoint
+          const sourceCenterX = sourceBoundsForSnap.x + sourceBoundsForSnap.width / 2;
+          const sourceCenterY = sourceBoundsForSnap.y + sourceBoundsForSnap.height / 2;
+          const angleFromCenter = Math.atan2(canvasPos.y - sourceCenterY, canvasPos.x - sourceCenterX);
+          const defaultClearance = 50;
+          const nodeRadius = Math.max(sourceBoundsForSnap.width, sourceBoundsForSnap.height) / 2;
+          const oldCanvasPos = canvasPos;
+          canvasPos = {
+            x: sourceCenterX + Math.cos(angleFromCenter) * (nodeRadius + defaultClearance),
+            y: sourceCenterY + Math.sin(angleFromCenter) * (nodeRadius + defaultClearance)
+          };
+          console.log('[mouseUp] Snapped from', oldCanvasPos, 'to', canvasPos);
+        } else {
+          console.log('[mouseUp] Outside snap threshold, keeping original position');
+        }
+      }
+
       const SNAP_DISTANCE_SQUARED = SNAP_DISTANCE * SNAP_DISTANCE;
       let closestNode: Node | null = null;
       let closestBlockedNode: Node | null = null;
@@ -310,10 +376,14 @@ export default function ConnectorDots({
 
       // Only reconnect if we have a valid target (not a blocked node)
       if (closestNode) {
+        console.log('[mouseUp] Connecting to node:', closestNode.id);
         onReconnect?.(edgeIndex, 'target', closestNode.id);
       } else if (!closestBlockedNode) {
         // Only set floating position if we're not hovering over a blocked node
+        console.log('[mouseUp] Setting floating position to:', canvasPos);
         onReconnect?.(edgeIndex, 'target', canvasPos);
+      } else {
+        console.log('[mouseUp] Blocked by ancestor node, not reconnecting');
       }
       // If closestBlockedNode exists but no closestNode, don't call onReconnect
       // This leaves the edge at its original position
@@ -340,6 +410,29 @@ export default function ConnectorDots({
       }
 
       const canvasPos = screenToCanvasCoords(e.clientX, e.clientY);
+
+      // Check if we're in snap-to-default zone (close to parent/source node)
+      let isInSnapToDefaultZone = false;
+      const sourceBoundsForCheck = nodeBounds.get(sourceNode.id);
+      if (sourceBoundsForCheck) {
+        const closestX = Math.max(sourceBoundsForCheck.left, Math.min(canvasPos.x, sourceBoundsForCheck.right));
+        const closestY = Math.max(sourceBoundsForCheck.top, Math.min(canvasPos.y, sourceBoundsForCheck.bottom));
+        const dx = closestX - canvasPos.x;
+        const dy = closestY - canvasPos.y;
+        const distSquared = dx * dx + dy * dy;
+        const SNAP_TO_DEFAULT_DISTANCE = SNAP_DISTANCE * 2;
+        const SNAP_TO_DEFAULT_DISTANCE_SQUARED = SNAP_TO_DEFAULT_DISTANCE * SNAP_TO_DEFAULT_DISTANCE;
+
+        if (distSquared < SNAP_TO_DEFAULT_DISTANCE_SQUARED) {
+          isInSnapToDefaultZone = true;
+          const tooltipX = sourceBoundsForCheck.x + sourceBoundsForCheck.width / 2;
+          const tooltipY = sourceBoundsForCheck.y - 10;
+          setParentNodeTooltip({ x: tooltipX, y: tooltipY });
+        } else {
+          setParentNodeTooltip(null);
+        }
+      }
+
       const SNAP_DISTANCE_SQUARED = SNAP_DISTANCE * SNAP_DISTANCE;
       let closestNode: Node | null = null;
       let closestBlockedNode: { node: Node; bounds: DOMRect } | null = null;
@@ -671,6 +764,31 @@ export default function ConnectorDots({
           }}
         >
           Can&apos;t connect to an earlier node
+        </div>
+      )}
+
+      {/* Parent node tooltip */}
+      {parentNodeTooltip && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${parentNodeTooltip.x}px`,
+            top: `${parentNodeTooltip.y}px`,
+            transform: 'translate(-50%, -100%)',
+            backgroundColor: '#6b7280',
+            color: 'white',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: '500',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            zIndex: 200,
+            border: '2px solid #4b5563',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          Can&apos;t connect to parent node
         </div>
       )}
     </>
