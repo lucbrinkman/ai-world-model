@@ -43,12 +43,14 @@ function HomeContent() {
   const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
   const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
   const [minOpacity, setMinOpacity] = useState(60);
-  const [pastStates, setPastStates] = useState<GraphNode[][]>([]);
-  const [futureStates, setFutureStates] = useState<GraphNode[][]>([]);
+
+  // Undo/redo history: Single array with current position index
+  const [history, setHistory] = useState<GraphNode[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   // Computed undo/redo availability
-  const canUndo = pastStates.length > 0;
-  const canRedo = futureStates.length > 0;
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
 
   const [showMobileWarning, setShowMobileWarning] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
@@ -77,12 +79,6 @@ function HomeContent() {
 
   // Track editor close events to prevent context menu from opening
   const editorCloseTimestampRef = useRef(0);
-
-  // Track previous state for auto-history
-  const previousNodesRef = useRef<GraphNode[] | null>(null);
-
-  // Prevent auto-save during undo/redo operations
-  const isUndoRedoRef = useRef(false);
 
   // Share button tooltip timeout
   const shareTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -280,32 +276,24 @@ function HomeContent() {
     authLoading,
   });
 
-  // Auto-history tracker: Watch graphData.nodes and save previous state automatically
+  // Auto-history tracker: Watch graphData.nodes and save current state to history
   useEffect(() => {
-    // Skip if this is an undo/redo operation
-    if (isUndoRedoRef.current) return;
-
-    // Skip on first render (no previous state yet)
-    if (previousNodesRef.current === null) {
-      previousNodesRef.current = graphData.nodes;
+    // Skip if current state is already in history at current index (happens during undo/redo)
+    if (graphData.nodes === history[historyIndex]) {
       return;
     }
 
-    // Check if nodes actually changed (by reference)
-    if (previousNodesRef.current === graphData.nodes) return;
-
-    // Save previous state to history
-    setPastStates(prev => {
-      const newPast = [...prev, previousNodesRef.current!];
-      return newPast.slice(-50); // Limit to 50 states
+    // Append current state to history
+    setHistory(prev => {
+      // Truncate history after current index (if user made changes after undo)
+      const truncated = prev.slice(0, historyIndex + 1);
+      const newHistory = [...truncated, graphData.nodes];
+      return newHistory.slice(-50); // Limit to 50 states
     });
 
-    // Clear future (branching undo)
-    setFutureStates([]);
-
-    // Update previous state ref
-    previousNodesRef.current = graphData.nodes;
-  }, [graphData.nodes]);
+    // Increment index to point to the new state
+    setHistoryIndex(prev => Math.min(prev + 1, 49)); // Cap at 49 (50 states - 1)
+  }, [graphData.nodes, history, historyIndex]);
 
   // Slider change handler
   const handleSliderChange = useCallback((nodeId: string, value: number) => {
@@ -675,63 +663,31 @@ function HomeContent() {
 
   // Undo handler
   const handleUndo = useCallback(() => {
-    // Prevent multiple simultaneous undo operations
-    if (isUndoRedoRef.current) return;
-    if (pastStates.length === 0) return;
+    // Can't undo if at the beginning
+    if (historyIndex <= 0) return;
 
-    // Set flag to prevent auto-history from saving during undo
-    isUndoRedoRef.current = true;
-
-    // Pop from past
-    const newPast = [...pastStates];
-    const previousState = newPast.pop()!;
-
-    // Push current to future
-    const newFuture = [...futureStates, graphData.nodes];
-
-    // Update all state atomically
-    setPastStates(newPast);
-    setFutureStates(newFuture);
-    setGraphData(prev => ({ ...prev, nodes: previousState }));
+    // Move to previous state
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    setGraphData(prev => ({ ...prev, nodes: history[newIndex] }));
 
     // Track analytics
     analytics.trackAction('undo');
-
-    // Clear flag after state updates complete
-    setTimeout(() => {
-      isUndoRedoRef.current = false;
-    }, 0);
-  }, [pastStates, futureStates, graphData.nodes]);
+  }, [historyIndex, history]);
 
   // Redo handler
   const handleRedo = useCallback(() => {
-    // Prevent multiple simultaneous redo operations
-    if (isUndoRedoRef.current) return;
-    if (futureStates.length === 0) return;
+    // Can't redo if at the end
+    if (historyIndex >= history.length - 1) return;
 
-    // Set flag to prevent auto-history from saving during redo
-    isUndoRedoRef.current = true;
-
-    // Pop from future
-    const newFuture = [...futureStates];
-    const nextState = newFuture.pop()!;
-
-    // Push current to past (with 50-state limit)
-    const newPast = [...pastStates, graphData.nodes].slice(-50);
-
-    // Update all state atomically
-    setPastStates(newPast);
-    setFutureStates(newFuture);
-    setGraphData(prev => ({ ...prev, nodes: nextState }));
+    // Move to next state
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    setGraphData(prev => ({ ...prev, nodes: history[newIndex] }));
 
     // Track analytics
     analytics.trackAction('redo');
-
-    // Clear flag after state updates complete
-    setTimeout(() => {
-      isUndoRedoRef.current = false;
-    }, 0);
-  }, [futureStates, pastStates, graphData.nodes]);
+  }, [historyIndex, history]);
 
   // Node drag end handler
   const handleNodeDragEnd = useCallback((nodeId: string, newX: number, newY: number) => {
