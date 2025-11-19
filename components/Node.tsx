@@ -86,6 +86,9 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
   const lastUpdateTimeRef = useRef<number>(0);
   const updateIntervalMs = 16; // Update arrows at ~60 FPS (every 16ms) during drag
 
+  // Pin button click cooldown - prevents hover preview immediately after clicking
+  const pinClickCooldownRef = useRef(false);
+
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(text);
@@ -539,21 +542,37 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         >
           {/* Pin button (left) */}
           {onSetProbabilityRoot && (
-            <Tooltip content="Set as start" position="top">
+            <Tooltip content={isSelected ? "Remove as start" : "Set as start"} position="top">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  pinClickCooldownRef.current = true;
+                  onSetProbabilityRootHoverEnd?.(); // Clear any existing hover
                   onSetProbabilityRoot();
                 }}
                 onMouseEnter={(e) => {
                   e.stopPropagation();
-                  onSetProbabilityRootHoverStart?.();
+                  if (!pinClickCooldownRef.current) {
+                    onSetProbabilityRootHoverStart?.();
+                  }
                 }}
                 onMouseLeave={(e) => {
                   e.stopPropagation();
+                  pinClickCooldownRef.current = false; // Reset cooldown when mouse leaves
                   onSetProbabilityRootHoverEnd?.();
                 }}
-                className={`${isSelected ? 'bg-orange-500' : 'bg-gray-400'} hover:bg-orange-500 text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors`}
+                className="text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
+                style={{
+                  backgroundColor: isSelected ? ORANGE_COLOR : '#9ca3af',
+                }}
+                onMouseOver={(e) => {
+                  if (!pinClickCooldownRef.current) {
+                    e.currentTarget.style.backgroundColor = ORANGE_COLOR;
+                  }
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = isSelected ? ORANGE_COLOR : '#9ca3af';
+                }}
               >
                 <Pin size={14} />
               </button>
@@ -574,6 +593,45 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
               </button>
             </Tooltip>
           )}
+        </div>
+      )}
+
+      {/* Persistent pin button - shown when node is probability root and not start node */}
+      {isSelected && node.type !== 's' && onSetProbabilityRoot && !isNodeSelected && (
+        <div
+          className="absolute flex flex-row gap-1 z-10"
+          style={{
+            top: `${-23 - borderWidth}px`,
+            right: `${-borderWidth}px`,
+          }}
+        >
+          <Tooltip content="Remove as start" position="top">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                pinClickCooldownRef.current = true;
+                onSetProbabilityRootHoverEnd?.(); // Clear hover state before toggling
+                onSetProbabilityRoot();
+              }}
+              onMouseEnter={(e) => {
+                e.stopPropagation();
+                if (!pinClickCooldownRef.current) {
+                  onSetProbabilityRootHoverStart?.();
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.stopPropagation();
+                pinClickCooldownRef.current = false; // Reset cooldown when mouse leaves
+                onSetProbabilityRootHoverEnd?.();
+              }}
+              className="text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
+              style={{
+                backgroundColor: ORANGE_COLOR,
+              }}
+            >
+              <Pin size={14} />
+            </button>
+          </Tooltip>
         </div>
       )}
 
