@@ -5,6 +5,7 @@ import ConnectorDots from './ConnectorDots';
 import ContextMenu from './ContextMenu';
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
+import { Trash2 } from 'lucide-react';
 
 interface FlowchartProps {
   nodes: NodeType[];
@@ -18,6 +19,7 @@ interface FlowchartProps {
   autoEditNodeId: string | null;
   hoveredDestinationDotIndex: number;
   draggingEdgeIndex: number;
+  pendingNewArrow?: { nodeId: string; edgeIndex: number; mousePos: { clientX: number; clientY: number } } | null;
   boldPaths: boolean;
   transparentPaths: boolean;
   minOpacity: number;
@@ -43,7 +45,7 @@ interface FlowchartProps {
   onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
   onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
   onDeleteEdge?: (edgeIndex: number) => void;
-  onAddArrow?: (nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number) => void;
+  onAddArrow?: (nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number, canvasPos?: { x: number; y: number }, mousePos?: { clientX: number; clientY: number }) => void;
   onNewArrowPreviewChange?: (nodeId: string, pos: { x: number; y: number } | null) => void;
   onCancelNewArrow?: (nodeId: string) => void;
   onConfirmNewArrow?: (nodeId: string, targetX: number, targetY: number) => void;
@@ -71,6 +73,7 @@ export default function Flowchart({
   autoEditNodeId,
   hoveredDestinationDotIndex,
   draggingEdgeIndex,
+  pendingNewArrow,
   boldPaths,
   transparentPaths,
   minOpacity,
@@ -123,6 +126,7 @@ export default function Flowchart({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const lastInteractionRef = useRef<{ type: 'editor-close' | null; timestamp: number }>({ type: null, timestamp: 0 });
   const [edgePreview, setEdgePreview] = useState<{ edgeIndex: number | null; node: NodeType | null; pos: { x: number; y: number } | null }>({ edgeIndex: null, node: null, pos: null });
+  const [deleteButtonPositions, setDeleteButtonPositions] = useState<Map<number, { x: number; y: number } | null>>(new Map());
 
   // Ref callback to set initial scroll position immediately on mount
   const scrollContainerRefCallback = useCallback((node: HTMLDivElement | null) => {
@@ -392,6 +396,15 @@ export default function Flowchart({
     setContextMenu(null);
   };
 
+  // Handle delete button position updates from edges
+  const handleDeleteButtonPositionChange = useCallback((edgeIndex: number, position: { x: number; y: number } | null) => {
+    setDeleteButtonPositions(prev => {
+      const newMap = new Map(prev);
+      newMap.set(edgeIndex, position);
+      return newMap;
+    });
+  }, []);
+
   // Handle edge preview changes (memoized to prevent infinite loops)
   const handlePreviewChange = useCallback((edgeIndex: number, node: NodeType | null, pos: { x: number; y: number } | null) => {
     // Only update if:
@@ -582,6 +595,7 @@ export default function Flowchart({
                   previewTargetNode={edgePreview.edgeIndex === index ? edgePreview.node : null}
                   previewTargetBounds={edgePreview.edgeIndex === index && edgePreview.node ? nodeBounds.get(edgePreview.node.id) : undefined}
                   previewFloatingPos={isNewArrowPreview ? newArrowPreviewPos : (edgePreview.edgeIndex === index ? edgePreview.pos : null)}
+                  onDeleteButtonPositionChange={(position) => handleDeleteButtonPositionChange(index, position)}
                 />
               );
             })}
@@ -640,47 +654,116 @@ export default function Flowchart({
                 onSliderChange={nodeSliderValue !== undefined && onSliderChange ? (value) => onSliderChange(node.id, value) : undefined}
                 onSliderChangeComplete={nodeSliderValue !== undefined && onSliderChangeComplete ? () => onSliderChangeComplete(node.id) : undefined}
                 showAddArrows={shouldShowAddArrows}
-                onAddArrow={shouldShowAddArrows ? (direction) => {
+                onAddArrow={shouldShowAddArrows ? (direction, mousePos) => {
                   const bounds = nodeBounds.get(node.id);
-                  onAddArrow(node.id, direction, bounds?.width, bounds?.height);
+                  // Convert screen coordinates to canvas coordinates if mousePos provided
+                  let canvasPos: { x: number; y: number } | undefined;
+                  if (mousePos && scrollContainerRef.current) {
+                    const scrollContainer = scrollContainerRef.current;
+                    const scrollRect = scrollContainer.getBoundingClientRect();
+                    const zoomFactor = zoom / 100;
+                    canvasPos = {
+                      x: (scrollContainer.scrollLeft + mousePos.clientX - scrollRect.left - CANVAS_PADDING) / zoomFactor,
+                      y: (scrollContainer.scrollTop + mousePos.clientY - scrollRect.top - CANVAS_PADDING) / zoomFactor
+                    };
+                  }
+                  onAddArrow(node.id, direction, bounds?.width, bounds?.height, canvasPos, mousePos);
                 } : undefined}
               />
             );
           })}
 
+          {/* Second SVG layer for interactive overlays (delete buttons) */}
+          <svg
+            className="absolute top-0 left-0"
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+            style={{
+              zIndex: 10000,
+              pointerEvents: 'none'
+            }}
+          >
+            {selectedEdgeIndex !== -1 && onDeleteEdge && draggingEdgeIndex !== selectedEdgeIndex && (() => {
+              const position = deleteButtonPositions.get(selectedEdgeIndex);
+              if (!position) return null;
+
+              // Render delete button in SVG foreignObject at position provided by Edge
+              return (
+                <foreignObject
+                  x={position.x - 10}
+                  y={position.y - 10}
+                  width={20}
+                  height={20}
+                  style={{ overflow: 'visible', pointerEvents: 'auto' }}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteEdge(selectedEdgeIndex);
+                    }}
+                    className="bg-gray-400 hover:bg-red-600 text-white rounded-full p-1 shadow-md hover:scale-110"
+                    title="Delete connection"
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </foreignObject>
+              );
+            })()}
+          </svg>
+
           {/* Connector dots (HTML, rendered on top of nodes) */}
-          {edges.map((edge, edgeIndex) => {
-            const sourceNode = nodes[edge.source];
-            const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
-            const sourceBounds = nodeBounds.get(sourceNode.id);
-            const targetBounds = targetNode ? nodeBounds.get(targetNode.id) : undefined;
+          {(() => {
+            // Track connection index per source node
+            const connectionIndexByNode = new Map<number, number>();
 
-            // Calculate visibility mode for this edge
-            let visibilityMode: 'full' | 'destination-only' | 'hidden';
-            if (selectedEdgeIndex === edgeIndex) {
-              visibilityMode = 'full';
-            } else if (selectedNodeId === sourceNode.id) {
-              // Source node is selected, show destination dot only
-              visibilityMode = 'destination-only';
-            } else if (hoveredDestinationDotIndex === edgeIndex || draggingEdgeIndex === edgeIndex) {
-              // Destination dot is being hovered or dragged
-              visibilityMode = 'destination-only';
-            } else {
-              // Default: hidden
-              visibilityMode = 'hidden';
-            }
+            return edges.map((edge, edgeIndex) => {
+              const sourceNode = nodes[edge.source];
+              const targetNode = edge.target !== undefined ? nodes[edge.target] : undefined;
+              const sourceBounds = nodeBounds.get(sourceNode.id);
+              const targetBounds = targetNode ? nodeBounds.get(targetNode.id) : undefined;
 
-            const screenToCanvasCoords = (screenX: number, screenY: number) => {
-              if (!containerRef.current || !scrollContainerRef.current) return { x: 0, y: 0 };
-              const scrollContainer = scrollContainerRef.current;
-              const scrollRect = scrollContainer.getBoundingClientRect();
-              const zoomFactor = zoom / 100;
+              // Track which connection this is for the source node
+              const currentConnectionIndex = connectionIndexByNode.get(edge.source) || 0;
+              connectionIndexByNode.set(edge.source, currentConnectionIndex + 1);
 
-              const canvasX = (scrollContainer.scrollLeft + screenX - scrollRect.left - CANVAS_PADDING) / zoomFactor;
-              const canvasY = (scrollContainer.scrollTop + screenY - scrollRect.top - CANVAS_PADDING) / zoomFactor;
+              // Calculate visibility mode for this edge
+              let visibilityMode: 'full' | 'destination-only' | 'hidden';
+              if (selectedEdgeIndex === edgeIndex) {
+                visibilityMode = 'full';
+              } else if (selectedNodeId === sourceNode.id) {
+                // Source node is selected, show destination dot only
+                visibilityMode = 'destination-only';
+              } else if (hoveredDestinationDotIndex === edgeIndex || draggingEdgeIndex === edgeIndex) {
+                // Destination dot is being hovered or dragged
+                visibilityMode = 'destination-only';
+              } else {
+                // Default: hidden
+                visibilityMode = 'hidden';
+              }
 
-              return { x: canvasX, y: canvasY };
-            };
+              const screenToCanvasCoords = (screenX: number, screenY: number) => {
+                if (!containerRef.current || !scrollContainerRef.current) return { x: 0, y: 0 };
+                const scrollContainer = scrollContainerRef.current;
+                const scrollRect = scrollContainer.getBoundingClientRect();
+                const zoomFactor = zoom / 100;
+
+                const canvasX = (scrollContainer.scrollLeft + screenX - scrollRect.left - CANVAS_PADDING) / zoomFactor;
+                const canvasY = (scrollContainer.scrollTop + screenY - scrollRect.top - CANVAS_PADDING) / zoomFactor;
+
+                return { x: canvasX, y: canvasY };
+              };
+
+              // Check if this is the pending new arrow that should start dragging
+              // Compare using the connection index within the source node, not the global edge index
+              const isPendingNewArrow = pendingNewArrow?.nodeId === sourceNode.id && pendingNewArrow?.edgeIndex === currentConnectionIndex;
 
             return (
               <ConnectorDots
@@ -705,9 +788,12 @@ export default function Flowchart({
                 screenToCanvasCoords={screenToCanvasCoords}
                 onPreviewChange={(node, pos) => handlePreviewChange(edgeIndex, node, pos)}
                 onCreateNodeFromFloatingArrow={onCreateNodeFromFloatingArrow}
+                shouldStartDragging={isPendingNewArrow}
+                initialMousePos={isPendingNewArrow ? pendingNewArrow?.mousePos : undefined}
               />
             );
-          })}
+            });
+          })()}
         </div>
       </div>
 

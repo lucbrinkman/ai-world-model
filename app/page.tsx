@@ -37,6 +37,7 @@ function HomeContent() {
   const [autoEditNodeId, setAutoEditNodeId] = useState<string | null>(null);
   const [hoveredDestinationDotIndex, setHoveredDestinationDotIndex] = useState(-1);
   const [draggingEdgeIndex, setDraggingEdgeIndex] = useState(-1);
+  const [pendingNewArrow, setPendingNewArrow] = useState<{ nodeId: string; edgeIndex: number; mousePos: { clientX: number; clientY: number } } | null>(null);
   const [minOpacity, setMinOpacity] = useState(60);
 
   // Undo/redo history: Single array with current position index
@@ -404,6 +405,7 @@ function HomeContent() {
 
   const handleDestinationDotDragEnd = useCallback(() => {
     setDraggingEdgeIndex(-1);
+    setPendingNewArrow(null); // Clear pending arrow when drag ends
   }, []);
 
   // Edge reconnect handler
@@ -544,7 +546,7 @@ function HomeContent() {
   }, [edges, nodes, graphData.nodes]);
 
   // Add arrow handler
-  const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number) => {
+  const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number, canvasPos?: { x: number; y: number }, mousePos?: { clientX: number; clientY: number }) => {
     // Close any open text editor before adding the arrow
     // Force blur on any active textarea to trigger save
     if (document.activeElement instanceof HTMLTextAreaElement) {
@@ -555,6 +557,10 @@ function HomeContent() {
     // Find the node we're adding an arrow to
     const targetNode = graphData.nodes.find(n => n.id === nodeId);
     if (!targetNode) return;
+
+    // Calculate which edge index the new arrow will have (for drag-to-create)
+    const currentConnectionCount = targetNode.connections.length;
+    const newEdgeIndex = currentConnectionCount; // Will be added at this index
 
     // Determine if this will convert to a question node
     const isIntermediateNode = targetNode.type === 'i';
@@ -571,28 +577,40 @@ function HomeContent() {
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
         if (node.id === nodeId) {
-          // Calculate floating endpoint position based on direction
-          // Use actual node dimensions if available, with fallbacks
-          const width = nodeWidth ?? 145;
-          const height = nodeHeight ?? 55;
-          const desiredClearance = 50; // How far beyond the node edge we want the endpoint
+          // Calculate floating endpoint position
+          let targetX: number;
+          let targetY: number;
 
-          let targetX = node.position.x;
-          let targetY = node.position.y;
+          if (canvasPos) {
+            // Always use cursor position on mouse down
+            // Snapping to default position happens only on mouse up (in ConnectorDots)
+            targetX = canvasPos.x;
+            targetY = canvasPos.y;
+            console.log('[handleAddArrow] Creating arrow at cursor position:', { targetX, targetY });
+          } else {
+            // Otherwise, calculate based on direction
+            // Use actual node dimensions if available, with fallbacks
+            const width = nodeWidth ?? 145;
+            const height = nodeHeight ?? 55;
+            const desiredClearance = 50; // How far beyond the node edge we want the endpoint
 
-          switch (direction) {
-            case 'top':
-              targetY -= (height / 2 + desiredClearance);
-              break;
-            case 'bottom':
-              targetY += (height / 2 + desiredClearance);
-              break;
-            case 'left':
-              targetX -= (width / 2 + desiredClearance);
-              break;
-            case 'right':
-              targetX += (width / 2 + desiredClearance);
-              break;
+            targetX = node.position.x;
+            targetY = node.position.y;
+
+            switch (direction) {
+              case 'top':
+                targetY -= (height / 2 + desiredClearance);
+                break;
+              case 'bottom':
+                targetY += (height / 2 + desiredClearance);
+                break;
+              case 'left':
+                targetX -= (width / 2 + desiredClearance);
+                break;
+              case 'right':
+                targetX += (width / 2 + desiredClearance);
+                break;
+            }
           }
 
           const isOutcomeNode = node.type === 'g' || node.type === 'a' || node.type === 'e';
@@ -638,6 +656,119 @@ function HomeContent() {
 
       return { ...prev, nodes: updatedNodes };
     });
+
+    // If mousePos is provided, signal that we want to start dragging this new arrow
+    if (mousePos && canvasPos) {
+      // Track if mouse has moved to distinguish click from drag
+      let hasMouseMoved = false;
+      let mouseUpFired = false;
+      const initialScreenPos = { x: mousePos.clientX, y: mousePos.clientY };
+
+      const handleMouseMove = (e: MouseEvent) => {
+        const dx = e.clientX - initialScreenPos.x;
+        const dy = e.clientY - initialScreenPos.y;
+        const distMoved = Math.sqrt(dx * dx + dy * dy);
+        if (distMoved > 5) { // 5px threshold
+          hasMouseMoved = true;
+          // Once we detect movement, remove this listener - ConnectorDots will handle the drag
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+          console.log('[handleAddArrow] Mouse moved, letting ConnectorDots handle drag');
+        }
+      };
+
+      const handleMouseUp = () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        mouseUpFired = true;
+
+        if (hasMouseMoved) {
+          // User dragged - let ConnectorDots handle the snap logic
+          console.log('[handleAddArrow] Drag detected, ConnectorDots will handle');
+          return;
+        }
+
+        // Quick click without drag - handle snap-to-default here
+        console.log('[handleAddArrow] Quick click detected, checking snap-to-default');
+
+        // Get the source node
+        const sourceNode = graphData.nodes.find(n => n.id === nodeId);
+        if (!sourceNode) {
+          setPendingNewArrow(null);
+          return;
+        }
+
+        // Calculate node bounds
+        const width = nodeWidth ?? 145;
+        const height = nodeHeight ?? 55;
+        const nodeLeft = sourceNode.position.x - width / 2;
+        const nodeRight = sourceNode.position.x + width / 2;
+        const nodeTop = sourceNode.position.y - height / 2;
+        const nodeBottom = sourceNode.position.y + height / 2;
+
+        // Calculate distance from canvasPos to node edge
+        const closestX = Math.max(nodeLeft, Math.min(canvasPos.x, nodeRight));
+        const closestY = Math.max(nodeTop, Math.min(canvasPos.y, nodeBottom));
+        const dx = closestX - canvasPos.x;
+        const dy = closestY - canvasPos.y;
+        const distSquared = dx * dx + dy * dy;
+
+        const SNAP_DISTANCE = 50;
+        const SNAP_TO_DEFAULT_DISTANCE = SNAP_DISTANCE * 2; // 100 pixels
+        const SNAP_TO_DEFAULT_DISTANCE_SQUARED = SNAP_TO_DEFAULT_DISTANCE * SNAP_TO_DEFAULT_DISTANCE;
+
+        console.log('[handleAddArrow] Distance to source edge:', Math.sqrt(distSquared), 'threshold:', SNAP_TO_DEFAULT_DISTANCE);
+
+        if (distSquared < SNAP_TO_DEFAULT_DISTANCE_SQUARED) {
+          console.log('[handleAddArrow] Within snap threshold! Snapping to default position...');
+          // Snap to default position
+          const sourceCenterX = sourceNode.position.x;
+          const sourceCenterY = sourceNode.position.y;
+          const angleFromCenter = Math.atan2(canvasPos.y - sourceCenterY, canvasPos.x - sourceCenterX);
+          const defaultClearance = 50;
+          const nodeRadius = Math.max(width, height) / 2;
+          const snappedX = sourceCenterX + Math.cos(angleFromCenter) * (nodeRadius + defaultClearance);
+          const snappedY = sourceCenterY + Math.sin(angleFromCenter) * (nodeRadius + defaultClearance);
+
+          console.log('[handleAddArrow] Snapping from', canvasPos, 'to', { x: snappedX, y: snappedY });
+
+          // Update the arrow position
+          setGraphData(prev => {
+            const updatedNodes = prev.nodes.map(node => {
+              if (node.id === nodeId) {
+                const updatedConnections = node.connections.map((conn, idx) => {
+                  if (idx === newEdgeIndex) {
+                    return { ...conn, targetX: snappedX, targetY: snappedY };
+                  }
+                  return conn;
+                });
+                return { ...node, connections: updatedConnections };
+              }
+              return node;
+            });
+            return { ...prev, nodes: updatedNodes };
+          });
+        }
+
+        // Clear any pending arrow state since we handled the quick click
+        setPendingNewArrow(null);
+        console.log('[handleAddArrow] Quick click handled, cleared pendingNewArrow');
+      };
+
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp, { once: true });
+
+      // Use setTimeout to ensure the arrow is rendered before we try to drag it
+      // Only set pendingNewArrow if mouseUp hasn't fired (meaning user is actually dragging)
+      setTimeout(() => {
+        if (!mouseUpFired) {
+          console.log('[handleAddArrow] Setting pendingNewArrow for drag');
+          setPendingNewArrow({ nodeId, edgeIndex: newEdgeIndex, mousePos });
+        } else {
+          console.log('[handleAddArrow] Not setting pendingNewArrow - mouseUp already fired');
+        }
+      }, 0);
+    }
   }, [graphData.nodes, handleEditorClose]);
 
   // Reset sliders to 50%
@@ -1415,6 +1546,7 @@ function HomeContent() {
             autoEditNodeId={autoEditNodeId}
             hoveredDestinationDotIndex={hoveredDestinationDotIndex}
             draggingEdgeIndex={draggingEdgeIndex}
+            pendingNewArrow={pendingNewArrow}
             boldPaths={true}
             transparentPaths={minOpacity < 100}
             minOpacity={minOpacity}
