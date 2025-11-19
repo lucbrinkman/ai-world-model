@@ -11,8 +11,6 @@ import ZoomControls from '@/components/ZoomControls';
 import DragHint from '@/components/DragHint';
 import { WelcomeModal } from '@/components/WelcomeModal';
 import { AuthModal } from '@/components/auth/AuthModal';
-import DeleteNodeDialog from '@/components/DeleteNodeDialog';
-import DeleteEdgeDialog from '@/components/DeleteEdgeDialog';
 import MobileWarning from '@/components/MobileWarning';
 import { useAuth } from '@/hooks/useAuth';
 import { MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData, type DocumentData, type GraphNode } from '@/lib/types';
@@ -38,10 +36,6 @@ function HomeContent() {
   const [autoEditNodeId, setAutoEditNodeId] = useState<string | null>(null);
   const [hoveredDestinationDotIndex, setHoveredDestinationDotIndex] = useState(-1);
   const [draggingEdgeIndex, setDraggingEdgeIndex] = useState(-1);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [nodeToDelete, setNodeToDelete] = useState<{ id: string; title: string } | null>(null);
-  const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
-  const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
   const [minOpacity, setMinOpacity] = useState(60);
 
   // Undo/redo history: Single array with current position index
@@ -1034,10 +1028,9 @@ function HomeContent() {
       return;
     }
 
-    // Open confirmation dialog
-    setNodeToDelete({ id: nodeId, title: node.title });
-    setDeleteDialogOpen(true);
-  }, [graphData]);
+    // Delete immediately (undo/redo provides safety net)
+    handleDeleteNode(nodeId);
+  }, [graphData, handleDeleteNode]);
 
   const handleDeleteNode = useCallback((nodeId: string) => {
     // Find the node to delete
@@ -1056,13 +1049,10 @@ function HomeContent() {
     flushSync(() => {
       // Clear UI state
       setSelectedNodeId(null);
-      setDeleteDialogOpen(false);
-      setNodeToDelete(null);
 
       // Reset selection if needed
       if (shouldResetSelection) {
         setProbabilityRootIndex(startNodeIndex);
-        setSelectedNodeId(null);
       }
 
       // Update graph data
@@ -1113,24 +1103,10 @@ function HomeContent() {
     });
   }, [graphData, nodes, probabilityRootIndex]);
 
-  const handleCancelDelete = useCallback(() => {
-    setDeleteDialogOpen(false);
-    setNodeToDelete(null);
-  }, []);
-
   const handleInitiateDeleteEdge = useCallback((edgeIndex: number) => {
-    const edge = edges[edgeIndex];
-    if (!edge) return;
-
-    const sourceNode = graphData.nodes[edge.source];
-    setEdgeToDelete({ index: edgeIndex, sourceNodeTitle: sourceNode.title });
-    setDeleteEdgeDialogOpen(true);
-  }, [edges, graphData.nodes]);
-
-  const handleCancelDeleteEdge = useCallback(() => {
-    setDeleteEdgeDialogOpen(false);
-    setEdgeToDelete(null);
-  }, []);
+    // Delete immediately (undo/redo provides safety net)
+    handleDeleteEdge(edgeIndex);
+  }, [handleDeleteEdge]);
 
   // Change node type handler
   const handleChangeNodeType = useCallback((nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => {
@@ -1459,28 +1435,6 @@ function HomeContent() {
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-      />
-
-      {/* Delete Node Dialog */}
-      <DeleteNodeDialog
-        isOpen={deleteDialogOpen}
-        nodeTitle={nodeToDelete?.title || ''}
-        onConfirm={() => nodeToDelete && handleDeleteNode(nodeToDelete.id)}
-        onCancel={handleCancelDelete}
-      />
-
-      {/* Delete Edge Dialog */}
-      <DeleteEdgeDialog
-        isOpen={deleteEdgeDialogOpen}
-        sourceNodeTitle={edgeToDelete?.sourceNodeTitle || ''}
-        onConfirm={() => {
-          if (edgeToDelete) {
-            handleDeleteEdge(edgeToDelete.index);
-            setDeleteEdgeDialogOpen(false);
-            setEdgeToDelete(null);
-          }
-        }}
-        onCancel={handleCancelDeleteEdge}
       />
 
       {/* Share Modal */}
