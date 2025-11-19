@@ -136,8 +136,6 @@ export default function DocumentPicker({
     if (!trimmedValue) {
       setRenameValue(currentDocumentName);
       setIsRenaming(false);
-      setIsHovering(false);
-      setShowTooltip(false);
       setRenameError(null);
       onEditorClose?.();
       return;
@@ -162,8 +160,6 @@ export default function DocumentPicker({
 
     setIsRenaming(false);
     setIsOpen(false);
-    setIsHovering(false);
-    setShowTooltip(false);
     setRenameError(null);
     onEditorClose?.();
 
