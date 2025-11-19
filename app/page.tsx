@@ -694,9 +694,6 @@ function HomeContent() {
     setFutureStates(newFuture);
     setGraphData(prev => ({ ...prev, nodes: previousState }));
 
-    // Update previousNodesRef to match the restored state
-    previousNodesRef.current = previousState;
-
     // Track analytics
     analytics.trackAction('undo');
 
@@ -726,9 +723,6 @@ function HomeContent() {
     setPastStates(newPast);
     setFutureStates(newFuture);
     setGraphData(prev => ({ ...prev, nodes: nextState }));
-
-    // Update previousNodesRef to match the restored state
-    previousNodesRef.current = nextState;
 
     // Track analytics
     analytics.trackAction('redo');
