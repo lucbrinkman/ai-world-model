@@ -398,7 +398,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
     <div  // Node container (also group for hover)
         ref={setRefs}
         data-node="true"
-        className={`group absolute border-solid px-1.5 py-0.5 ${isDragging ? '' : 'transition-all duration-200'}`}
+        className="group absolute border-solid px-1.5 py-0.5"
       style={{
         left: `${x}px`,
         top: `${y}px`,
@@ -438,7 +438,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
     >
       {/* Probability badge at top-left - absolutely positioned */}
       <div
-        className="text-xs font-mono px-1.5 py-0.5 transition-all duration-200"
+        className="text-xs font-mono px-1.5 py-0.5"
         style={{
           position: 'absolute',
           top: 0,
@@ -697,7 +697,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
             key={direction}
             style={{
               ...containerStyle,
-              zIndex: 100,
+              zIndex: 1001,
               pointerEvents: 'auto',
             }}
             className={`${
@@ -705,7 +705,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
             }`}
           >
             <button
-              onClick={(e) => {
+              onMouseDown={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 onAddArrow(direction);

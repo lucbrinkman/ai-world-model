@@ -11,8 +11,6 @@ import ZoomControls from '@/components/ZoomControls';
 import DragHint from '@/components/DragHint';
 import { WelcomeModal } from '@/components/WelcomeModal';
 import { AuthModal } from '@/components/auth/AuthModal';
-import DeleteNodeDialog from '@/components/DeleteNodeDialog';
-import DeleteEdgeDialog from '@/components/DeleteEdgeDialog';
 import MobileWarning from '@/components/MobileWarning';
 import { useAuth } from '@/hooks/useAuth';
 import { MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData, type DocumentData, type GraphNode } from '@/lib/types';
@@ -38,12 +36,19 @@ function HomeContent() {
   const [autoEditNodeId, setAutoEditNodeId] = useState<string | null>(null);
   const [hoveredDestinationDotIndex, setHoveredDestinationDotIndex] = useState(-1);
   const [draggingEdgeIndex, setDraggingEdgeIndex] = useState(-1);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [nodeToDelete, setNodeToDelete] = useState<{ id: string; title: string } | null>(null);
-  const [deleteEdgeDialogOpen, setDeleteEdgeDialogOpen] = useState(false);
-  const [edgeToDelete, setEdgeToDelete] = useState<{ index: number; sourceNodeTitle: string } | null>(null);
   const [minOpacity, setMinOpacity] = useState(60);
-  const [undoStack, setUndoStack] = useState<GraphNode[][]>([]);
+
+  // Undo/redo history: Single array with current position index
+  const [history, setHistory] = useState<GraphNode[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  // Suppress history updates during continuous operations (like slider drag)
+  const suppressHistoryRef = useRef(false);
+
+  // Computed undo/redo availability
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
   const [showMobileWarning, setShowMobileWarning] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -268,8 +273,35 @@ function HomeContent() {
     authLoading,
   });
 
+  // Auto-history tracker: Watch graphData.nodes and save current state to history
+  useEffect(() => {
+    // Skip if suppression is active (during continuous operations like slider drag)
+    if (suppressHistoryRef.current) {
+      return;
+    }
+
+    // Skip if current state is already in history at current index (happens during undo/redo)
+    if (graphData.nodes === history[historyIndex]) {
+      return;
+    }
+
+    // Append current state to history
+    setHistory(prev => {
+      // Truncate history after current index (if user made changes after undo)
+      const truncated = prev.slice(0, historyIndex + 1);
+      const newHistory = [...truncated, graphData.nodes];
+      return newHistory.slice(-50); // Limit to 50 states
+    });
+
+    // Increment index to point to the new state
+    setHistoryIndex(prev => Math.min(prev + 1, 49)); // Cap at 49 (50 states - 1)
+  }, [graphData.nodes, history, historyIndex]);
+
   // Slider change handler
   const handleSliderChange = useCallback((nodeId: string, value: number) => {
+    // Suppress history tracking during continuous drag
+    suppressHistoryRef.current = true;
+
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node =>
         node.id === nodeId ? { ...node, probability: value } : node
@@ -278,22 +310,19 @@ function HomeContent() {
     });
   }, []);
 
-  // Slider change complete handler (for undo)
+  // Slider change complete handler
   const handleSliderChangeComplete = useCallback((nodeId: string) => {
+    // Re-enable history tracking
+    suppressHistoryRef.current = false;
+
+    // Force one final state update to capture end state in history
+    setGraphData(prev => ({ ...prev, nodes: [...prev.nodes] }));
+
     // Track analytics
     const node = graphData.nodes.find(n => n.id === nodeId);
     if (node && node.probability !== null) {
       analytics.trackSliderChange(nodeId, node.probability);
     }
-
-    // Save to undo stack
-    setUndoStack(prev => {
-      const currentState = graphData.nodes;
-      if (prev.length === 0 || JSON.stringify(prev[prev.length - 1]) !== JSON.stringify(currentState)) {
-        return [...prev, currentState];
-      }
-      return prev;
-    });
   }, [graphData.nodes]);
 
   // Node click handler - no longer changes probability root
@@ -515,6 +544,13 @@ function HomeContent() {
 
   // Add arrow handler
   const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number) => {
+    // Close any open text editor before adding the arrow
+    // Force blur on any active textarea to trigger save
+    if (document.activeElement instanceof HTMLTextAreaElement) {
+      document.activeElement.blur();
+    }
+    handleEditorClose();
+
     // Find the node we're adding an arrow to
     const targetNode = graphData.nodes.find(n => n.id === nodeId);
     if (!targetNode) return;
@@ -601,10 +637,11 @@ function HomeContent() {
 
       return { ...prev, nodes: updatedNodes };
     });
-  }, [graphData.nodes]);
+  }, [graphData.nodes, handleEditorClose]);
 
   // Reset sliders to 50%
   const handleResetSliders = useCallback(() => {
+
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
         if (node.type === 'n' && node.sliderIndex !== null) {
@@ -615,15 +652,13 @@ function HomeContent() {
       return { ...prev, nodes: updatedNodes };
     });
 
-    // Save to undo stack
-    setUndoStack(prev => [...prev, graphData.nodes]);
-
     // Track analytics
     analytics.trackAction('reset');
-  }, [graphData.nodes]);
+  }, []);
 
   // Load default estimates (only updates recognized nodes, preserves custom nodes)
   const handleLoadAuthorsEstimates = useCallback(() => {
+
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
         // Find this node in defaultGraphData to get its original probability
@@ -640,34 +675,37 @@ function HomeContent() {
       return { ...prev, nodes: updatedNodes };
     });
 
-    // Save to undo stack
-    setUndoStack(prev => [...prev, graphData.nodes]);
-
     // Track analytics
     analytics.trackAction('load_authors_estimates');
-  }, [graphData.nodes]);
+  }, []);
 
   // Undo handler
   const handleUndo = useCallback(() => {
-    setUndoStack(prev => {
-      if (prev.length > 1) {
-        const newStack = [...prev];
-        newStack.pop();
-        const previousState = newStack[newStack.length - 1];
+    // Can't undo if at the beginning
+    if (historyIndex <= 0) return;
 
-        setGraphData(current => ({
-          ...current,
-          nodes: previousState,
-        }));
+    // Move to previous state
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    setGraphData(prev => ({ ...prev, nodes: history[newIndex] }));
 
-        // Track analytics
-        analytics.trackAction('undo');
+    // Track analytics
+    analytics.trackAction('undo');
+  }, [historyIndex, history]);
 
-        return newStack;
-      }
-      return prev;
-    });
-  }, []);
+  // Redo handler
+  const handleRedo = useCallback(() => {
+    // Can't redo if at the end
+    if (historyIndex >= history.length - 1) return;
+
+    // Move to next state
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    setGraphData(prev => ({ ...prev, nodes: history[newIndex] }));
+
+    // Track analytics
+    analytics.trackAction('redo');
+  }, [historyIndex, history]);
 
   // Node drag end handler
   const handleNodeDragEnd = useCallback((nodeId: string, newX: number, newY: number) => {
@@ -920,6 +958,7 @@ function HomeContent() {
 
 
   const handleAddNode = useCallback((x: number, y: number) => {
+
     // Generate a unique ID for the new node
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).substring(2, 9);
@@ -944,11 +983,18 @@ function HomeContent() {
     // Trigger auto-edit for the newly created node
     setAutoEditNodeId(newNodeId);
 
-  }, [graphData]);
+  }, []);
 
   const handleCreateNodeFromFloatingArrow = useCallback((edgeIndex: number, position: { x: number; y: number }) => {
     const edge = edges[edgeIndex];
     if (!edge || edge.target !== undefined) return; // Only handle floating arrows
+
+    // Close any open text editor before creating the new node
+    // Force blur on any active textarea to trigger save
+    if (document.activeElement instanceof HTMLTextAreaElement) {
+      document.activeElement.blur();
+    }
+    handleEditorClose();
 
     // Generate a unique ID for the new node
     const timestamp = Date.now();
@@ -1000,23 +1046,7 @@ function HomeContent() {
 
     // Trigger auto-edit for the newly created node
     setAutoEditNodeId(newNodeId);
-  }, [edges, nodes]);
-
-  const handleInitiateDelete = useCallback((nodeId: string) => {
-    // Find the node to delete
-    const node = graphData.nodes.find(n => n.id === nodeId);
-    if (!node) return;
-
-    // Prevent deleting the start node
-    if (node.type === 's') {
-      alert('Cannot delete the start node');
-      return;
-    }
-
-    // Open confirmation dialog
-    setNodeToDelete({ id: nodeId, title: node.title });
-    setDeleteDialogOpen(true);
-  }, [graphData]);
+  }, [edges, nodes, handleEditorClose]);
 
   const handleDeleteNode = useCallback((nodeId: string) => {
     // Find the node to delete
@@ -1035,13 +1065,10 @@ function HomeContent() {
     flushSync(() => {
       // Clear UI state
       setSelectedNodeId(null);
-      setDeleteDialogOpen(false);
-      setNodeToDelete(null);
 
       // Reset selection if needed
       if (shouldResetSelection) {
         setProbabilityRootIndex(startNodeIndex);
-        setSelectedNodeId(null);
       }
 
       // Update graph data
@@ -1092,24 +1119,25 @@ function HomeContent() {
     });
   }, [graphData, nodes, probabilityRootIndex]);
 
-  const handleCancelDelete = useCallback(() => {
-    setDeleteDialogOpen(false);
-    setNodeToDelete(null);
-  }, []);
+  const handleInitiateDelete = useCallback((nodeId: string) => {
+    // Find the node to delete
+    const node = graphData.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    // Prevent deleting the start node
+    if (node.type === 's') {
+      alert('Cannot delete the start node');
+      return;
+    }
+
+    // Delete immediately (undo/redo provides safety net)
+    handleDeleteNode(nodeId);
+  }, [graphData, handleDeleteNode]);
 
   const handleInitiateDeleteEdge = useCallback((edgeIndex: number) => {
-    const edge = edges[edgeIndex];
-    if (!edge) return;
-
-    const sourceNode = graphData.nodes[edge.source];
-    setEdgeToDelete({ index: edgeIndex, sourceNodeTitle: sourceNode.title });
-    setDeleteEdgeDialogOpen(true);
-  }, [edges, graphData.nodes]);
-
-  const handleCancelDeleteEdge = useCallback(() => {
-    setDeleteEdgeDialogOpen(false);
-    setEdgeToDelete(null);
-  }, []);
+    // Delete immediately (undo/redo provides safety net)
+    handleDeleteEdge(edgeIndex);
+  }, [handleDeleteEdge]);
 
   // Change node type handler
   const handleChangeNodeType = useCallback((nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => {
@@ -1212,20 +1240,54 @@ function HomeContent() {
   // Keyboard handler for Delete/Backspace keys
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger if a node is selected and we're not editing text
-      if (!selectedNodeId) return;
+      // Only trigger if a node or edge is selected and we're not editing text
+      if (!selectedNodeId && selectedEdgeIndex < 0) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if ((e.target as HTMLElement).contentEditable === 'true') return;
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
-        handleInitiateDelete(selectedNodeId);
+
+        // Delete edge if one is selected
+        if (selectedEdgeIndex >= 0) {
+          handleInitiateDeleteEdge(selectedEdgeIndex);
+        }
+        // Otherwise delete node if one is selected
+        else if (selectedNodeId) {
+          handleInitiateDelete(selectedNodeId);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeId, handleInitiateDelete]);
+  }, [selectedNodeId, selectedEdgeIndex, handleInitiateDelete, handleInitiateDeleteEdge]);
+
+  // Keyboard handler for Undo/Redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger when typing in text inputs (but allow for range/slider inputs)
+      if (e.target instanceof HTMLInputElement && e.target.type !== 'range') return;
+      if (e.target instanceof HTMLTextAreaElement) return;
+      if ((e.target as HTMLElement).contentEditable === 'true') return;
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
+        // Ctrl+Z / Cmd+Z = Undo
+        e.preventDefault();
+        handleUndo();
+      } else if (cmdOrCtrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        // Ctrl+Y / Cmd+Y or Ctrl+Shift+Z / Cmd+Shift+Z = Redo
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
 
   // Settings change handlers with analytics
   const handleMinOpacityChange = useCallback((value: number) => {
@@ -1393,6 +1455,10 @@ function HomeContent() {
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onReset={handleResetView}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
           />
         </div>
       </div>
@@ -1408,28 +1474,6 @@ function HomeContent() {
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-      />
-
-      {/* Delete Node Dialog */}
-      <DeleteNodeDialog
-        isOpen={deleteDialogOpen}
-        nodeTitle={nodeToDelete?.title || ''}
-        onConfirm={() => nodeToDelete && handleDeleteNode(nodeToDelete.id)}
-        onCancel={handleCancelDelete}
-      />
-
-      {/* Delete Edge Dialog */}
-      <DeleteEdgeDialog
-        isOpen={deleteEdgeDialogOpen}
-        sourceNodeTitle={edgeToDelete?.sourceNodeTitle || ''}
-        onConfirm={() => {
-          if (edgeToDelete) {
-            handleDeleteEdge(edgeToDelete.index);
-            setDeleteEdgeDialogOpen(false);
-            setEdgeToDelete(null);
-          }
-        }}
-        onCancel={handleCancelDeleteEdge}
       />
 
       {/* Share Modal */}

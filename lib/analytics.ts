@@ -36,7 +36,7 @@ export const analytics = {
   },
 
   // Track action button clicks
-  trackAction: (action: 'reset' | 'load_authors_estimates' | 'undo') => {
+  trackAction: (action: 'reset' | 'load_authors_estimates' | 'undo' | 'redo') => {
     posthog.capture('action_performed', {
       action: action,
     })
