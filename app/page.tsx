@@ -544,6 +544,13 @@ function HomeContent() {
 
   // Add arrow handler
   const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number) => {
+    // Close any open text editor before adding the arrow
+    // Force blur on any active textarea to trigger save
+    if (document.activeElement instanceof HTMLTextAreaElement) {
+      document.activeElement.blur();
+    }
+    handleEditorClose();
+
     // Find the node we're adding an arrow to
     const targetNode = graphData.nodes.find(n => n.id === nodeId);
     if (!targetNode) return;
@@ -630,7 +637,7 @@ function HomeContent() {
 
       return { ...prev, nodes: updatedNodes };
     });
-  }, [graphData.nodes]);
+  }, [graphData.nodes, handleEditorClose]);
 
   // Reset sliders to 50%
   const handleResetSliders = useCallback(() => {
@@ -982,6 +989,13 @@ function HomeContent() {
     const edge = edges[edgeIndex];
     if (!edge || edge.target !== undefined) return; // Only handle floating arrows
 
+    // Close any open text editor before creating the new node
+    // Force blur on any active textarea to trigger save
+    if (document.activeElement instanceof HTMLTextAreaElement) {
+      document.activeElement.blur();
+    }
+    handleEditorClose();
+
     // Generate a unique ID for the new node
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).substring(2, 9);
@@ -1032,7 +1046,7 @@ function HomeContent() {
 
     // Trigger auto-edit for the newly created node
     setAutoEditNodeId(newNodeId);
-  }, [edges, nodes]);
+  }, [edges, nodes, handleEditorClose]);
 
   const handleDeleteNode = useCallback((nodeId: string) => {
     // Find the node to delete
