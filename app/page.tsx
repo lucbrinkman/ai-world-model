@@ -684,94 +684,108 @@ function HomeContent() {
 
   // Undo handler
   const handleUndo = useCallback(() => {
+    console.log('[UNDO] Called, lock status:', undoRedoInProgressRef.current);
+
     // Prevent multiple simultaneous undo operations
     if (undoRedoInProgressRef.current) {
       console.log('[UNDO] BLOCKED - operation in progress');
       return;
     }
-    if (pastStates.length === 0) return;
+    if (pastStates.length === 0) {
+      console.log('[UNDO] BLOCKED - no past states');
+      return;
+    }
 
+    // Set lock immediately
     undoRedoInProgressRef.current = true;
-
-    // Capture current state BEFORE any updates
-    const currentState = graphData.nodes;
+    console.log('[UNDO] Lock acquired');
 
     setPastStates(prev => {
       const newPast = [...prev];
       const previousState = newPast.pop()!;
 
       console.log('[UNDO] Past length:', prev.length, '→', newPast.length);
-      console.log('[UNDO] Saving current to future, restoring previous from past');
 
-      // Save current state to future
-      setFutureStates(future => {
-        console.log('[UNDO] Future length:', future.length, '→', future.length + 1);
-        return [...future, currentState];
+      // Get current state and save to future
+      setGraphData(current => {
+        // Save current nodes to future before changing
+        setFutureStates(future => {
+          console.log('[UNDO] Future length:', future.length, '→', future.length + 1);
+          return [...future, current.nodes];
+        });
+
+        // Restore previous state
+        return {
+          ...current,
+          nodes: previousState,
+        };
       });
-
-      // Restore previous state
-      setGraphData(current => ({
-        ...current,
-        nodes: previousState,
-      }));
 
       // Track analytics
       analytics.trackAction('undo');
 
-      // Reset the lock after a short delay to allow state updates to complete
-      setTimeout(() => {
-        undoRedoInProgressRef.current = false;
-      }, 50);
-
       return newPast;
     });
-  }, [pastStates, graphData.nodes]);
+
+    // Reset the lock after a short delay to allow state updates to complete
+    setTimeout(() => {
+      undoRedoInProgressRef.current = false;
+      console.log('[UNDO] Lock released');
+    }, 50);
+  }, [pastStates]);
 
   // Redo handler
   const handleRedo = useCallback(() => {
+    console.log('[REDO] Called, lock status:', undoRedoInProgressRef.current);
+
     // Prevent multiple simultaneous redo operations
     if (undoRedoInProgressRef.current) {
       console.log('[REDO] BLOCKED - operation in progress');
       return;
     }
-    if (futureStates.length === 0) return;
+    if (futureStates.length === 0) {
+      console.log('[REDO] BLOCKED - no future states');
+      return;
+    }
 
+    // Set lock immediately
     undoRedoInProgressRef.current = true;
-
-    // Capture current state BEFORE any updates
-    const currentState = graphData.nodes;
+    console.log('[REDO] Lock acquired');
 
     setFutureStates(prev => {
       const newFuture = [...prev];
       const nextState = newFuture.pop()!;
 
       console.log('[REDO] Future length:', prev.length, '→', newFuture.length);
-      console.log('[REDO] Saving current to past, restoring next from future');
 
-      // Save current state to past
-      setPastStates(past => {
-        const newPast = [...past, currentState].slice(-50);
-        console.log('[REDO] Past length:', past.length, '→', newPast.length);
-        return newPast;
+      // Get current state and save to past
+      setGraphData(current => {
+        // Save current nodes to past before changing
+        setPastStates(past => {
+          const newPast = [...past, current.nodes].slice(-50);
+          console.log('[REDO] Past length:', past.length, '→', newPast.length);
+          return newPast;
+        });
+
+        // Restore next state
+        return {
+          ...current,
+          nodes: nextState,
+        };
       });
-
-      // Restore next state
-      setGraphData(current => ({
-        ...current,
-        nodes: nextState,
-      }));
 
       // Track analytics
       analytics.trackAction('redo');
 
-      // Reset the lock after a short delay to allow state updates to complete
-      setTimeout(() => {
-        undoRedoInProgressRef.current = false;
-      }, 50);
-
       return newFuture;
     });
-  }, [futureStates, graphData.nodes]);
+
+    // Reset the lock after a short delay to allow state updates to complete
+    setTimeout(() => {
+      undoRedoInProgressRef.current = false;
+      console.log('[REDO] Lock released');
+    }, 50);
+  }, [futureStates]);
 
   // Node drag end handler
   const handleNodeDragEnd = useCallback((nodeId: string, newX: number, newY: number) => {
