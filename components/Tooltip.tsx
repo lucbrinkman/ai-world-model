@@ -60,7 +60,7 @@ export default function Tooltip({
 
   return (
     <div
-      className="relative inline-block"
+      className="relative inline"
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       onFocus={handleFocus}
