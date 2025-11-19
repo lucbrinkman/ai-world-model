@@ -78,11 +78,11 @@ function HomeContent() {
   // Track editor close events to prevent context menu from opening
   const editorCloseTimestampRef = useRef(0);
 
-  // Track slider drag session for undo
-  const sliderDragSessionRef = useRef<string | null>(null);
+  // Track previous state for auto-history
+  const previousNodesRef = useRef<GraphNode[] | null>(null);
 
-  // Prevent multiple simultaneous undo/redo operations
-  const undoRedoInProgressRef = useRef(false);
+  // Prevent auto-save during undo/redo operations
+  const isUndoRedoRef = useRef(false);
 
   // Share button tooltip timeout
   const shareTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -280,43 +280,50 @@ function HomeContent() {
     authLoading,
   });
 
-  // History helper: Save current state before making changes
-  const saveToHistory = useCallback(() => {
+  // Auto-history tracker: Watch graphData.nodes and save previous state automatically
+  useEffect(() => {
+    // Skip if this is an undo/redo operation
+    if (isUndoRedoRef.current) return;
+
+    // Skip on first render (no previous state yet)
+    if (previousNodesRef.current === null) {
+      previousNodesRef.current = graphData.nodes;
+      return;
+    }
+
+    // Check if nodes actually changed (by reference)
+    if (previousNodesRef.current === graphData.nodes) return;
+
+    // Save previous state to history
     setPastStates(prev => {
-      const newPast = [...prev, graphData.nodes];
-      // Limit history to 50 states
-      return newPast.slice(-50);
+      const newPast = [...prev, previousNodesRef.current!];
+      return newPast.slice(-50); // Limit to 50 states
     });
+
     // Clear future (branching undo)
     setFutureStates([]);
+
+    // Update previous state ref
+    previousNodesRef.current = graphData.nodes;
   }, [graphData.nodes]);
 
   // Slider change handler
   const handleSliderChange = useCallback((nodeId: string, value: number) => {
-    // Save to history at the START of a drag session (only once per drag)
-    if (sliderDragSessionRef.current !== nodeId) {
-      saveToHistory();
-      sliderDragSessionRef.current = nodeId;
-    }
-
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node =>
         node.id === nodeId ? { ...node, probability: value } : node
       );
       return { ...prev, nodes: updatedNodes };
     });
-  }, [saveToHistory]);
+  }, []);
 
-  // Slider change complete handler (for undo)
+  // Slider change complete handler
   const handleSliderChangeComplete = useCallback((nodeId: string) => {
     // Track analytics
     const node = graphData.nodes.find(n => n.id === nodeId);
     if (node && node.probability !== null) {
       analytics.trackSliderChange(nodeId, node.probability);
     }
-
-    // Reset drag session ref (so next drag will save to history)
-    sliderDragSessionRef.current = null;
   }, [graphData.nodes]);
 
   // Node click handler - no longer changes probability root
@@ -404,9 +411,6 @@ function HomeContent() {
     const edge = edges[edgeIndex];
     if (!edge) return;
 
-    // Save to history before making changes
-    saveToHistory();
-
     // Convert indices to IDs
     const sourceNodeId = nodes[edge.source].id;
     const targetNodeId = edge.target !== undefined ? nodes[edge.target].id : undefined;
@@ -442,15 +446,12 @@ function HomeContent() {
       return { ...prev, nodes: updatedNodes };
     });
 
-  }, [edges, nodes, saveToHistory]);
+  }, [edges, nodes]);
 
   // Edge label update handler
   const handleEdgeLabelUpdate = useCallback((edgeIndex: number, newLabel: string) => {
     const edge = edges[edgeIndex];
     if (!edge || edge.source === undefined || edge.target === undefined) return;
-
-    // Save to history before making changes
-    saveToHistory();
 
     // Convert indices to IDs
     const sourceNodeId = nodes[edge.source].id;
@@ -474,15 +475,12 @@ function HomeContent() {
       return { ...prev, nodes: updatedNodes };
     });
 
-  }, [edges, nodes, saveToHistory]);
+  }, [edges, nodes]);
 
   // Delete edge handler
   const handleDeleteEdge = useCallback((edgeIndex: number) => {
     const edge = edges[edgeIndex];
     if (!edge || edge.source === undefined) return;
-
-    // Save to history before making changes
-    saveToHistory();
 
     const sourceNode = nodes[edge.source];
     const sourceGraphNode = graphData.nodes.find(n => n.id === sourceNode.id);
@@ -543,16 +541,13 @@ function HomeContent() {
     });
 
     setSelectedEdgeIndex(-1);
-  }, [edges, nodes, graphData.nodes, saveToHistory]);
+  }, [edges, nodes, graphData.nodes]);
 
   // Add arrow handler
   const handleAddArrow = useCallback((nodeId: string, direction: 'top' | 'bottom' | 'left' | 'right', nodeWidth?: number, nodeHeight?: number) => {
     // Find the node we're adding an arrow to
     const targetNode = graphData.nodes.find(n => n.id === nodeId);
     if (!targetNode) return;
-
-    // Save to history before making changes
-    saveToHistory();
 
     // Determine if this will convert to a question node
     const isIntermediateNode = targetNode.type === 'i';
@@ -636,12 +631,10 @@ function HomeContent() {
 
       return { ...prev, nodes: updatedNodes };
     });
-  }, [graphData.nodes, saveToHistory]);
+  }, [graphData.nodes]);
 
   // Reset sliders to 50%
   const handleResetSliders = useCallback(() => {
-    // Save to history before making changes
-    saveToHistory();
 
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
@@ -655,12 +648,10 @@ function HomeContent() {
 
     // Track analytics
     analytics.trackAction('reset');
-  }, [saveToHistory]);
+  }, []);
 
   // Load default estimates (only updates recognized nodes, preserves custom nodes)
   const handleLoadAuthorsEstimates = useCallback(() => {
-    // Save to history before making changes
-    saveToHistory();
 
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
@@ -680,118 +671,70 @@ function HomeContent() {
 
     // Track analytics
     analytics.trackAction('load_authors_estimates');
-  }, [saveToHistory]);
+  }, []);
 
   // Undo handler
   const handleUndo = useCallback(() => {
-    console.log('[UNDO] Called, lock status:', undoRedoInProgressRef.current);
-
     // Prevent multiple simultaneous undo operations
-    if (undoRedoInProgressRef.current) {
-      console.log('[UNDO] BLOCKED - operation in progress');
-      return;
-    }
-    if (pastStates.length === 0) {
-      console.log('[UNDO] BLOCKED - no past states');
-      return;
-    }
+    if (isUndoRedoRef.current) return;
+    if (pastStates.length === 0) return;
 
-    // Set lock immediately
-    undoRedoInProgressRef.current = true;
-    console.log('[UNDO] Lock acquired');
+    // Set flag to prevent auto-history from saving during undo
+    isUndoRedoRef.current = true;
 
-    setPastStates(prev => {
-      const newPast = [...prev];
-      const previousState = newPast.pop()!;
+    // Pop from past
+    const newPast = [...pastStates];
+    const previousState = newPast.pop()!;
 
-      console.log('[UNDO] Past length:', prev.length, '→', newPast.length);
+    // Push current to future
+    const newFuture = [...futureStates, graphData.nodes];
 
-      // Get current state and save to future
-      setGraphData(current => {
-        // Save current nodes to future before changing
-        setFutureStates(future => {
-          console.log('[UNDO] Future length:', future.length, '→', future.length + 1);
-          return [...future, current.nodes];
-        });
+    // Update all state atomically
+    setPastStates(newPast);
+    setFutureStates(newFuture);
+    setGraphData(prev => ({ ...prev, nodes: previousState }));
 
-        // Restore previous state
-        return {
-          ...current,
-          nodes: previousState,
-        };
-      });
+    // Track analytics
+    analytics.trackAction('undo');
 
-      // Track analytics
-      analytics.trackAction('undo');
-
-      return newPast;
-    });
-
-    // Reset the lock after a short delay to allow state updates to complete
+    // Clear flag after state updates complete
     setTimeout(() => {
-      undoRedoInProgressRef.current = false;
-      console.log('[UNDO] Lock released');
-    }, 50);
-  }, [pastStates]);
+      isUndoRedoRef.current = false;
+    }, 0);
+  }, [pastStates, futureStates, graphData.nodes]);
 
   // Redo handler
   const handleRedo = useCallback(() => {
-    console.log('[REDO] Called, lock status:', undoRedoInProgressRef.current);
-
     // Prevent multiple simultaneous redo operations
-    if (undoRedoInProgressRef.current) {
-      console.log('[REDO] BLOCKED - operation in progress');
-      return;
-    }
-    if (futureStates.length === 0) {
-      console.log('[REDO] BLOCKED - no future states');
-      return;
-    }
+    if (isUndoRedoRef.current) return;
+    if (futureStates.length === 0) return;
 
-    // Set lock immediately
-    undoRedoInProgressRef.current = true;
-    console.log('[REDO] Lock acquired');
+    // Set flag to prevent auto-history from saving during redo
+    isUndoRedoRef.current = true;
 
-    setFutureStates(prev => {
-      const newFuture = [...prev];
-      const nextState = newFuture.pop()!;
+    // Pop from future
+    const newFuture = [...futureStates];
+    const nextState = newFuture.pop()!;
 
-      console.log('[REDO] Future length:', prev.length, '→', newFuture.length);
+    // Push current to past (with 50-state limit)
+    const newPast = [...pastStates, graphData.nodes].slice(-50);
 
-      // Get current state and save to past
-      setGraphData(current => {
-        // Save current nodes to past before changing
-        setPastStates(past => {
-          const newPast = [...past, current.nodes].slice(-50);
-          console.log('[REDO] Past length:', past.length, '→', newPast.length);
-          return newPast;
-        });
+    // Update all state atomically
+    setPastStates(newPast);
+    setFutureStates(newFuture);
+    setGraphData(prev => ({ ...prev, nodes: nextState }));
 
-        // Restore next state
-        return {
-          ...current,
-          nodes: nextState,
-        };
-      });
+    // Track analytics
+    analytics.trackAction('redo');
 
-      // Track analytics
-      analytics.trackAction('redo');
-
-      return newFuture;
-    });
-
-    // Reset the lock after a short delay to allow state updates to complete
+    // Clear flag after state updates complete
     setTimeout(() => {
-      undoRedoInProgressRef.current = false;
-      console.log('[REDO] Lock released');
-    }, 50);
-  }, [futureStates]);
+      isUndoRedoRef.current = false;
+    }, 0);
+  }, [futureStates, pastStates, graphData.nodes]);
 
   // Node drag end handler
   const handleNodeDragEnd = useCallback((nodeId: string, newX: number, newY: number) => {
-    // Save to history before making changes
-    saveToHistory();
-
     // Update graph data with new position (auto-save will handle persistence)
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
@@ -920,7 +863,7 @@ function HomeContent() {
       };
     });
 
-  }, [saveToHistory]);
+  }, []);
 
   // Reset node positions handler
   const handleResetNodePositions = useCallback(() => {
@@ -1022,9 +965,6 @@ function HomeContent() {
 
   // Graph editing handlers
   const handleUpdateNodeText = useCallback((nodeId: string, newText: string) => {
-    // Save to history before making changes
-    saveToHistory();
-
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
         if (node.id === nodeId) {
@@ -1040,12 +980,10 @@ function HomeContent() {
         nodes: updatedNodes,
       };
     });
-  }, [saveToHistory]);
+  }, []);
 
 
   const handleAddNode = useCallback((x: number, y: number) => {
-    // Save to history before making changes
-    saveToHistory();
 
     // Generate a unique ID for the new node
     const timestamp = Date.now();
@@ -1071,14 +1009,11 @@ function HomeContent() {
     // Trigger auto-edit for the newly created node
     setAutoEditNodeId(newNodeId);
 
-  }, [saveToHistory]);
+  }, []);
 
   const handleCreateNodeFromFloatingArrow = useCallback((edgeIndex: number, position: { x: number; y: number }) => {
     const edge = edges[edgeIndex];
     if (!edge || edge.target !== undefined) return; // Only handle floating arrows
-
-    // Save to history before making changes
-    saveToHistory();
 
     // Generate a unique ID for the new node
     const timestamp = Date.now();
@@ -1130,7 +1065,7 @@ function HomeContent() {
 
     // Trigger auto-edit for the newly created node
     setAutoEditNodeId(newNodeId);
-  }, [edges, nodes, saveToHistory]);
+  }, [edges, nodes]);
 
   const handleInitiateDelete = useCallback((nodeId: string) => {
     // Find the node to delete
@@ -1152,9 +1087,6 @@ function HomeContent() {
     // Find the node to delete
     const nodeToDelete = graphData.nodes.find(n => n.id === nodeId);
     if (!nodeToDelete) return;
-
-    // Save to history before making changes
-    saveToHistory();
 
     // Get the node's position for converting incoming edges to free-floating
     const nodePosition = nodeToDelete.position;
@@ -1223,7 +1155,7 @@ function HomeContent() {
         };
       });
     });
-  }, [graphData, nodes, probabilityRootIndex, saveToHistory]);
+  }, [graphData, nodes, probabilityRootIndex]);
 
   const handleCancelDelete = useCallback(() => {
     setDeleteDialogOpen(false);
@@ -1257,9 +1189,6 @@ function HomeContent() {
 
     const oldType = node.type;
     if (oldType === newType) return; // No change
-
-    // Save to history before making changes
-    saveToHistory();
 
     flushSync(() => {
       setGraphData(prev => {
@@ -1343,7 +1272,7 @@ function HomeContent() {
       });
 
       });
-  }, [graphData, saveToHistory]);
+  }, [graphData]);
 
   // Keyboard handler for Delete/Backspace keys
   useEffect(() => {
