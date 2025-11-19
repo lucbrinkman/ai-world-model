@@ -441,9 +441,14 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
         // Only trigger onClick if we didn't drag
         if (!didDragRef.current) {
           onClick();
-          // Toggle selection: if already selected, deselect; otherwise select
-          if (onSelect) {
-            onSelect(isNodeSelected ? null : node.id);
+          // If already selected, start editing on single click
+          if (isNodeSelected && onUpdateText) {
+            setIsEditing(true);
+          } else {
+            // Toggle selection: if already selected, deselect; otherwise select
+            if (onSelect) {
+              onSelect(isNodeSelected ? null : node.id);
+            }
           }
         }
       }}

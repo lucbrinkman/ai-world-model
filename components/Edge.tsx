@@ -357,8 +357,13 @@ export default function Edge({
   // Handle click on label (for edge selection)
   const handleLabelClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onClick && !isEditingLabel) {
-      onClick();
+    if (!isEditingLabel) {
+      // If already selected, start editing on single click
+      if (isSelected && onLabelUpdate) {
+        setIsEditingLabel(true);
+      } else if (onClick) {
+        onClick();
+      }
     }
   };
 
