@@ -664,7 +664,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(({
       {showSlider && (
         <div
           className={`absolute pointer-events-auto transition-opacity duration-200 ${
-            isNodeSelected || isSliderDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            isNodeSelected || isSliderDragging || isHovered ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
           }`}
           style={{
             top: '100%',
