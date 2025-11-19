@@ -183,17 +183,17 @@ export default function Flowchart({
 
   // Update node bounds whenever nodes change or window resizes
   useEffect(() => {
-    // Wait for CSS transitions to complete (nodes have transition-all duration-200)
-    // This fixes the issue where reset positions doesn't update arrows until second click
-    const timeoutId = setTimeout(() => {
+    // Update bounds immediately since we removed CSS transitions from nodes
+    // Use requestAnimationFrame to ensure DOM has been painted
+    const rafId = requestAnimationFrame(() => {
       updateBounds();
-    }, 250); // Wait slightly longer than the 200ms transition
+    });
 
     // Update on window resize - use wrapper to match event listener signature
     const handleResize = () => updateBounds();
     window.addEventListener('resize', handleResize);
     return () => {
-      clearTimeout(timeoutId);
+      cancelAnimationFrame(rafId);
       window.removeEventListener('resize', handleResize);
     };
   }, [nodes, updateBounds]);
