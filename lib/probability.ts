@@ -99,11 +99,11 @@ export function calculateProbabilities(
   const edges = initialEdges.map(e => ({ ...e }));
 
   // Extract slider probabilities from question nodes (0-100 to 0.0-1.0)
-  // Build array indexed by sliderIndex
-  const sliderProbs: number[] = [];
+  // Build map from node ID to probability value
+  const nodeIdToProb = new Map<string, number>();
   graphData.nodes.forEach(node => {
-    if (node.type === NodeType.QUESTION && node.sliderIndex !== null) {
-      sliderProbs[node.sliderIndex] = (node.probability || 50) / 100.0;
+    if (node.type === NodeType.QUESTION) {
+      nodeIdToProb.set(node.id, (node.probability ?? 50) / 100.0);
     }
   });
 
@@ -145,14 +145,13 @@ export function calculateProbabilities(
 
     // Calculate conditional probability based on edge type
     if (edge.yn !== EdgeType.E100) {
-      // Find the slider index for the source node
-      const sliderIndex = questionNodeIndices.indexOf(edge.source);
+      // Get the source node and look up its probability by ID
+      const sourceNode = nodes[edge.source];
+      const sliderProb = nodeIdToProb.get(sourceNode.id);
 
-      if (sliderIndex === -1) {
-        throw new Error(`No slider value for node ${edge.source} from edge ${edgeIndex}`);
+      if (sliderProb === undefined) {
+        throw new Error(`No slider value for node ${sourceNode.id} (index ${edge.source}) from edge ${edgeIndex}`);
       }
-
-      const sliderProb = sliderProbs[sliderIndex];
 
       // YES edge = slider probability, NO edge = 1 - slider probability
       conditionalProb = edge.yn === EdgeType.YES ? sliderProb : 1.0 - sliderProb;
