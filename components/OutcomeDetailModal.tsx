@@ -72,7 +72,7 @@ export function OutcomeDetailModal({
         title={`${label}: ${categoryPercent}%`}
       >
         {heightPercent > 8 && (
-          <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-black">
+          <div className="absolute inset-0 flex items-center justify-center text-sm font-normal text-black">
             {label} - {categoryPercent}%
           </div>
         )}
@@ -85,6 +85,7 @@ export function OutcomeDetailModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onMouseDown={handleBackdropMouseDown}
       onMouseUp={handleBackdropMouseUp}
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
       <div
         className="bg-gray-900 rounded-lg shadow-xl max-w-4xl w-full mx-4 border border-gray-700"
@@ -93,7 +94,7 @@ export function OutcomeDetailModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-800">
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-2xl font-extrabold text-white">
             Outcome Distribution
           </h2>
           <button

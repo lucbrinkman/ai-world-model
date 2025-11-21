@@ -35,6 +35,7 @@ export default function OutcomeBarGraph({
         <button
           onClick={() => setIsModalOpen(true)}
           className="w-10 h-32 bg-gray-900 border border-gray-800 rounded-lg overflow-hidden flex flex-col hover:border-gray-600 transition-colors cursor-pointer"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
         >
           {/* Good outcomes (top) */}
           {goodPercent > 0 && (
@@ -47,7 +48,7 @@ export default function OutcomeBarGraph({
               }}
             >
               {goodPercent > 15 && (
-                <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-black">
+                <span className="absolute inset-0 flex items-center justify-center text-base font-normal text-black">
                   {goodPercent.toFixed(0)}
                 </span>
               )}
@@ -65,7 +66,7 @@ export default function OutcomeBarGraph({
               }}
             >
               {ambivalentPercent > 15 && (
-                <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-black">
+                <span className="absolute inset-0 flex items-center justify-center text-base font-normal text-black">
                   {ambivalentPercent.toFixed(0)}
                 </span>
               )}
@@ -83,7 +84,7 @@ export default function OutcomeBarGraph({
               }}
             >
               {existentialPercent > 15 && (
-                <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-black">
+                <span className="absolute inset-0 flex items-center justify-center text-base font-normal text-black">
                   {existentialPercent.toFixed(0)}
                 </span>
               )}
