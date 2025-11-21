@@ -562,6 +562,34 @@ export default function Flowchart({
     }
   }, [isDragging]);
 
+  // Screen to canvas coordinate conversion - used by nodes and edges for dragging
+  const screenToCanvasCoords = useCallback(
+    (screenX: number, screenY: number) => {
+      if (!containerRef.current || !scrollContainerRef.current)
+        return { x: 0, y: 0 };
+      const scrollContainer = scrollContainerRef.current;
+      const scrollRect = scrollContainer.getBoundingClientRect();
+      const zoomFactor = zoom / 100;
+
+      // Convert screen coords to position within scrollable area, then to canvas coords
+      const canvasX =
+        (scrollContainer.scrollLeft +
+          screenX -
+          scrollRect.left -
+          CANVAS_PADDING) /
+        zoomFactor;
+      const canvasY =
+        (scrollContainer.scrollTop +
+          screenY -
+          scrollRect.top -
+          CANVAS_PADDING) /
+        zoomFactor;
+
+      return { x: canvasX, y: canvasY };
+    },
+    [zoom]
+  );
+
   return (
     <div
       ref={scrollContainerRefCallback}
@@ -839,31 +867,18 @@ export default function Flowchart({
                     : undefined
                 }
                 showAddArrows={shouldShowAddArrows}
+                screenToCanvasCoords={screenToCanvasCoords}
                 onAddArrow={
                   shouldShowAddArrows
                     ? (direction, mousePos) => {
                         const bounds = nodeBounds.get(node.id);
                         // Convert screen coordinates to canvas coordinates if mousePos provided
                         let canvasPos: { x: number; y: number } | undefined;
-                        if (mousePos && scrollContainerRef.current) {
-                          const scrollContainer = scrollContainerRef.current;
-                          const scrollRect =
-                            scrollContainer.getBoundingClientRect();
-                          const zoomFactor = zoom / 100;
-                          canvasPos = {
-                            x:
-                              (scrollContainer.scrollLeft +
-                                mousePos.clientX -
-                                scrollRect.left -
-                                CANVAS_PADDING) /
-                              zoomFactor,
-                            y:
-                              (scrollContainer.scrollTop +
-                                mousePos.clientY -
-                                scrollRect.top -
-                                CANVAS_PADDING) /
-                              zoomFactor,
-                          };
+                        if (mousePos) {
+                          canvasPos = screenToCanvasCoords(
+                            mousePos.clientX,
+                            mousePos.clientY
+                          );
                         }
                         onAddArrow(
                           node.id,
