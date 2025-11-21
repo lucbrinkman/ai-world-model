@@ -60,6 +60,10 @@ interface NodeProps {
   onSliderChange?: (value: number) => void;
   onSliderChangeComplete?: () => void;
   showAddArrows?: boolean;
+  screenToCanvasCoords: (
+    screenX: number,
+    screenY: number
+  ) => { x: number; y: number };
   onAddArrow?: (
     direction: "top" | "bottom" | "left" | "right",
     mousePos?: { clientX: number; clientY: number }
@@ -98,6 +102,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
       onSliderChange,
       onSliderChangeComplete,
       showAddArrows,
+      screenToCanvasCoords,
       onAddArrow,
     },
     ref
@@ -108,8 +113,10 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
     const [isDragging, setIsDragging] = useState(false);
     const [shiftHeld, setShiftHeld] = useState(false); // Track if Shift is held during drag
     const dragStartRef = useRef<{
-      mouseX: number;
-      mouseY: number;
+      // Offset from mouse position to node center in canvas coordinates
+      nodeOffsetX: number;
+      nodeOffsetY: number;
+      // Original node position for calculating deltas
       nodeX: number;
       nodeY: number;
     } | null>(null);
@@ -120,6 +127,9 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
 
     // Pin button click cooldown - prevents hover preview immediately after clicking
     const pinClickCooldownRef = useRef(false);
+
+    // Pin button hover state - controls extended hover zone to prevent flickering
+    const [isPinHovered, setIsPinHovered] = useState(false);
 
     // Edit state
     const [isEditing, setIsEditing] = useState(false);
@@ -339,9 +349,14 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
       onDragStateChange(true, false, e.clientX, e.clientY);
       didDragRef.current = false;
       lastUpdateTimeRef.current = Date.now(); // Reset timer for throttling
+
+      // Convert mouse position to canvas coordinates
+      const canvasPos = screenToCanvasCoords(e.clientX, e.clientY);
+
+      // Store offset from mouse to node center in canvas coordinates
       dragStartRef.current = {
-        mouseX: e.clientX,
-        mouseY: e.clientY,
+        nodeOffsetX: x - canvasPos.x,
+        nodeOffsetY: y - canvasPos.y,
         nodeX: x,
         nodeY: y,
       };
@@ -372,23 +387,21 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
         }
         onDragStateChange(true, e.shiftKey, e.clientX, e.clientY);
 
-        // Calculate raw delta in screen space
-        const rawDeltaX = e.clientX - dragStartRef.current.mouseX;
-        const rawDeltaY = e.clientY - dragStartRef.current.mouseY;
+        // Convert current mouse position to canvas coordinates
+        const canvasPos = screenToCanvasCoords(e.clientX, e.clientY);
+
+        // Calculate new node position by adding the stored offset
+        let newX = canvasPos.x + dragStartRef.current.nodeOffsetX;
+        let newY = canvasPos.y + dragStartRef.current.nodeOffsetY;
+
+        // Calculate raw delta to check if we've moved enough to count as dragging
+        const rawDeltaX = newX - dragStartRef.current.nodeX;
+        const rawDeltaY = newY - dragStartRef.current.nodeY;
 
         // Mark that we've dragged (moved more than a few pixels)
         if (Math.abs(rawDeltaX) > 3 || Math.abs(rawDeltaY) > 3) {
           didDragRef.current = true;
         }
-
-        // Convert to canvas coordinates
-        const zoomFactor = zoom / 100;
-        const canvasDeltaX = rawDeltaX / zoomFactor;
-        const canvasDeltaY = rawDeltaY / zoomFactor;
-
-        // Calculate new position in canvas coordinates
-        let newX = dragStartRef.current.nodeX + canvasDeltaX;
-        let newY = dragStartRef.current.nodeY + canvasDeltaY;
 
         // Apply snap to grid unless Shift is held
         // Simple, predictable: what you see during drag = final position
@@ -412,9 +425,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
           lastUpdateTimeRef.current = now;
 
           // Trigger bounds recalculation so arrows update (use snapped position)
-          const snappedCanvasDeltaX = newX - dragStartRef.current.nodeX;
-          const snappedCanvasDeltaY = newY - dragStartRef.current.nodeY;
-          onDragMove(node.index, snappedCanvasDeltaX, snappedCanvasDeltaY);
+          onDragMove(node.index, snappedDeltaX, snappedDeltaY);
         }
       };
 
@@ -424,15 +435,11 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
         if (!dragStartRef.current) return;
 
         // Calculate final position (same logic as mousemove for consistency)
-        const rawDeltaX = e.clientX - dragStartRef.current.mouseX;
-        const rawDeltaY = e.clientY - dragStartRef.current.mouseY;
+        const canvasPos = screenToCanvasCoords(e.clientX, e.clientY);
 
-        const zoomFactor = zoom / 100;
-        const canvasDeltaX = rawDeltaX / zoomFactor;
-        const canvasDeltaY = rawDeltaY / zoomFactor;
-
-        let newX = dragStartRef.current.nodeX + canvasDeltaX;
-        let newY = dragStartRef.current.nodeY + canvasDeltaY;
+        // Calculate new node position by adding the stored offset
+        let newX = canvasPos.x + dragStartRef.current.nodeOffsetX;
+        let newY = canvasPos.y + dragStartRef.current.nodeOffsetY;
 
         // Apply snap to grid unless Shift was held
         if (!e.shiftKey) {
@@ -463,7 +470,17 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
         window.removeEventListener("mousemove", handleGlobalMouseMove);
         window.removeEventListener("mouseup", handleGlobalMouseUp);
       };
-    }, [isDragging, zoom, onDragMove, onDragEnd, node.id, node.index]);
+    }, [
+      isDragging,
+      zoom,
+      onDragMove,
+      onDragEnd,
+      onDragStateChange,
+      node.id,
+      node.index,
+      screenToCanvasCoords,
+      shiftHeld,
+    ]);
 
     // Format text (replace | with line breaks)
     const formattedText = text.replace(/\|/g, "\n");
@@ -628,46 +645,45 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
           >
             {/* Pin button (left) */}
             {onSetProbabilityRoot && (
-              <Tooltip
-                content={isSelected ? "Remove as start" : "Set as start"}
-                position="top"
+              <div
+                onMouseEnter={(e) => {
+                  e.stopPropagation();
+                  if (!pinClickCooldownRef.current) {
+                    setIsPinHovered(true);
+                    onSetProbabilityRootHoverStart?.();
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation();
+                  setIsPinHovered(false);
+                  pinClickCooldownRef.current = false; // Reset cooldown when mouse leaves
+                  onSetProbabilityRootHoverEnd?.();
+                }}
+                style={{
+                  paddingBottom: isPinHovered ? "10px" : "0",
+                }}
               >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    pinClickCooldownRef.current = true;
-                    onSetProbabilityRootHoverEnd?.(); // Clear any existing hover
-                    onSetProbabilityRoot();
-                  }}
-                  onMouseEnter={(e) => {
-                    e.stopPropagation();
-                    if (!pinClickCooldownRef.current) {
-                      onSetProbabilityRootHoverStart?.();
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.stopPropagation();
-                    pinClickCooldownRef.current = false; // Reset cooldown when mouse leaves
-                    onSetProbabilityRootHoverEnd?.();
-                  }}
-                  className="text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
-                  style={{
-                    backgroundColor: isSelected ? ORANGE_COLOR : "#9ca3af",
-                  }}
-                  onMouseOver={(e) => {
-                    if (!pinClickCooldownRef.current) {
-                      e.currentTarget.style.backgroundColor = ORANGE_COLOR;
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = isSelected
-                      ? ORANGE_COLOR
-                      : "#9ca3af";
-                  }}
+                <Tooltip
+                  content={isSelected ? "Remove as start" : "Set as start"}
+                  position="top"
                 >
-                  <Pin size={14} />
-                </button>
-              </Tooltip>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      pinClickCooldownRef.current = true;
+                      onSetProbabilityRootHoverEnd?.(); // Clear any existing hover
+                      onSetProbabilityRoot();
+                    }}
+                    className="text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
+                    style={{
+                      backgroundColor:
+                        isPinHovered || isSelected ? ORANGE_COLOR : "#9ca3af",
+                    }}
+                  >
+                    <Pin size={14} />
+                  </button>
+                </Tooltip>
+              </div>
             )}
 
             {/* Trash button (right) */}
@@ -699,33 +715,41 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
                 right: `${-borderWidth}px`,
               }}
             >
-              <Tooltip content="Remove as start" position="top">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    pinClickCooldownRef.current = true;
-                    onSetProbabilityRootHoverEnd?.(); // Clear hover state before toggling
-                    onSetProbabilityRoot();
-                  }}
-                  onMouseEnter={(e) => {
-                    e.stopPropagation();
-                    if (!pinClickCooldownRef.current) {
-                      onSetProbabilityRootHoverStart?.();
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.stopPropagation();
-                    pinClickCooldownRef.current = false; // Reset cooldown when mouse leaves
-                    onSetProbabilityRootHoverEnd?.();
-                  }}
-                  className="text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
-                  style={{
-                    backgroundColor: ORANGE_COLOR,
-                  }}
-                >
-                  <Pin size={14} />
-                </button>
-              </Tooltip>
+              <div
+                onMouseEnter={(e) => {
+                  e.stopPropagation();
+                  if (!pinClickCooldownRef.current) {
+                    setIsPinHovered(true);
+                    onSetProbabilityRootHoverStart?.();
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation();
+                  setIsPinHovered(false);
+                  pinClickCooldownRef.current = false; // Reset cooldown when mouse leaves
+                  onSetProbabilityRootHoverEnd?.();
+                }}
+                style={{
+                  paddingBottom: isPinHovered ? "10px" : "0",
+                }}
+              >
+                <Tooltip content="Remove as start" position="top">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      pinClickCooldownRef.current = true;
+                      onSetProbabilityRootHoverEnd?.(); // Clear hover state before toggling
+                      onSetProbabilityRoot();
+                    }}
+                    className="text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
+                    style={{
+                      backgroundColor: ORANGE_COLOR,
+                    }}
+                  >
+                    <Pin size={14} />
+                  </button>
+                </Tooltip>
+              </div>
             </div>
           )}
 
