@@ -71,6 +71,8 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
    ```
 
 2. **Create Pull Request:**
+   - **IMPORTANT:** Only create PRs when the user explicitly requests it
+   - Feature branches may be worked on for extended periods before PR creation
    - Use GitHub UI or `gh pr create --repo lucbrinkman/ai-world-model` command
    - **IMPORTANT:** Always create PRs to `lucbrinkman/ai-world-model` (NOT the upstream fork `swantescholz/aifutures`)
    - CI automatically runs type-check, lint, and build
@@ -110,6 +112,7 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 
 - NEVER merge to main locally - always use GitHub PRs
 - NEVER push main branch directly - only push feature branches
+- NEVER create PRs automatically - only when the user explicitly requests it
 - Let CI validate all changes before merging
 - If CI fails, fix issues and push updates to the PR branch
 
