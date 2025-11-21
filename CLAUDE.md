@@ -66,7 +66,8 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
    ```
 
 2. **Create Pull Request:**
-   - Use GitHub UI or `gh pr create` command
+   - Use GitHub UI or `gh pr create --repo lucbrinkman/ai-world-model` command
+   - **IMPORTANT:** Always create PRs to `lucbrinkman/ai-world-model` (NOT the upstream fork `swantescholz/aifutures`)
    - CI automatically runs type-check, lint, and build
    - PR cannot be merged until all CI checks pass
 
