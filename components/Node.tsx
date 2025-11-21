@@ -128,6 +128,9 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
     // Pin button click cooldown - prevents hover preview immediately after clicking
     const pinClickCooldownRef = useRef(false);
 
+    // Pin button hover state - controls extended hover zone to prevent flickering
+    const [isPinHovered, setIsPinHovered] = useState(false);
+
     // Edit state
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(text);
@@ -642,46 +645,45 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
           >
             {/* Pin button (left) */}
             {onSetProbabilityRoot && (
-              <Tooltip
-                content={isSelected ? "Remove as start" : "Set as start"}
-                position="top"
+              <div
+                onMouseEnter={(e) => {
+                  e.stopPropagation();
+                  if (!pinClickCooldownRef.current) {
+                    setIsPinHovered(true);
+                    onSetProbabilityRootHoverStart?.();
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation();
+                  setIsPinHovered(false);
+                  pinClickCooldownRef.current = false; // Reset cooldown when mouse leaves
+                  onSetProbabilityRootHoverEnd?.();
+                }}
+                style={{
+                  paddingBottom: isPinHovered ? "10px" : "0",
+                }}
               >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    pinClickCooldownRef.current = true;
-                    onSetProbabilityRootHoverEnd?.(); // Clear any existing hover
-                    onSetProbabilityRoot();
-                  }}
-                  onMouseEnter={(e) => {
-                    e.stopPropagation();
-                    if (!pinClickCooldownRef.current) {
-                      onSetProbabilityRootHoverStart?.();
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.stopPropagation();
-                    pinClickCooldownRef.current = false; // Reset cooldown when mouse leaves
-                    onSetProbabilityRootHoverEnd?.();
-                  }}
-                  className="text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
-                  style={{
-                    backgroundColor: isSelected ? ORANGE_COLOR : "#9ca3af",
-                  }}
-                  onMouseOver={(e) => {
-                    if (!pinClickCooldownRef.current) {
-                      e.currentTarget.style.backgroundColor = ORANGE_COLOR;
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = isSelected
-                      ? ORANGE_COLOR
-                      : "#9ca3af";
-                  }}
+                <Tooltip
+                  content={isSelected ? "Remove as start" : "Set as start"}
+                  position="top"
                 >
-                  <Pin size={14} />
-                </button>
-              </Tooltip>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      pinClickCooldownRef.current = true;
+                      onSetProbabilityRootHoverEnd?.(); // Clear any existing hover
+                      onSetProbabilityRoot();
+                    }}
+                    className="text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
+                    style={{
+                      backgroundColor:
+                        isPinHovered || isSelected ? ORANGE_COLOR : "#9ca3af",
+                    }}
+                  >
+                    <Pin size={14} />
+                  </button>
+                </Tooltip>
+              </div>
             )}
 
             {/* Trash button (right) */}
@@ -713,33 +715,41 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
                 right: `${-borderWidth}px`,
               }}
             >
-              <Tooltip content="Remove as start" position="top">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    pinClickCooldownRef.current = true;
-                    onSetProbabilityRootHoverEnd?.(); // Clear hover state before toggling
-                    onSetProbabilityRoot();
-                  }}
-                  onMouseEnter={(e) => {
-                    e.stopPropagation();
-                    if (!pinClickCooldownRef.current) {
-                      onSetProbabilityRootHoverStart?.();
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.stopPropagation();
-                    pinClickCooldownRef.current = false; // Reset cooldown when mouse leaves
-                    onSetProbabilityRootHoverEnd?.();
-                  }}
-                  className="text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
-                  style={{
-                    backgroundColor: ORANGE_COLOR,
-                  }}
-                >
-                  <Pin size={14} />
-                </button>
-              </Tooltip>
+              <div
+                onMouseEnter={(e) => {
+                  e.stopPropagation();
+                  if (!pinClickCooldownRef.current) {
+                    setIsPinHovered(true);
+                    onSetProbabilityRootHoverStart?.();
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation();
+                  setIsPinHovered(false);
+                  pinClickCooldownRef.current = false; // Reset cooldown when mouse leaves
+                  onSetProbabilityRootHoverEnd?.();
+                }}
+                style={{
+                  paddingBottom: isPinHovered ? "10px" : "0",
+                }}
+              >
+                <Tooltip content="Remove as start" position="top">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      pinClickCooldownRef.current = true;
+                      onSetProbabilityRootHoverEnd?.(); // Clear hover state before toggling
+                      onSetProbabilityRoot();
+                    }}
+                    className="text-white rounded w-5 h-5 flex items-center justify-center shadow-lg transition-colors"
+                    style={{
+                      backgroundColor: ORANGE_COLOR,
+                    }}
+                  >
+                    <Pin size={14} />
+                  </button>
+                </Tooltip>
+              </div>
             </div>
           )}
 
