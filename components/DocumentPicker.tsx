@@ -1,12 +1,16 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Document } from '@/lib/types';
-import { getUserDocuments, deleteDocument, renameDocument } from '@/lib/actions/documents';
-import TemplateChoiceDialog from './TemplateChoiceDialog';
-import NewDocumentWarningDialog from './NewDocumentWarningDialog';
-import { ShareModal } from './ShareModal';
-import Tooltip from './Tooltip';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Document } from "@/lib/types";
+import {
+  getUserDocuments,
+  deleteDocument,
+  renameDocument,
+} from "@/lib/actions/documents";
+import TemplateChoiceDialog from "./TemplateChoiceDialog";
+import NewDocumentWarningDialog from "./NewDocumentWarningDialog";
+import { ShareModal } from "./ShareModal";
+import Tooltip from "./Tooltip";
 
 interface DocumentPickerProps {
   currentDocumentId: string | null;
@@ -50,14 +54,17 @@ export default function DocumentPicker({
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
         setIsRenaming(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Focus rename input when renaming starts
@@ -87,7 +94,7 @@ export default function DocumentPicker({
   const handleDelete = async (documentId: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (!confirm('Are you sure you want to delete this document?')) {
+    if (!confirm("Are you sure you want to delete this document?")) {
       return;
     }
 
@@ -120,15 +127,22 @@ export default function DocumentPicker({
 
     // Check if name exists in loaded documents
     const nameExists = documents.some(
-      doc => doc.name === trimmedValue && doc.id !== currentDocumentId
+      (doc) => doc.name === trimmedValue && doc.id !== currentDocumentId
     );
 
     if (nameExists) {
-      setRenameError('A document with this name already exists');
+      setRenameError("A document with this name already exists");
     } else {
       setRenameError(null);
     }
-  }, [renameValue, isRenaming, isAuthenticated, documents, currentDocumentName, currentDocumentId]);
+  }, [
+    renameValue,
+    isRenaming,
+    isAuthenticated,
+    documents,
+    currentDocumentName,
+    currentDocumentId,
+  ]);
 
   const handleRenameSubmit = useCallback(async () => {
     const trimmedValue = renameValue.trim();
@@ -168,14 +182,25 @@ export default function DocumentPicker({
     setTimeout(() => {
       justRenamed.current = false;
     }, 300); // 300ms cooldown
-  }, [renameValue, currentDocumentName, isAuthenticated, currentDocumentId, onRename, renameError, onEditorClose]);
+  }, [
+    renameValue,
+    currentDocumentName,
+    isAuthenticated,
+    currentDocumentId,
+    onRename,
+    renameError,
+    onEditorClose,
+  ]);
 
   // Handle clicks outside when renaming to submit
   useEffect(() => {
     if (!isRenaming) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (renameInputRef.current && !renameInputRef.current.contains(event.target as Node)) {
+      if (
+        renameInputRef.current &&
+        !renameInputRef.current.contains(event.target as Node)
+      ) {
         // Call onEditorClose FIRST to set the timestamp before any other handlers run
         onEditorClose?.();
 
@@ -191,16 +216,22 @@ export default function DocumentPicker({
     };
 
     // Use capture phase to ensure we catch the click before it's potentially stopped
-    document.addEventListener('mousedown', handleClickOutside, true);
+    document.addEventListener("mousedown", handleClickOutside, true);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener("mousedown", handleClickOutside, true);
     };
-  }, [isRenaming, renameError, currentDocumentName, handleRenameSubmit]);
+  }, [
+    isRenaming,
+    renameError,
+    currentDocumentName,
+    handleRenameSubmit,
+    onEditorClose,
+  ]);
 
   const handleRenameKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleRenameSubmit();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setRenameValue(currentDocumentName);
       setRenameError(null);
       setIsRenaming(false);
@@ -220,7 +251,7 @@ export default function DocumentPicker({
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={handleRenameKeyDown}
             className="px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-sm"
-            style={{ width: '200px' }}
+            style={{ width: "200px" }}
           />
         </div>
       );
@@ -230,7 +261,11 @@ export default function DocumentPicker({
       <>
         <div className="relative" ref={dropdownRef}>
           <div className="flex items-center gap-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm">
-            <Tooltip content="Rename" position="bottom" disabled={justRenamed.current}>
+            <Tooltip
+              content="Rename"
+              position="bottom"
+              disabled={justRenamed.current}
+            >
               <span
                 className="font-medium cursor-text px-1 py-0.5 rounded transition-all hover:border hover:border-gray-500 border border-transparent"
                 onClick={() => setIsRenaming(true)}
@@ -243,12 +278,17 @@ export default function DocumentPicker({
               className="hover:bg-gray-700 p-1 rounded"
             >
               <svg
-                className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </button>
           </div>
@@ -321,9 +361,9 @@ export default function DocumentPicker({
             }}
             onKeyDown={handleRenameKeyDown}
             className={`px-3 py-2 bg-gray-800 border rounded text-white text-sm ${
-              renameError ? 'border-red-500' : 'border-gray-600'
+              renameError ? "border-red-500" : "border-gray-600"
             }`}
-            style={{ width: '250px' }}
+            style={{ width: "250px" }}
           />
           {renameError && (
             <div className="text-xs text-red-400">{renameError}</div>
@@ -331,7 +371,11 @@ export default function DocumentPicker({
         </div>
       ) : (
         <div className="flex items-center gap-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm">
-          <Tooltip content="Rename" position="bottom" disabled={justRenamed.current}>
+          <Tooltip
+            content="Rename"
+            position="bottom"
+            disabled={justRenamed.current}
+          >
             <span
               className="font-medium cursor-text px-1 py-0.5 rounded transition-all hover:border hover:border-gray-500 border border-transparent"
               onClick={() => setIsRenaming(true)}
@@ -344,12 +388,17 @@ export default function DocumentPicker({
             className="hover:bg-gray-700 p-1 rounded"
           >
             <svg
-              className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           </button>
         </div>
@@ -395,8 +444,8 @@ export default function DocumentPicker({
               disabled={!currentDocumentId}
               className={`w-full px-4 py-2 text-left text-sm border-b border-gray-600 ${
                 currentDocumentId
-                  ? 'text-white hover:bg-gray-700 cursor-pointer'
-                  : 'text-gray-500 cursor-not-allowed'
+                  ? "text-white hover:bg-gray-700 cursor-pointer"
+                  : "text-gray-500 cursor-not-allowed"
               }`}
             >
               Share Current
@@ -407,14 +456,16 @@ export default function DocumentPicker({
           {loading ? (
             <div className="px-4 py-2 text-sm text-gray-400">Loading...</div>
           ) : documents.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-gray-400">No documents yet</div>
+            <div className="px-4 py-2 text-sm text-gray-400">
+              No documents yet
+            </div>
           ) : (
             <div className="py-1">
               {documents.map((doc) => (
                 <div
                   key={doc.id}
                   className={`flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-700 ${
-                    doc.id === currentDocumentId ? 'bg-gray-700' : ''
+                    doc.id === currentDocumentId ? "bg-gray-700" : ""
                   }`}
                 >
                   <button
