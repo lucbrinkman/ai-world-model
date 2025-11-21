@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function AuthCodeError() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -22,16 +24,17 @@ export default function AuthCodeError() {
             Authentication Error
           </h1>
           <p className="text-gray-600 mb-6">
-            There was a problem confirming your email. The link may have expired or already been used.
+            There was a problem confirming your email. The link may have expired
+            or already been used.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700"
           >
             Return to Home
-          </a>
+          </Link>
         </div>
       </div>
     </div>
-  )
+  );
 }
