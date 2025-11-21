@@ -22,9 +22,21 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 - `npm run build` - Build for production
 - `npm run lint` - Run ESLint
 
+**Port Management:**
+
+- **IMPORTANT:** Each worktree MUST use its designated port:
+  - **WorkTree1** (`ai-world-model-worktree-1`): Port **3000**
+  - **WorkTree2** (`ai-world-model-worktree-2`): Port **3001**
+- **NEVER** start a dev server on a different port without explicit user permission
+- **Before starting a dev server:**
+  1. Check which worktree you're in (from working directory)
+  2. Determine the correct port (3000 for WorkTree1, 3001 for WorkTree2)
+  3. Kill any process on that port: `fuser -k <port>/tcp`
+  4. Start dev server with: `npm run dev -- -p <port>` (e.g., `npm run dev -- -p 3001`)
+
 **Process Management:**
 
-- **To stop a dev server cleanly:** `fuser -k <port>/tcp` (e.g., `fuser -k 3000/tcp`)
+- **To stop a dev server cleanly:** `fuser -k <port>/tcp` (e.g., `fuser -k 3000/tcp` or `fuser -k 3001/tcp`)
   - This kills all processes using that port, including orphaned child processes
   - More reliable than KillShell which can leave next-server processes running
   - Prevents accumulation of zombie processes that consume CPU/memory

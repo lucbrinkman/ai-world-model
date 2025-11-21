@@ -243,7 +243,7 @@ function HomeContent() {
   }, [user, authLoading]);
 
   // Calculate probabilities using useMemo (only recalculate when dependencies change)
-  const { nodes, edges, maxOutcomeProbability } = useMemo(() => {
+  const { nodes, edges, maxOutcomeProbability, outcomeProbabilities } = useMemo(() => {
     // Use preview index if hovering, otherwise use actual root index
     const effectiveRootIndex = previewProbabilityRootIndex ?? probabilityRootIndex;
     const result = calculateProbabilities(effectiveRootIndex, graphData);
@@ -257,7 +257,27 @@ function HomeContent() {
       0 // Fallback to 0 if no outcome nodes
     );
 
-    return { nodes: result.nodes, edges: result.edges, maxOutcomeProbability };
+    // Calculate total probability for each outcome category
+    const goodProbability = result.nodes
+      .filter(n => n.type === NodeType.GOOD)
+      .reduce((sum, n) => sum + n.p, 0);
+    const ambivalentProbability = result.nodes
+      .filter(n => n.type === NodeType.AMBIVALENT)
+      .reduce((sum, n) => sum + n.p, 0);
+    const existentialProbability = result.nodes
+      .filter(n => n.type === NodeType.EXISTENTIAL)
+      .reduce((sum, n) => sum + n.p, 0);
+
+    return {
+      nodes: result.nodes,
+      edges: result.edges,
+      maxOutcomeProbability,
+      outcomeProbabilities: {
+        good: goodProbability,
+        ambivalent: ambivalentProbability,
+        existential: existentialProbability,
+      },
+    };
   }, [probabilityRootIndex, previewProbabilityRootIndex, graphData]);
 
   // Create document data for auto-save
@@ -1593,6 +1613,10 @@ function HomeContent() {
             canRedo={canRedo}
             onUndo={handleUndo}
             onRedo={handleRedo}
+            existentialProbability={outcomeProbabilities.existential}
+            ambivalentProbability={outcomeProbabilities.ambivalent}
+            goodProbability={outcomeProbabilities.good}
+            nodes={nodes}
           />
 
           {/* Feedback Button */}

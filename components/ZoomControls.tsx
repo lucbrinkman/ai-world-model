@@ -1,7 +1,8 @@
-import { MIN_ZOOM, MAX_ZOOM } from '@/lib/types';
+import { MIN_ZOOM, MAX_ZOOM, Node } from '@/lib/types';
 import Tooltip from './Tooltip';
 import { useModifierKey } from '@/hooks/useKeyboardShortcut';
 import { Locate, Plus, Minus } from 'lucide-react';
+import OutcomeBarGraph from './OutcomeBarGraph';
 
 interface ZoomControlsProps {
   zoom: number;
@@ -12,6 +13,10 @@ interface ZoomControlsProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  existentialProbability: number;
+  ambivalentProbability: number;
+  goodProbability: number;
+  nodes: Node[];
 }
 
 export default function ZoomControls({
@@ -23,10 +28,25 @@ export default function ZoomControls({
   canRedo,
   onUndo,
   onRedo,
+  existentialProbability,
+  ambivalentProbability,
+  goodProbability,
+  nodes,
 }: ZoomControlsProps) {
   const modKey = useModifierKey();
   return (
     <div className="fixed bottom-6 right-6 bg-background border border-gray-800 rounded-lg p-2 shadow-lg flex flex-col gap-2 z-10">
+      {/* Outcome Bar Graph */}
+      <OutcomeBarGraph
+        existentialProbability={existentialProbability}
+        ambivalentProbability={ambivalentProbability}
+        goodProbability={goodProbability}
+        nodes={nodes}
+      />
+
+      {/* Divider */}
+      <div className="border-t border-gray-800"></div>
+
       {/* Redo Button */}
       <Tooltip content={`Redo (${modKey}+Y)`} position="left">
         <button
