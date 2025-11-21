@@ -1,4 +1,4 @@
-import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, NodeDragStateHandler, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING, NodeType as NT, type GraphData } from '@/lib/types';
+import { Node as NodeType, Edge as EdgeType, NodeDragEndHandler, NodeDragStateHandler, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_ZOOM, MAX_ZOOM, ZOOM_SENSITIVITY, CANVAS_PADDING, NodeType as NT, EdgeType as ET, type GraphData, type NodeType as NodeTypeValue } from '@/lib/types';
 import NodeComponent from './Node';
 import EdgeComponent from './Edge';
 import ConnectorDots from './ConnectorDots';
@@ -39,7 +39,7 @@ interface FlowchartProps {
   onAddNode?: (x: number, y: number) => void;
   onNodeSelect?: (nodeId: string | null) => void;
   onDeleteNode?: (nodeId: string) => void;
-  onChangeNodeType?: (nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => void;
+  onChangeNodeType?: (nodeId: string, newType: NodeTypeValue) => void;
   onEdgeClick?: (edgeIndex: number) => void;
   onEdgeReconnect?: (edgeIndex: number, end: 'source' | 'target', newNodeIdOrCoords: string | { x: number; y: number }) => void;
   onEdgeLabelUpdate?: (edgeIndex: number, newLabel: string) => void;
@@ -540,7 +540,7 @@ export default function Flowchart({
                 // Find the newest NO edge from this node (last one in the connections array)
                 const noEdgesFromNode = edges.filter(e =>
                   nodes[e.source].id === sourceNode.id &&
-                  e.yn === 'n' &&
+                  e.yn === ET.NO &&
                   e.label === 'No'
                 );
                 const newestNoEdge = noEdgesFromNode[noEdgesFromNode.length - 1];
@@ -602,7 +602,7 @@ export default function Flowchart({
             const outgoingEdges = edges.filter(e => e.source === node.index);
             const isIntermediate = outgoingEdges.length === 1;
             const isOutcomeWithNoArrows =
-              (node.type === 'g' || node.type === 'a' || node.type === 'e') &&
+              (node.type === NT.GOOD || node.type === NT.AMBIVALENT || node.type === NT.EXISTENTIAL) &&
               outgoingEdges.length === 0;
             const shouldShowAddArrows =
               node.type !== NT.START &&

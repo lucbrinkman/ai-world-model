@@ -144,7 +144,7 @@ export function calculateProbabilities(
     let conditionalProb = 1.0;
 
     // Calculate conditional probability based on edge type
-    if (edge.yn !== EdgeType.E100) {
+    if (edge.yn !== EdgeType.ALWAYS) {
       // Find the slider index for the source node
       const sliderIndex = questionNodeIndices.indexOf(edge.source);
 

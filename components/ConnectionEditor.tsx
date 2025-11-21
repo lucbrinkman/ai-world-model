@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { GraphNode, NodeConnection, EdgeType } from '@/lib/types';
+import { EdgeType as ET } from '@/lib/types';
 
 interface ConnectionEditorProps {
   selectedNode: GraphNode | null;
@@ -46,11 +47,11 @@ export default function ConnectionEditor({
 
   const getEdgeTypeLabel = (type: EdgeType): string => {
     switch (type) {
-      case 'y':
+      case ET.YES:
         return 'YES';
-      case 'n':
+      case ET.NO:
         return 'NO';
-      case '-':
+      case ET.ALWAYS:
         return 'ALWAYS';
       default:
         return type;
@@ -59,11 +60,11 @@ export default function ConnectionEditor({
 
   const getEdgeTypeColor = (type: EdgeType): string => {
     switch (type) {
-      case 'y':
+      case ET.YES:
         return 'text-green-400';
-      case 'n':
+      case ET.NO:
         return 'text-red-400';
-      case '-':
+      case ET.ALWAYS:
         return 'text-blue-400';
       default:
         return 'text-gray-400';

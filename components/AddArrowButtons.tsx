@@ -1,4 +1,5 @@
 import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { NodeType as NT } from '@/lib/types';
 import Tooltip from './Tooltip';
 
 interface AddArrowButtonsProps {
@@ -19,7 +20,7 @@ export default function AddArrowButtons({
   const offset = 15; // Distance from node edge
 
   // Determine if this is an outcome node (has colored bubbles on the left)
-  const isOutcomeNode = nodeType === 'g' || nodeType === 'a' || nodeType === 'e';
+  const isOutcomeNode = nodeType === NT.GOOD || nodeType === NT.AMBIVALENT || nodeType === NT.EXISTENTIAL;
 
   const allButtons = [
     {

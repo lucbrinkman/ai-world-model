@@ -1,14 +1,14 @@
 'use client'
 
 import { useState } from 'react';
-import { NODE_COLORS, type NodeType } from '@/lib/types';
+import { NODE_COLORS, type NodeType, NodeType as NT } from '@/lib/types';
 import Tooltip from './Tooltip';
 
 interface OutcomeTypeSwitcherProps {
   nodeId: string;
   currentType: NodeType;
   isSelected: boolean;
-  onChangeType: (nodeId: string, newType: 'n' | 'g' | 'a' | 'e' | 'i') => void;
+  onChangeType: (nodeId: string, newType: NodeType) => void;
 }
 
 export default function OutcomeTypeSwitcher({
@@ -23,9 +23,9 @@ export default function OutcomeTypeSwitcher({
   if (!isSelected) return null;
 
   const outcomeTypes = [
-    { type: 'g' as const, label: 'Good', color: NODE_COLORS.GOOD.border },
-    { type: 'a' as const, label: 'Ambivalent', color: NODE_COLORS.AMBIVALENT.border },
-    { type: 'e' as const, label: 'Bad', color: NODE_COLORS.EXISTENTIAL.border },
+    { type: NT.GOOD, label: 'Good', color: NODE_COLORS.GOOD.border },
+    { type: NT.AMBIVALENT, label: 'Ambivalent', color: NODE_COLORS.AMBIVALENT.border },
+    { type: NT.EXISTENTIAL, label: 'Bad', color: NODE_COLORS.EXISTENTIAL.border },
   ];
 
   return (
@@ -67,8 +67,8 @@ export default function OutcomeTypeSwitcher({
                 className="font-medium whitespace-nowrap"
                 style={{
                   fontSize: '10px',
-                  color: type === 'e' ? 'white' : 'black', // Black for Good/Ambivalent, white for Bad
-                  textShadow: type === 'e' ? '0 1px 2px rgba(0, 0, 0, 0.8)' : 'none',
+                  color: type === NT.EXISTENTIAL ? 'white' : 'black', // Black for Good/Ambivalent, white for Bad
+                  textShadow: type === NT.EXISTENTIAL ? '0 1px 2px rgba(0, 0, 0, 0.8)' : 'none',
                 }}
               >
                 {label}
