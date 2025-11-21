@@ -10,7 +10,9 @@ import {
   ZOOM_SENSITIVITY,
   CANVAS_PADDING,
   NodeType as NT,
+  EdgeType as ET,
   type GraphData,
+  type NodeType as NodeTypeValue,
 } from "@/lib/types";
 import NodeComponent from "./Node";
 import EdgeComponent from "./Edge";
@@ -62,10 +64,7 @@ interface FlowchartProps {
   onAddNode?: (x: number, y: number) => void;
   onNodeSelect?: (nodeId: string | null) => void;
   onDeleteNode?: (nodeId: string) => void;
-  onChangeNodeType?: (
-    nodeId: string,
-    newType: "n" | "i" | "g" | "a" | "e"
-  ) => void;
+  onChangeNodeType?: (nodeId: string, newType: NodeTypeValue) => void;
   onEdgeClick?: (edgeIndex: number) => void;
   onEdgeReconnect?: (
     edgeIndex: number,
@@ -475,7 +474,6 @@ export default function Flowchart({
       onBackgroundClick,
       selectedEdgeIndex,
       selectedNodeId,
-      editorCloseTimestampRef,
     ]
   );
 
@@ -683,7 +681,7 @@ export default function Flowchart({
                 const noEdgesFromNode = edges.filter(
                   (e) =>
                     nodes[e.source].id === sourceNode.id &&
-                    e.yn === "n" &&
+                    e.yn === ET.NO &&
                     e.label === "No"
                 );
                 const newestNoEdge =
@@ -777,7 +775,9 @@ export default function Flowchart({
             const outgoingEdges = edges.filter((e) => e.source === node.index);
             const isIntermediate = outgoingEdges.length === 1;
             const isOutcomeWithNoArrows =
-              (node.type === "g" || node.type === "a" || node.type === "e") &&
+              (node.type === NT.GOOD ||
+                node.type === NT.AMBIVALENT ||
+                node.type === NT.EXISTENTIAL) &&
               outgoingEdges.length === 0;
             const shouldShowAddArrows =
               node.type !== NT.START &&

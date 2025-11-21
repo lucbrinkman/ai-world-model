@@ -1,22 +1,22 @@
 // Node types
-export type NodeType = 'n' | 's' | 'g' | 'a' | 'e' | 'i';
+export type NodeType = 'question' | 'start' | 'goodOutcome' | 'ambivalentOutcome' | 'existentialOutcome' | 'intermediateStep';
 
 export const NodeType = {
-  QUESTION: 'n' as const,
-  START: 's' as const,
-  GOOD: 'g' as const,
-  AMBIVALENT: 'a' as const,
-  EXISTENTIAL: 'e' as const,
-  INTERMEDIATE: 'i' as const,
+  QUESTION: 'question' as const,
+  START: 'start' as const,
+  GOOD: 'goodOutcome' as const,
+  AMBIVALENT: 'ambivalentOutcome' as const,
+  EXISTENTIAL: 'existentialOutcome' as const,
+  INTERMEDIATE: 'intermediateStep' as const,
 };
 
 // Edge types
-export type EdgeType = 'y' | 'n' | '-';
+export type EdgeType = 'yes' | 'no' | 'always';
 
 export const EdgeType = {
-  YES: 'y' as const,
-  NO: 'n' as const,
-  E100: '-' as const, // Always 100% probability
+  YES: 'yes' as const,
+  NO: 'no' as const,
+  ALWAYS: 'always' as const, // Always 100% probability
 };
 
 // Node interface

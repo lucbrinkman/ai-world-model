@@ -1,5 +1,6 @@
 import { graphData, nodes, edges, nodeIdMap } from './graphData';
 import type { GraphNode, GraphData } from './types';
+import { NodeType, EdgeType } from './types';
 
 /**
  * Get a node with all its details including connections
@@ -21,12 +22,12 @@ export function serializeForLLM(): string {
 
   // Group nodes by type
   const nodesByType: Record<string, GraphNode[]> = {
-    s: [], // start
-    n: [], // question
-    i: [], // intermediate
-    g: [], // good outcome
-    a: [], // ambivalent outcome
-    e: [], // existential risk
+    [NodeType.START]: [], // start
+    [NodeType.QUESTION]: [], // question
+    [NodeType.INTERMEDIATE]: [], // intermediate
+    [NodeType.GOOD]: [], // good outcome
+    [NodeType.AMBIVALENT]: [], // ambivalent outcome
+    [NodeType.EXISTENTIAL]: [], // existential risk
   };
 
   graphData.nodes.forEach(node => {
@@ -38,12 +39,12 @@ export function serializeForLLM(): string {
 
   // Output nodes by type
   const typeNames = {
-    s: 'Start Node',
-    n: 'Question Nodes (with probability sliders)',
-    i: 'Intermediate Nodes',
-    g: 'Good Outcomes',
-    a: 'Ambivalent Outcomes',
-    e: 'Existential Risk Outcomes',
+    [NodeType.START]: 'Start Node',
+    [NodeType.QUESTION]: 'Question Nodes (with probability sliders)',
+    [NodeType.INTERMEDIATE]: 'Intermediate Nodes',
+    [NodeType.GOOD]: 'Good Outcomes',
+    [NodeType.AMBIVALENT]: 'Ambivalent Outcomes',
+    [NodeType.EXISTENTIAL]: 'Existential Risk Outcomes',
   };
 
   for (const [type, name] of Object.entries(typeNames)) {
@@ -62,7 +63,7 @@ export function serializeForLLM(): string {
       if (node.connections.length > 0) {
         output += `  - Outgoing Connections:\n`;
         node.connections.forEach(conn => {
-          const typeLabel = conn.type === 'y' ? 'YES' : conn.type === 'n' ? 'NO' : 'ALWAYS';
+          const typeLabel = conn.type === EdgeType.YES ? 'YES' : conn.type === EdgeType.NO ? 'NO' : 'ALWAYS';
           output += `    - [${typeLabel}${conn.label ? ` - "${conn.label}"` : ''}] → ${conn.targetId}\n`;
         });
       } else {
@@ -149,7 +150,7 @@ export function validateGraph(): {
   });
 
   graphData.nodes.forEach(node => {
-    if (node.type !== 's' && !nodesWithIncoming.has(node.id) && !nodesWithOutgoing.has(node.id)) {
+    if (node.type !== NodeType.START && !nodesWithIncoming.has(node.id) && !nodesWithOutgoing.has(node.id)) {
       warnings.push(`Orphaned node: ${node.id} (${node.title})`);
     }
   });
@@ -175,7 +176,7 @@ export function validateGraph(): {
 
   // Check slider indices are sequential and start at 0
   const questionNodes = graphData.nodes
-    .filter(n => n.type === 'n' && n.sliderIndex !== null)
+    .filter(n => n.type === NodeType.QUESTION && n.sliderIndex !== null)
     .sort((a, b) => (a.sliderIndex || 0) - (b.sliderIndex || 0));
 
   questionNodes.forEach((node, index) => {
@@ -241,15 +242,15 @@ export function getGraphStats() {
     totalNodes: graphData.nodes.length,
     totalConnections: edges.length,
     nodesByType: {
-      start: graphData.nodes.filter(n => n.type === 's').length,
-      question: graphData.nodes.filter(n => n.type === 'n').length,
-      intermediate: graphData.nodes.filter(n => n.type === 'i').length,
-      good: graphData.nodes.filter(n => n.type === 'g').length,
-      ambivalent: graphData.nodes.filter(n => n.type === 'a').length,
-      existential: graphData.nodes.filter(n => n.type === 'e').length,
+      start: graphData.nodes.filter(n => n.type === NodeType.START).length,
+      question: graphData.nodes.filter(n => n.type === NodeType.QUESTION).length,
+      intermediate: graphData.nodes.filter(n => n.type === NodeType.INTERMEDIATE).length,
+      good: graphData.nodes.filter(n => n.type === NodeType.GOOD).length,
+      ambivalent: graphData.nodes.filter(n => n.type === NodeType.AMBIVALENT).length,
+      existential: graphData.nodes.filter(n => n.type === NodeType.EXISTENTIAL).length,
     },
     terminalNodes: graphData.nodes.filter(n => n.connections.length === 0).length,
-    questionNodeCount: graphData.nodes.filter(n => n.type === 'n').length,
+    questionNodeCount: graphData.nodes.filter(n => n.type === NodeType.QUESTION).length,
   };
 
   return stats;

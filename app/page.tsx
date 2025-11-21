@@ -13,7 +13,7 @@ import { WelcomeModal } from '@/components/WelcomeModal';
 import { AuthModal } from '@/components/auth/AuthModal';
 import MobileWarning from '@/components/MobileWarning';
 import { useAuth } from '@/hooks/useAuth';
-import { MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, type GraphData, type DocumentData, type GraphNode } from '@/lib/types';
+import { MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, NodeType, EdgeType, type GraphData, type DocumentData, type GraphNode } from '@/lib/types';
 import { startNodeIndex, AUTHORS_ESTIMATES, graphData as defaultGraphData } from '@/lib/graphData';
 import { calculateProbabilities } from '@/lib/probability';
 import { loadFromLocalStorage, saveToLocalStorage, createDefaultDocumentData, clearLocalStorage, createEmptyDocumentData } from '@/lib/documentState';
@@ -157,7 +157,7 @@ function HomeContent() {
           if (node.probability === undefined) {
             return {
               ...node,
-              probability: node.type === 'n' ? 50 : null
+              probability: node.type === NodeType.QUESTION ? 50 : null
             };
           }
           return node;
@@ -191,7 +191,7 @@ function HomeContent() {
             if (node.probability === undefined) {
               return {
                 ...node,
-                probability: node.type === 'n' ? 50 : null
+                probability: node.type === NodeType.QUESTION ? 50 : null
               };
             }
             return node;
@@ -250,7 +250,7 @@ function HomeContent() {
 
     // Find max probability among outcome nodes (good, ambivalent, existential)
     const outcomeNodes = result.nodes.filter(
-      n => n.type === 'g' || n.type === 'a' || n.type === 'e'
+      n => n.type === NodeType.GOOD || n.type === NodeType.AMBIVALENT || n.type === NodeType.EXISTENTIAL
     );
     const maxOutcomeProbability = Math.max(
       ...outcomeNodes.map(n => n.p),
@@ -510,16 +510,16 @@ function HomeContent() {
 
           if (updatedConnections.length === 0) {
             // No connections left: convert to AMBIVALENT outcome
-            updatedType = 'a';
+            updatedType = NodeType.AMBIVALENT;
             updatedSliderIndex = null; // Clear sliderIndex
           } else if (updatedConnections.length === 1) {
             // One connection left: convert from QUESTION to INTERMEDIATE
             // Also convert the remaining connection from YES/NO to E100
-            updatedType = 'i';
+            updatedType = NodeType.INTERMEDIATE;
             updatedSliderIndex = null; // Clear sliderIndex
             finalConnections = updatedConnections.map(conn => ({
               ...conn,
-              type: '-' as const,
+              type: EdgeType.ALWAYS,
               label: '',
             }));
           }
@@ -532,7 +532,7 @@ function HomeContent() {
       // Re-index remaining question nodes if we removed a question
       if (sliderIndexToRemove !== null && sliderIndexToRemove !== undefined) {
         updatedNodes = updatedNodes.map(n => {
-          if (n.type === 'n' && n.sliderIndex !== null && n.sliderIndex > sliderIndexToRemove) {
+          if (n.type === NodeType.QUESTION && n.sliderIndex !== null && n.sliderIndex > sliderIndexToRemove) {
             return { ...n, sliderIndex: n.sliderIndex - 1 };
           }
           return n;
@@ -563,11 +563,11 @@ function HomeContent() {
     const newEdgeIndex = currentConnectionCount; // Will be added at this index
 
     // Determine if this will convert to a question node
-    const isIntermediateNode = targetNode.type === 'i';
+    const isIntermediateNode = targetNode.type === NodeType.INTERMEDIATE;
     const willBecomeQuestion = isIntermediateNode && targetNode.connections.length === 1;
 
     // Calculate the next sliderIndex BEFORE state updates (for new question nodes)
-    const existingQuestions = graphData.nodes.filter(n => n.type === 'n');
+    const existingQuestions = graphData.nodes.filter(n => n.type === NodeType.QUESTION);
     const maxSliderIndex = existingQuestions.reduce(
       (max, n) => n.sliderIndex !== null && n.sliderIndex > max ? n.sliderIndex : max,
       -1
@@ -613,32 +613,32 @@ function HomeContent() {
             }
           }
 
-          const isOutcomeNode = node.type === 'g' || node.type === 'a' || node.type === 'e';
-          const isIntermediateNode = node.type === 'i';
+          const isOutcomeNode = node.type === NodeType.GOOD || node.type === NodeType.AMBIVALENT || node.type === NodeType.EXISTENTIAL;
+          const isIntermediateNode = node.type === NodeType.INTERMEDIATE;
 
           if (isOutcomeNode && node.connections.length === 0) {
             // Case: OUTCOME node with 0 connections -> add 1 E100 connection -> convert to INTERMEDIATE
             const newConnection = {
-              type: '-' as const,
+              type: EdgeType.ALWAYS,
               targetX,
               targetY,
               label: '',
             };
 
-            return { ...node, connections: [newConnection], type: 'i' as const };
+            return { ...node, connections: [newConnection], type: NodeType.INTERMEDIATE };
           } else if (isIntermediateNode && node.connections.length === 1) {
             // Case: INTERMEDIATE node with 1 connection -> add YES/NO connections -> convert to QUESTION
             // Convert existing connection from E100 to YES
             const updatedExistingConnections = node.connections.map(conn => {
-              if (conn.type === '-') {
-                return { ...conn, type: 'y' as const, label: 'Yes' };
+              if (conn.type === EdgeType.ALWAYS) {
+                return { ...conn, type: EdgeType.YES, label: 'Yes' };
               }
               return conn;
             });
 
             // Add new connection with NO type
             const newConnection = {
-              type: 'n' as const,
+              type: EdgeType.NO,
               targetX,
               targetY,
               label: 'No',
@@ -648,7 +648,7 @@ function HomeContent() {
 
             // Convert node from INTERMEDIATE to QUESTION
             // CRITICAL: Assign sliderIndex and initialize probability
-            return { ...node, connections: updatedConnections, type: 'n' as const, sliderIndex: newSliderIndex, probability: 50 };
+            return { ...node, connections: updatedConnections, type: NodeType.QUESTION, sliderIndex: newSliderIndex, probability: 50 };
           }
         }
         return node;
@@ -776,7 +776,7 @@ function HomeContent() {
 
     setGraphData(prev => {
       const updatedNodes = prev.nodes.map(node => {
-        if (node.type === 'n' && node.sliderIndex !== null) {
+        if (node.type === NodeType.QUESTION && node.sliderIndex !== null) {
           return { ...node, probability: 50 };
         }
         return node;
@@ -798,7 +798,7 @@ function HomeContent() {
         // Only update probability for question nodes that exist in the default data
         // AND have a valid probability value (not null or undefined)
         // Custom nodes and nodes without default probabilities are left unchanged
-        if (node.type === 'n' && node.sliderIndex !== null && defaultNode && defaultNode.probability != null) {
+        if (node.type === NodeType.QUESTION && node.sliderIndex !== null && defaultNode && defaultNode.probability != null) {
           // Preserve all node fields (including custom title), only update probability
           return { ...node, probability: defaultNode.probability };
         }
@@ -1004,7 +1004,7 @@ function HomeContent() {
         if (node.probability === undefined) {
           return {
             ...node,
-            probability: node.type === 'n' ? 50 : null
+            probability: node.type === NodeType.QUESTION ? 50 : null
           };
         }
         return node;
@@ -1099,7 +1099,7 @@ function HomeContent() {
     // Create a new ambivalent outcome node at the clicked position
     const newNode = {
       id: newNodeId,
-      type: 'a' as const, // Ambivalent outcome node type
+      type: NodeType.AMBIVALENT, // Ambivalent outcome node type
       title: '',
       connections: [], // Outcome nodes have no outgoing connections
       position: { x, y },
@@ -1136,7 +1136,7 @@ function HomeContent() {
     // Create a new ambivalent outcome node at the specified position
     const newNode = {
       id: newNodeId,
-      type: 'a' as const, // Ambivalent outcome node type
+      type: NodeType.AMBIVALENT, // Ambivalent outcome node type
       title: '',
       connections: [], // Outcome nodes have no outgoing connections
       position: { x: position.x, y: position.y },
@@ -1257,7 +1257,7 @@ function HomeContent() {
     if (!node) return;
 
     // Prevent deleting the start node
-    if (node.type === 's') {
+    if (node.type === NodeType.START) {
       alert('Cannot delete the start node');
       return;
     }
@@ -1272,12 +1272,12 @@ function HomeContent() {
   }, [handleDeleteEdge]);
 
   // Change node type handler
-  const handleChangeNodeType = useCallback((nodeId: string, newType: 'n' | 'i' | 'g' | 'a' | 'e') => {
+  const handleChangeNodeType = useCallback((nodeId: string, newType: NodeType) => {
     const node = graphData.nodes.find(n => n.id === nodeId);
     if (!node) return;
 
     // Don't allow changing start node type
-    if (node.type === 's') {
+    if (node.type === NodeType.START) {
       alert('Cannot change the type of the start node');
       return;
     }
@@ -1291,9 +1291,9 @@ function HomeContent() {
           if (n.id !== nodeId) return n;
 
           // Changing TO question node
-          if (newType === 'n') {
+          if (newType === NodeType.QUESTION) {
             // Find the highest sliderIndex among existing questions
-            const questionNodes = prev.nodes.filter(node => node.type === 'n');
+            const questionNodes = prev.nodes.filter(node => node.type === NodeType.QUESTION);
             const maxSliderIndex = questionNodes.reduce((max, node) =>
               node.sliderIndex !== null && node.sliderIndex > max ? node.sliderIndex : max, -1);
             const newSliderIndex = maxSliderIndex + 1;
@@ -1303,17 +1303,17 @@ function HomeContent() {
             if (connections.length === 0) {
               // Create 2 new free-floating connections
               connections = [
-                { type: 'y' as const, targetX: n.position.x + 75, targetY: n.position.y - 50, label: 'Yes' },
-                { type: 'n' as const, targetX: n.position.x + 75, targetY: n.position.y + 50, label: 'No' },
+                { type: EdgeType.YES, targetX: n.position.x + 75, targetY: n.position.y - 50, label: 'Yes' },
+                { type: EdgeType.NO, targetX: n.position.x + 75, targetY: n.position.y + 50, label: 'No' },
               ];
             } else if (connections.length === 1) {
               // Keep existing as YES, add NO
-              connections[0] = { ...connections[0], type: 'y' as const };
-              connections.push({ type: 'n' as const, targetX: n.position.x + 75, targetY: n.position.y + 50, label: 'No' });
+              connections[0] = { ...connections[0], type: EdgeType.YES };
+              connections.push({ type: EdgeType.NO, targetX: n.position.x + 75, targetY: n.position.y + 50, label: 'No' });
             } else {
               // Has 2+ connections: convert first to YES, second to NO, keep rest as-is
-              connections[0] = { ...connections[0], type: 'y' as const };
-              connections[1] = { ...connections[1], type: 'n' as const };
+              connections[0] = { ...connections[0], type: EdgeType.YES };
+              connections[1] = { ...connections[1], type: EdgeType.NO };
             }
 
             return {
@@ -1325,11 +1325,11 @@ function HomeContent() {
           }
 
           // Changing FROM question node to something else
-          if (oldType === 'n') {
+          if (oldType === NodeType.QUESTION) {
             // Convert YES/NO connections to ALWAYS
             const connections = n.connections.map(conn => ({
               ...conn,
-              type: '-' as const,
+              type: EdgeType.ALWAYS,
             }));
 
             return {
@@ -1348,12 +1348,12 @@ function HomeContent() {
         });
 
         // If changing FROM question, need to re-index remaining questions and update sliderValues
-        if (oldType === 'n') {
+        if (oldType === NodeType.QUESTION) {
           const oldSliderIndex = node.sliderIndex;
           if (oldSliderIndex !== null) {
             // Re-index all questions that had higher indices
             const finalNodes = updatedNodes.map(n => {
-              if (n.type === 'n' && n.sliderIndex !== null && n.sliderIndex > oldSliderIndex) {
+              if (n.type === NodeType.QUESTION && n.sliderIndex !== null && n.sliderIndex > oldSliderIndex) {
                 return { ...n, sliderIndex: n.sliderIndex - 1 };
               }
               return n;

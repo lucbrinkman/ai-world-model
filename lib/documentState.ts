@@ -1,4 +1,4 @@
-import { DocumentData, GraphNode, GraphMetadata } from './types';
+import { DocumentData, GraphNode, GraphMetadata, NodeType, EdgeType } from './types';
 
 const STORAGE_KEY = 'ai_futures_draft_document';
 const NAME_KEY = 'ai_futures_draft_name';
@@ -39,7 +39,7 @@ export function loadFromLocalStorage(): { data: DocumentData; name: string | nul
       if (node.probability === undefined) {
         return {
           ...node,
-          probability: node.type === 'n' ? 50 : null // Default to 50 for question nodes, null for others
+          probability: node.type === NodeType.QUESTION ? 50 : null // Default to 50 for question nodes, null for others
         };
       }
       return node;
@@ -100,7 +100,7 @@ export function createDefaultDocumentData(
 export function createEmptyDocumentData(): DocumentData {
   const startNode: GraphNode = {
     id: 'sstart',
-    type: 's',
+    type: NodeType.START,
     title: 'START',
     description: '',
     position: {
@@ -113,7 +113,7 @@ export function createEmptyDocumentData(): DocumentData {
       {
         targetX: 250, // Free-floating connection pointing to the right
         targetY: 120,
-        type: '-',
+        type: EdgeType.ALWAYS,
         label: '',
       },
     ],
