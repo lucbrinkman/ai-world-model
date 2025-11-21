@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { NODE_COLORS, Node } from '@/lib/types';
-import { OutcomeDetailModal } from './OutcomeDetailModal';
-import Tooltip from './Tooltip';
+import React, { useState } from "react";
+import { NODE_COLORS, Node } from "@/lib/types";
+import { OutcomeDetailModal } from "./OutcomeDetailModal";
+import Tooltip from "./Tooltip";
 
 interface OutcomeBarGraphProps {
   existentialProbability: number;
@@ -17,11 +17,14 @@ export default function OutcomeBarGraph({
   nodes,
 }: OutcomeBarGraphProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const total = existentialProbability + ambivalentProbability + goodProbability;
+  const total =
+    existentialProbability + ambivalentProbability + goodProbability;
 
   // Calculate percentages (normalize to 100% if there's any probability)
-  const existentialPercent = total > 0 ? (existentialProbability / total) * 100 : 0;
-  const ambivalentPercent = total > 0 ? (ambivalentProbability / total) * 100 : 0;
+  const existentialPercent =
+    total > 0 ? (existentialProbability / total) * 100 : 0;
+  const ambivalentPercent =
+    total > 0 ? (ambivalentProbability / total) * 100 : 0;
   const goodPercent = total > 0 ? (goodProbability / total) * 100 : 0;
 
   const tooltipContent = `Good: ${goodPercent.toFixed(1)}% | Ambivalent: ${ambivalentPercent.toFixed(1)}% | Existential: ${existentialPercent.toFixed(1)}%`;
@@ -40,7 +43,7 @@ export default function OutcomeBarGraph({
               style={{
                 height: `${goodPercent}%`,
                 backgroundColor: NODE_COLORS.GOOD.border,
-                filter: 'saturate(0.7)',
+                filter: "saturate(0.7)",
               }}
             >
               {goodPercent > 15 && (
@@ -58,7 +61,7 @@ export default function OutcomeBarGraph({
               style={{
                 height: `${ambivalentPercent}%`,
                 backgroundColor: NODE_COLORS.AMBIVALENT.border,
-                filter: 'saturate(0.7)',
+                filter: "saturate(0.7)",
               }}
             >
               {ambivalentPercent > 15 && (
@@ -76,7 +79,7 @@ export default function OutcomeBarGraph({
               style={{
                 height: `${existentialPercent}%`,
                 backgroundColor: NODE_COLORS.EXISTENTIAL.border,
-                filter: 'saturate(0.7)',
+                filter: "saturate(0.7)",
               }}
             >
               {existentialPercent > 15 && (

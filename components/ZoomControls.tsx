@@ -1,8 +1,8 @@
-import { MIN_ZOOM, MAX_ZOOM, Node } from '@/lib/types';
-import Tooltip from './Tooltip';
-import { useModifierKey } from '@/hooks/useKeyboardShortcut';
-import { Locate, Plus, Minus } from 'lucide-react';
-import OutcomeBarGraph from './OutcomeBarGraph';
+import { MIN_ZOOM, MAX_ZOOM, Node } from "@/lib/types";
+import Tooltip from "./Tooltip";
+import { useModifierKey } from "@/hooks/useKeyboardShortcut";
+import { Locate, Plus, Minus } from "lucide-react";
+import OutcomeBarGraph from "./OutcomeBarGraph";
 
 interface ZoomControlsProps {
   zoom: number;
