@@ -10,7 +10,7 @@
   "nodes": [
     {
       "id": "sstart",
-      "type": "s",
+      "type": "start",
       "title": "START",
       "description": "",
       "position": {
@@ -22,14 +22,14 @@
       "connections": [
         {
           "targetId": "ncapabilities-plateau",
-          "type": "-",
+          "type": "always",
           "label": ""
         }
       ]
     },
     {
       "id": "adune",
-      "type": "a",
+      "type": "ambivalentOutcome",
       "title": "Advanced AI is permanently banned",
       "description": "",
       "position": {
@@ -42,7 +42,7 @@
     },
     {
       "id": "ncapabilities-plateau",
-      "type": "n",
+      "type": "question",
       "title": "Will current AI approaches plateau before AGI-level capabilities?",
       "description": "",
       "position": {
@@ -54,19 +54,19 @@
       "connections": [
         {
           "targetId": "npause",
-          "type": "n",
+          "type": "no",
           "label": "No plateau"
         },
         {
           "targetId": "nnew-approaches",
-          "type": "y",
+          "type": "yes",
           "label": "Plateau"
         }
       ]
     },
     {
       "id": "nnew-approaches",
-      "type": "n",
+      "type": "question",
       "title": "Will new approaches unlock AGI-level capabilities?",
       "description": "",
       "position": {
@@ -78,19 +78,19 @@
       "connections": [
         {
           "targetId": "npause",
-          "type": "y",
+          "type": "yes",
           "label": "Unlocks AGI"
         },
         {
           "targetId": "aai-winter",
-          "type": "n",
+          "type": "no",
           "label": "No unlock"
         }
       ]
     },
     {
       "id": "aai-winter",
-      "type": "a",
+      "type": "ambivalentOutcome",
       "title": "Permanent AI winter",
       "description": "",
       "position": {
@@ -103,7 +103,7 @@
     },
     {
       "id": "npause",
-      "type": "n",
+      "type": "question",
       "title": "Will we pause advancing AI capabilities before they reach catastrophic potential?",
       "description": "",
       "position": {
@@ -115,19 +115,19 @@
       "connections": [
         {
           "targetId": "ipause",
-          "type": "y",
+          "type": "yes",
           "label": "Pause"
         },
         {
           "targetId": "ireach-catastrophic-potential",
-          "type": "n",
+          "type": "no",
           "label": "No pause"
         }
       ]
     },
     {
       "id": "ipause",
-      "type": "i",
+      "type": "intermediateStep",
       "title": "Pause allows more safety research and other precautions",
       "description": "",
       "position": {
@@ -139,14 +139,14 @@
       "connections": [
         {
           "targetId": "ncontinue",
-          "type": "-",
+          "type": "always",
           "label": ""
         }
       ]
     },
     {
       "id": "ncontinue",
-      "type": "n",
+      "type": "question",
       "title": "Will we continue AI capabilities research after a pause?",
       "description": "",
       "position": {
@@ -158,19 +158,19 @@
       "connections": [
         {
           "targetId": "ireach-catastrophic-potential",
-          "type": "y",
+          "type": "yes",
           "label": "Continue"
         },
         {
           "targetId": "adune",
-          "type": "n",
+          "type": "no",
           "label": "No continue"
         }
       ]
     },
     {
       "id": "ireach-catastrophic-potential",
-      "type": "i",
+      "type": "intermediateStep",
       "title": "Frontier AI reaches capabilities with catastrophic potential",
       "description": "",
       "position": {
@@ -182,14 +182,14 @@
       "connections": [
         {
           "targetId": "ncatastrophe",
-          "type": "-",
+          "type": "always",
           "label": ""
         }
       ]
     },
     {
       "id": "ncatastrophe",
-      "type": "n",
+      "type": "question",
       "title": "Does a pre-AGI catastrophe occur (e.g. AI misuse via cyber- or bio-weapons)?",
       "description": "",
       "position": {
@@ -201,19 +201,19 @@
       "connections": [
         {
           "targetId": "icatastrophy-occurs",
-          "type": "y",
+          "type": "yes",
           "label": "Catastrophe"
         },
         {
           "targetId": "iagi-exists",
-          "type": "n",
+          "type": "no",
           "label": "No catastrophe"
         }
       ]
     },
     {
       "id": "icatastrophy-occurs",
-      "type": "i",
+      "type": "intermediateStep",
       "title": "Pre-AGI catastrophe does occur!",
       "description": "",
       "position": {
@@ -225,14 +225,14 @@
       "connections": [
         {
           "targetId": "nstop",
-          "type": "-",
+          "type": "always",
           "label": ""
         }
       ]
     },
     {
       "id": "nstop",
-      "type": "n",
+      "type": "question",
       "title": "Humanity permanently fully stops frontier AI development (after catastrophe)?",
       "description": "",
       "position": {
@@ -244,19 +244,19 @@
       "connections": [
         {
           "targetId": "iagi-exists",
-          "type": "n",
+          "type": "no",
           "label": "Doesn't stop"
         },
         {
           "targetId": "adune",
-          "type": "y",
+          "type": "yes",
           "label": "Stops development"
         }
       ]
     },
     {
       "id": "iagi-exists",
-      "type": "i",
+      "type": "intermediateStep",
       "title": "Research towards AGI continues. First AGI exists",
       "description": "",
       "position": {
@@ -268,14 +268,14 @@
       "connections": [
         {
           "targetId": "nagi-transformative",
-          "type": "-",
+          "type": "always",
           "label": ""
         }
       ]
     },
     {
       "id": "nagi-transformative",
-      "type": "n",
+      "type": "question",
       "title": "Will AGI become transformative?",
       "description": "",
       "position": {
@@ -287,19 +287,19 @@
       "connections": [
         {
           "targetId": "nalignment-theory",
-          "type": "y",
+          "type": "yes",
           "label": "Transformative"
         },
         {
           "targetId": "anon-transformative-agi",
-          "type": "n",
+          "type": "no",
           "label": "Non-transformative"
         }
       ]
     },
     {
       "id": "anon-transformative-agi",
-      "type": "a",
+      "type": "ambivalentOutcome",
       "title": "Powerful, but not transformative AGI",
       "description": "",
       "position": {
@@ -312,7 +312,7 @@
     },
     {
       "id": "nalignment-theory",
-      "type": "n",
+      "type": "question",
       "title": "Do we have a practical solution for AGI alignment?",
       "description": "",
       "position": {
@@ -324,19 +324,19 @@
       "connections": [
         {
           "targetId": "nimplement-alignment1",
-          "type": "y",
+          "type": "yes",
           "label": "Solution exists"
         },
         {
           "targetId": "imisaligned-agi",
-          "type": "n",
+          "type": "no",
           "label": "No solution"
         }
       ]
     },
     {
       "id": "nimplement-alignment1",
-      "type": "n",
+      "type": "question",
       "title": "Will the first AGI lab implement alignment correctly?",
       "description": "",
       "position": {
@@ -348,19 +348,19 @@
       "connections": [
         {
           "targetId": "imisaligned-agi",
-          "type": "n",
+          "type": "no",
           "label": "Misaligned first AGI"
         },
         {
           "targetId": "nprevent-other-agis",
-          "type": "y",
+          "type": "yes",
           "label": "Aligned first AGI"
         }
       ]
     },
     {
       "id": "nprevent-other-agis",
-      "type": "n",
+      "type": "question",
       "title": "Will the first AGI prevent other AGIs from appearing?",
       "description": "",
       "position": {
@@ -372,19 +372,19 @@
       "connections": [
         {
           "targetId": "nimplement-alignment2",
-          "type": "n",
+          "type": "no",
           "label": "Doesn't prevent"
         },
         {
           "targetId": "ialigned-agi",
-          "type": "y",
+          "type": "yes",
           "label": "Prevents others"
         }
       ]
     },
     {
       "id": "nimplement-alignment2",
-      "type": "n",
+      "type": "question",
       "title": "Will all other AGI labs implement alignment correctly?",
       "description": "",
       "position": {
@@ -396,19 +396,19 @@
       "connections": [
         {
           "targetId": "imultipolar",
-          "type": "n",
+          "type": "no",
           "label": "Others misaligned"
         },
         {
           "targetId": "ialigned-agi",
-          "type": "y",
+          "type": "yes",
           "label": "Others aligned"
         }
       ]
     },
     {
       "id": "imultipolar",
-      "type": "i",
+      "type": "intermediateStep",
       "title": "Multiple conflicting AGIs exist",
       "description": "",
       "position": {
@@ -420,14 +420,14 @@
       "connections": [
         {
           "targetId": "imisaligned-agi",
-          "type": "-",
+          "type": "always",
           "label": ""
         }
       ]
     },
     {
       "id": "ialigned-agi",
-      "type": "i",
+      "type": "intermediateStep",
       "title": "All AGIs are aligned",
       "description": "",
       "position": {
@@ -439,14 +439,14 @@
       "connections": [
         {
           "targetId": "nwhole-humanity-aligned",
-          "type": "-",
+          "type": "always",
           "label": ""
         }
       ]
     },
     {
       "id": "nwhole-humanity-aligned",
-      "type": "n",
+      "type": "question",
       "title": "Is AGI aligned with humanity's interests as a whole?",
       "description": "",
       "position": {
@@ -458,19 +458,19 @@
       "connections": [
         {
           "targetId": "ncontrollers-thoughtful",
-          "type": "n",
+          "type": "no",
           "label": "Controller-aligned"
         },
         {
           "targetId": "gagi-utopia2",
-          "type": "y",
+          "type": "yes",
           "label": "Humanity-aligned"
         }
       ]
     },
     {
       "id": "gagi-utopia2",
-      "type": "g",
+      "type": "goodOutcome",
       "title": "AGI utopia",
       "description": "",
       "position": {
@@ -483,7 +483,7 @@
     },
     {
       "id": "ncontrollers-thoughtful",
-      "type": "n",
+      "type": "question",
       "title": "Are AGI controllers wise enough to avoid unintended consequences?",
       "description": "",
       "position": {
@@ -495,19 +495,19 @@
       "connections": [
         {
           "targetId": "nagi-protects",
-          "type": "n",
+          "type": "no",
           "label": "Unwise controllers"
         },
         {
           "targetId": "ncontrollers-good",
-          "type": "y",
+          "type": "yes",
           "label": "Wise controllers"
         }
       ]
     },
     {
       "id": "nagi-protects",
-      "type": "n",
+      "type": "question",
       "title": "Does AGI protect its users?",
       "description": "",
       "position": {
@@ -519,19 +519,19 @@
       "connections": [
         {
           "targetId": "ncontrollers-good",
-          "type": "y",
+          "type": "yes",
           "label": "Protects users"
         },
         {
           "targetId": "estupid-xrisk",
-          "type": "n",
+          "type": "no",
           "label": "Doesn't protect"
         }
       ]
     },
     {
       "id": "estupid-xrisk",
-      "type": "e",
+      "type": "existentialOutcome",
       "title": "Accidental human extinction",
       "description": "",
       "position": {
@@ -544,7 +544,7 @@
     },
     {
       "id": "ncontrollers-good",
-      "type": "n",
+      "type": "question",
       "title": "Do AGI controllers have good intentions?",
       "description": "",
       "position": {
@@ -556,19 +556,19 @@
       "connections": [
         {
           "targetId": "eauthoritarian-dystopia",
-          "type": "n",
+          "type": "no",
           "label": "Bad intentions"
         },
         {
           "targetId": "gagi-utopia2",
-          "type": "y",
+          "type": "yes",
           "label": "Good intentions"
         }
       ]
     },
     {
       "id": "eauthoritarian-dystopia",
-      "type": "e",
+      "type": "existentialOutcome",
       "title": "Authoritarian dystopia",
       "description": "",
       "position": {
@@ -581,7 +581,7 @@
     },
     {
       "id": "imisaligned-agi",
-      "type": "i",
+      "type": "intermediateStep",
       "title": "(At least one) Misaligned AGI",
       "description": "",
       "position": {
@@ -593,14 +593,14 @@
       "connections": [
         {
           "targetId": "nfigure-misaligned",
-          "type": "-",
+          "type": "always",
           "label": ""
         }
       ]
     },
     {
       "id": "nfigure-misaligned",
-      "type": "n",
+      "type": "question",
       "title": "Do we figure out right away that it's misaligned?",
       "description": "",
       "position": {
@@ -612,19 +612,19 @@
       "connections": [
         {
           "targetId": "nturn-off",
-          "type": "y",
+          "type": "yes",
           "label": "Figure it out"
         },
         {
           "targetId": "nharming-us",
-          "type": "n",
+          "type": "no",
           "label": "Don't figure it out"
         }
       ]
     },
     {
       "id": "nturn-off",
-      "type": "n",
+      "type": "question",
       "title": "Can we easily turn it off?",
       "description": "",
       "position": {
@@ -636,19 +636,19 @@
       "connections": [
         {
           "targetId": "asecond-chance",
-          "type": "y",
+          "type": "yes",
           "label": "Can turn off"
         },
         {
           "targetId": "nharming-us",
-          "type": "n",
+          "type": "no",
           "label": "Cannot turn off"
         }
       ]
     },
     {
       "id": "asecond-chance",
-      "type": "a",
+      "type": "ambivalentOutcome",
       "title": "We get a second chance at building AGI",
       "description": "",
       "position": {
@@ -661,7 +661,7 @@
     },
     {
       "id": "nharming-us",
-      "type": "n",
+      "type": "question",
       "title": "Does it pursue actions that harm us?",
       "description": "",
       "position": {
@@ -673,19 +673,19 @@
       "connections": [
         {
           "targetId": "ncan-destroy-it",
-          "type": "y",
+          "type": "yes",
           "label": "Harms us"
         },
         {
           "targetId": "asecond-chance",
-          "type": "n",
+          "type": "no",
           "label": "Doesn't harm"
         }
       ]
     },
     {
       "id": "ncan-destroy-it",
-      "type": "n",
+      "type": "question",
       "title": "Can we destroy it?",
       "description": "",
       "position": {
@@ -697,19 +697,19 @@
       "connections": [
         {
           "targetId": "asecond-chance",
-          "type": "y",
+          "type": "yes",
           "label": "Can destroy"
         },
         {
           "targetId": "nbenefit-extinction",
-          "type": "n",
+          "type": "no",
           "label": "Cannot destroy"
         }
       ]
     },
     {
       "id": "nbenefit-extinction",
-      "type": "n",
+      "type": "question",
       "title": "Does it benefit from our extinction?",
       "description": "",
       "position": {
@@ -721,19 +721,19 @@
       "connections": [
         {
           "targetId": "eagi-kills-us",
-          "type": "y",
+          "type": "yes",
           "label": "Benefits from extinction"
         },
         {
           "targetId": "nbenefit-suffering",
-          "type": "n",
+          "type": "no",
           "label": "No benefit"
         }
       ]
     },
     {
       "id": "eagi-kills-us",
-      "type": "e",
+      "type": "existentialOutcome",
       "title": "AGI-initiated human extinction",
       "description": "",
       "position": {
@@ -746,7 +746,7 @@
     },
     {
       "id": "nbenefit-suffering",
-      "type": "n",
+      "type": "question",
       "title": "Does it benefit from our suffering?",
       "description": "",
       "position": {
@@ -758,19 +758,19 @@
       "connections": [
         {
           "targetId": "esuffering",
-          "type": "y",
+          "type": "yes",
           "label": "Benefits from suffering"
         },
         {
           "targetId": "emedium-dystopia",
-          "type": "n",
+          "type": "no",
           "label": "No benefit"
         }
       ]
     },
     {
       "id": "emedium-dystopia",
-      "type": "e",
+      "type": "existentialOutcome",
       "title": "AI dystopia: humans survive, but AI is in control",
       "description": "",
       "position": {
@@ -783,7 +783,7 @@
     },
     {
       "id": "esuffering",
-      "type": "e",
+      "type": "existentialOutcome",
       "title": "Astronomical suffering",
       "description": "",
       "position": {

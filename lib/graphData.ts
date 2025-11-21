@@ -7,7 +7,7 @@ const graphData = graphDataJson as GraphData;
 
 // Author's probability estimates (reconstructed from question nodes)
 export const AUTHORS_ESTIMATES = graphData.nodes
-  .filter(n => n.type === 'n' && n.sliderIndex !== null)
+  .filter(n => n.type === NodeType.QUESTION && n.sliderIndex !== null)
   .sort((a, b) => (a.sliderIndex || 0) - (b.sliderIndex || 0))
   .map(n => n.probability || 50)
   .join('i');

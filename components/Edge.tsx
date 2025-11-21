@@ -277,7 +277,7 @@ export default function Edge({
   // Calculate label text
   let labelText = '';
   let labelDescription = '';
-  if (yn !== ET.E100) {
+  if (yn !== ET.ALWAYS) {
     const value = yn === ET.YES ? sliderValue : (sliderValue !== null ? 100 - sliderValue : null);
     if (value !== null) {
       // Get descriptive label from edge data

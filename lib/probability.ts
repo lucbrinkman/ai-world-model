@@ -144,7 +144,7 @@ export function calculateProbabilities(
     let conditionalProb = 1.0;
 
     // Calculate conditional probability based on edge type
-    if (edge.yn !== EdgeType.E100) {
+    if (edge.yn !== EdgeType.ALWAYS) {
       // Get the source node and look up its probability by ID
       const sourceNode = nodes[edge.source];
       const sliderProb = nodeIdToProb.get(sourceNode.id);

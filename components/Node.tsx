@@ -1,6 +1,7 @@
 import {
   Node as NodeType,
   NodeType as NT,
+  type NodeType as NodeTypeValue,
   NODE_COLORS,
   NodeDragEndHandler,
   NodeDragStateHandler,
@@ -54,7 +55,7 @@ interface NodeProps {
   onEditingStarted?: () => void;
   onSelect?: (nodeId: string | null) => void;
   onDelete?: (nodeId: string) => void;
-  onChangeType?: (nodeId: string, newType: "n" | "i" | "g" | "a" | "e") => void;
+  onChangeType?: (nodeId: string, newType: NodeTypeValue) => void;
   sliderValue?: number;
   onSliderChange?: (value: number) => void;
   onSliderChangeComplete?: () => void;
@@ -462,16 +463,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
         window.removeEventListener("mousemove", handleGlobalMouseMove);
         window.removeEventListener("mouseup", handleGlobalMouseUp);
       };
-    }, [
-      isDragging,
-      zoom,
-      onDragMove,
-      onDragEnd,
-      node.id,
-      node.index,
-      onDragStateChange,
-      shiftHeld,
-    ]);
+    }, [isDragging, zoom, onDragMove, onDragEnd, node.id, node.index]);
 
     // Format text (replace | with line breaks)
     const formattedText = text.replace(/\|/g, "\n");
@@ -679,7 +671,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
             )}
 
             {/* Trash button (right) */}
-            {onDelete && node.type !== "s" && (
+            {onDelete && node.type !== NT.START && (
               <Tooltip content="Delete node" position="top">
                 <button
                   onClick={(e) => {
@@ -697,7 +689,7 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
 
         {/* Persistent pin button - shown when node is probability root and not start node */}
         {isSelected &&
-          node.type !== "s" &&
+          node.type !== NT.START &&
           onSetProbabilityRoot &&
           !isNodeSelected && (
             <div
@@ -739,7 +731,9 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
 
         {/* Outcome type switcher - shown for outcome nodes */}
         {onChangeType &&
-          (node.type === "g" || node.type === "a" || node.type === "e") && (
+          (node.type === NT.GOOD ||
+            node.type === NT.AMBIVALENT ||
+            node.type === NT.EXISTENTIAL) && (
             <OutcomeTypeSwitcher
               nodeId={node.id}
               currentType={node.type}
@@ -816,7 +810,10 @@ const Node = forwardRef<HTMLDivElement, NodeProps>(
           onAddArrow &&
           (() => {
             // Determine if this is an outcome node (has colored bubbles on the left)
-            const isOutcomeNode = type === "g" || type === "a" || type === "e";
+            const isOutcomeNode =
+              type === NT.GOOD ||
+              type === NT.AMBIVALENT ||
+              type === NT.EXISTENTIAL;
             const offset = 10; // Distance from node edge in pixels
             const hoverPadding = 8; // Extra padding to bridge gap between node and button
 
