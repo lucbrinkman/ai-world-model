@@ -21,6 +21,11 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 - `npm run dev` - Start dev server (http://localhost:3000)
 - `npm run build` - Build for production
 - `npm run lint` - Run ESLint
+- `npm run type-check` - Run TypeScript type checking
+- `npm run test:e2e` - Run E2E tests with Playwright
+- `npm run test:e2e:ui` - Run E2E tests with Playwright UI
+- `npm run test:e2e:headed` - Run E2E tests with browser visible
+- `npm run test:e2e:debug` - Debug E2E tests
 
 **Process Management:**
 
@@ -79,9 +84,21 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 **CI/CD Pipeline:**
 
 - GitHub Actions workflow runs on all pushes and PRs (`.github/workflows/ci.yml`)
-- Checks: TypeScript type-check, ESLint, Next.js build
+- Checks: TypeScript type-check, ESLint, Next.js build, E2E tests (Playwright)
 - PRs blocked from merging if CI fails
-- Local pre-commit hooks run same checks (via Husky) to catch issues early
+- Local pre-commit hooks run type-check, lint, and format checks (via Husky)
+- E2E tests run in CI to validate core functionality
+
+**Testing:**
+
+- **E2E Tests** (`tests/e2e/`): Playwright tests for critical user flows
+  - Canvas navigation (panning, zooming)
+  - Node creation (context menu, add arrow buttons)
+  - Node movement (drag-and-drop, grid snapping, free movement with Shift)
+  - Node deletion (delete button, START node protection)
+- Tests run automatically in CI on every PR
+- Run locally: `npm run test:e2e`
+- Debug tests: `npm run test:e2e:ui` or `npm run test:e2e:debug`
 
 **Branch Protection (configure in GitHub settings):**
 
