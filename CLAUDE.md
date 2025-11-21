@@ -20,6 +20,12 @@ Next.js application called "Map of AI Futures" - an interactive probability flow
 - `npm run build` - Build for production
 - `npm run lint` - Run ESLint
 
+**Process Management:**
+- **To stop a dev server cleanly:** `fuser -k <port>/tcp` (e.g., `fuser -k 3000/tcp`)
+  - This kills all processes using that port, including orphaned child processes
+  - More reliable than KillShell which can leave next-server processes running
+  - Prevents accumulation of zombie processes that consume CPU/memory
+
 **Environment Variables:**
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
